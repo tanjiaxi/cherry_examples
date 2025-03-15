@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/ahmetb/go-linq/v3 v3.2.0
-	github.com/cherry-game/cherry v1.3.14
+	github.com/cherry-game/cherry v1.3.15
 	github.com/cherry-game/cherry/components/cron v1.3.14
 	github.com/cherry-game/cherry/components/data-config v1.3.14
 	github.com/cherry-game/cherry/components/gin v1.3.14

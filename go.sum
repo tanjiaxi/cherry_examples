@@ -8,8 +8,8 @@ github.com/cespare/xxhash/v2 v2.1.2/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XL
 github.com/chenzhuoyu/base64x v0.0.0-20211019084208-fb5309c8db06/go.mod h1:DH46F32mSOjUmXrMHnKwZdA8wcEefY7UVqBKYGjpdQY=
 github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 h1:qSGYFH7+jGhDF8vLC+iwCD4WpbV1EBDSzWkJODFLams=
 github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311/go.mod h1:b583jCggY9gE99b6G5LEC39OIiVsWj+R97kbl5odCEk=
-github.com/cherry-game/cherry v1.3.14 h1:KI7jeUVTdFeoC9z90ZVDerICn/S1L+YO8Z+C13WZqTw=
-github.com/cherry-game/cherry v1.3.14/go.mod h1:QJZChJ+4eNnO31SHL9JbaUuHrLAjHiUmwTZQnb1q+SM=
+github.com/cherry-game/cherry v1.3.15 h1:IWhZIO9cIrpBlVVrRdoTN1nRLogeasXGI1PeHvfiiog=
+github.com/cherry-game/cherry v1.3.15/go.mod h1:QJZChJ+4eNnO31SHL9JbaUuHrLAjHiUmwTZQnb1q+SM=
 github.com/cherry-game/cherry/components/cron v1.3.14 h1:b6fCwg4G03FwDUzoLE1mgTNWv23k3wpCEhv22KrrKiU=
 github.com/cherry-game/cherry/components/cron v1.3.14/go.mod h1:xpacYaSgiW7W9wRFcyr5iqOW3BmiEOlHXl6G0rrYNFQ=
 github.com/cherry-game/cherry/components/data-config v1.3.14 h1:h8ddNrYn3bz1quJb9zauIWZZgKbW1oqpzKvvB0L1U5Y=

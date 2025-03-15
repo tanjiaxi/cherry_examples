@@ -73,13 +73,19 @@ func (p *ActorAgent) login(session *cproto.Session, req *pb.LoginRequest) {
 		return
 	}
 
-	p.checkGateSession(uid)
-
-	if err := agent.Bind(uid); err != nil {
-		clog.Warn(err)
+	oldAgent, err := pomelo.Bind(session.Sid, uid)
+	if err != nil {
 		agent.ResponseCode(session, code.AccountBindFail, true)
+		clog.Warn(err)
 		return
 	}
+
+	// 挤掉之前的agent
+	if oldAgent != nil {
+		oldAgent.Kick(duplicateLoginCode, true)
+	}
+
+	p.checkGateSession(uid)
 
 	agent.Session().Set(sessionKey.ServerID, cstring.ToString(req.ServerId))
 	agent.Session().Set(sessionKey.PID, cstring.ToString(userToken.PID))
@@ -96,7 +102,7 @@ func (p *ActorAgent) login(session *cproto.Session, req *pb.LoginRequest) {
 
 func (p *ActorAgent) validateToken(base64Token string) (*token.Token, int32) {
 	userToken, ok := token.DecodeToken(base64Token)
-	if ok == false {
+	if !ok {
 		return nil, code.AccountTokenValidateFail
 	}
 
@@ -106,7 +112,7 @@ func (p *ActorAgent) validateToken(base64Token string) (*token.Token, int32) {
 	}
 
 	statusCode, ok := token.Validate(userToken, platformRow.Salt)
-	if ok == false {
+	if !ok {
 		return nil, statusCode
 	}
 
@@ -114,16 +120,12 @@ func (p *ActorAgent) validateToken(base64Token string) (*token.Token, int32) {
 }
 
 func (p *ActorAgent) checkGateSession(uid cfacade.UID) {
-	if agent, found := pomelo.GetAgentWithUID(uid); found {
-		agent.Kick(duplicateLoginCode, true)
-	}
-
 	rsp := &cproto.PomeloKick{
 		Uid:    uid,
 		Reason: duplicateLoginCode,
 	}
 
-	// 遍历所有网关节点，踢除旧的session
+	// 遍历其他网关节点，挤掉旧的agent
 	members := p.App().Discovery().ListByType(p.App().NodeType(), p.App().NodeId())
 	for _, member := range members {
 		// user是gate.go里自定义的agentActorID
