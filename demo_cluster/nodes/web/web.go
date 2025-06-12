@@ -12,9 +12,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Run(profileFilePath, nodeId string) {
+func Run(profileFilePath, nodeID string) {
 	// 配置cherry引擎,加载profile配置文件
-	app := cherry.Configure(profileFilePath, nodeId, false, cherry.Cluster)
+	app := cherry.Configure(profileFilePath, nodeID, false, cherry.Cluster)
 
 	// 注册调度组件
 	app.Register(cherryCron.New())

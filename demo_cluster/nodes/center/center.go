@@ -9,10 +9,10 @@ import (
 	"github.com/cherry-game/examples/demo_cluster/nodes/center/module/ops"
 )
 
-func Run(profileFilePath, nodeId string) {
+func Run(profileFilePath, nodeID string) {
 	app := cherry.Configure(
 		profileFilePath,
-		nodeId,
+		nodeID,
 		false,
 		cherry.Cluster,
 	)

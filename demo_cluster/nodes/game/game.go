@@ -13,17 +13,17 @@ import (
 	"github.com/cherry-game/examples/demo_cluster/nodes/game/module/player"
 )
 
-func Run(profileFilePath, nodeId string) {
-	if !cherryUtils.IsNumeric(nodeId) {
+func Run(profileFilePath, nodeID string) {
+	if !cherryUtils.IsNumeric(nodeID) {
 		panic("node parameter must is number.")
 	}
 
 	// snowflake global id
-	serverId, _ := cstring.ToInt64(nodeId)
+	serverId, _ := cstring.ToInt64(nodeID)
 	cherrySnowflake.SetDefaultNode(serverId)
 
 	// 配置cherry引擎
-	app := cherry.Configure(profileFilePath, nodeId, false, cherry.Cluster)
+	app := cherry.Configure(profileFilePath, nodeID, false, cherry.Cluster)
 
 	// diagnose
 	app.Register(cherryGops.New())

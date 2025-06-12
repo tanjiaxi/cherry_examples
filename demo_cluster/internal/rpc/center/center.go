@@ -31,13 +31,13 @@ const (
 
 // Ping 访问center节点，确认center已启动
 func Ping(app cfacade.IApplication) bool {
-	nodeId := GetCenterNodeID(app)
-	if nodeId == "" {
+	nodeID := GetCenterNodeID(app)
+	if nodeID == "" {
 		return false
 	}
 
 	rsp := &pb.Bool{}
-	targetPath := nodeId + opsActor
+	targetPath := nodeID + opsActor
 	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, ping, nil, rsp)
 	if code.IsFail(errCode) {
 		return false
@@ -111,6 +111,6 @@ func GetCenterNodeID(app cfacade.IApplication) string {
 }
 
 func GetTargetPath(app cfacade.IApplication, actorID string) string {
-	nodeId := GetCenterNodeID(app)
-	return nodeId + actorID
+	nodeID := GetCenterNodeID(app)
+	return nodeID + actorID
 }

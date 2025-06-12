@@ -16,11 +16,11 @@ import (
 
 // Run 运行gate节点
 // gate 主要用于对外提供网络连接、管理用户连接、消息转发
-func Run(profileFilePath, nodeId string) {
+func Run(profileFilePath, nodeID string) {
 	// 创建一个cherry实例
 	app := cherry.Configure(
 		profileFilePath,
-		nodeId,
+		nodeID,
 		true,
 		cherry.Cluster,
 	)
