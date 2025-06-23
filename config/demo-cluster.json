@@ -42,7 +42,7 @@
     ],
     "gate": [
       {
-        "node_id": "gc-gate-1",
+        "node_id": "^gc-gate-\\d+$",
         "address": ":10010",
         "__settings__": {
           "db_id_list" : {
@@ -65,7 +65,7 @@
     ],
     "game": [
       {
-        "node_id": "10001",
+        "node_id": "^\\d+$",
         "__settings__": {
           "db_id_list" : {
             "game_db_id": "game_db_1"
