@@ -6,7 +6,7 @@ import (
 	cactor "github.com/cherry-game/cherry/net/actor"
 	"github.com/cherry-game/examples/demo_cluster/internal/code"
 	"github.com/cherry-game/examples/demo_cluster/internal/pb"
-	"github.com/cherry-game/examples/demo_cluster/nodes/center/db"
+	"github.com/cherry-game/examples/demo_cluster/nodes/center/server"
 )
 
 type (
@@ -42,29 +42,32 @@ func (p *ActorAccount) registerDevAccount(req *pb.DevRegister) int32 {
 	if len(password) < 3 || len(password) > 18 {
 		return code.LoginError
 	}
-
-	return db.DevAccountRegister(accountName, password, req.Ip)
+	return server.DevAccountRegister(accountName, password, req.Ip)
 }
 
 // getDevAccount 根据帐号名获取开发者帐号表
 func (p *ActorAccount) getDevAccount(req *pb.DevRegister) (*pb.Int64, int32) {
 	accountName := req.AccountName
-	password := req.Password
+	passWord := req.Password
 
-	devAccount, _ := db.DevAccountWithName(accountName)
-	if devAccount == nil || devAccount.Password != password {
+	devAccount, _ := server.DevAccountWithName(accountName)
+	if devAccount == nil || passWord != devAccount.Password {
 		return nil, code.AccountAuthFail
 	}
 
-	return &pb.Int64{Value: devAccount.AccountId}, code.OK
+	return &pb.Int64{Value: int64(devAccount.UserID)}, code.OK
 }
 
 // getUID 获取uid
 func (p *ActorAccount) getUID(req *pb.User) (*pb.Int64, int32) {
-	uid, ok := db.BindUID(req.SdkId, req.Pid, req.OpenId)
-	if uid == 0 || ok == false {
+	accout, error := server.DevAccountWithName(req.DeviceName)
+	if error != nil {
+		return nil, code.AccountTokenValidateFail
+	}
+	userId, ok := server.BindUID(req.SdkId, req.Pid, req.OpenId, accout.UserID)
+	if userId == 0 || !ok {
 		return nil, code.AccountBindFail
 	}
 
-	return &pb.Int64{Value: uid}, code.OK
+	return &pb.Int64{Value: int64(userId)}, code.OK
 }

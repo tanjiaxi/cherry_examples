@@ -2,12 +2,13 @@ package main
 
 import (
 	"encoding/binary"
-	cherryLogger "github.com/cherry-game/cherry/logger"
-	"github.com/nats-io/nats.go"
 	"log"
 	"os"
 	"os/signal"
 	"time"
+
+	cherryLogger "github.com/cherry-game/cherry/logger"
+	"github.com/nats-io/nats.go"
 )
 
 func BytesToInt64(buf []byte) int64 {
@@ -27,11 +28,11 @@ func main() {
 	}
 
 	nc.Subscribe(subj, func(msg *nats.Msg) {
-		t := BytesToInt64(msg.Data)
+		// t := BytesToInt64(msg.Data)
 
-		dt := time.Now().UnixMicro() - t
+		// dt := time.Now().UnixMicro() - t
 
-		cherryLogger.Debugf("dt = %d, msg = %v", dt, msg)
+		cherryLogger.Debugf("dt = %s, msg = %v", string(msg.Data), msg)
 		msg.Respond([]byte("response msg"))
 	})
 	nc.Flush()

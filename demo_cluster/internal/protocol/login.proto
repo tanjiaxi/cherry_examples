@@ -17,7 +17,7 @@ message LoginRequest {
 
 // 登陆响应
 message LoginResponse {
-  int64              uid = 1;      // 游戏内的用户唯一id
+  int64              userId = 1;      // 游戏内的用户唯一id
   int32              pid = 2;      // 平台id
   string             openId = 3;   // 平台openId(平台的帐号唯一id)
   map<int32, string> params = 4;   // 登陆后的扩展参数，按需增加

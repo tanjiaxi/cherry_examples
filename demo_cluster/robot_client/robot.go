@@ -94,7 +94,7 @@ func (p *Robot) UserLogin(serverId int32) error {
 		return err
 	}
 
-	p.UID = rsp.Uid
+	p.UID = rsp.UserId
 	p.PID = rsp.Pid
 	p.OpenId = rsp.OpenId
 

@@ -1,0 +1,128 @@
+// TODO message结构的属性名请使用 驼峰小写字母开始
+// TODO enum枚举的属性名请使用 驼峰大写字母开始
+syntax = "proto3";
+option go_package = "/pb";
+package pb;
+import "slots_define.proto";
+import "slots_feature.proto";
+// machineInfo请求
+message MachineInfo {
+  int32 id = 1; // 老虎机ID
+}
+
+// machineInfo回复
+message MachineInfoResponse {
+  BaseInfo base = 1;       // 老虎机基础信息
+  GameStage stage = 2;     // 老虎机状态
+  ReelsInfo initReels = 3; // 预设转轴数据
+  SpinResult initResult =
+      4; // spin的结果 TODO 考虑一下是否将spinResult作为多维数据
+  FeatureInfo feature = 5;       // feature结果
+  repeated PayInfo payTable = 6; // paytable
+  repeated JackPot jackpot = 7;  // jackpot的数据
+}
+
+// spin请求
+message Spin {
+  int32 id = 1;            // 老虎机ID
+  int64 curBet = 2;        // 当前倍率
+  int64 curMoney = 3;      // 当前钱
+  int64 curCost = 4;       // 当前消耗
+  int32 reelsVersion = 5;  // 转轴版本号
+  string testSeed = 6;     // 测试种子
+  int32 testReelLevel = 7; // 转轴等级
+  string token = 8;        // 登录Token
+  bool isCasinoQuest = 9;  // 是否在冒险任务关卡
+}
+// spin回复
+message SpinResponse {
+  int32 id = 1;          // 老虎机ID
+  SeedInfo seedInfo = 2; // 种子
+  message SeedInfo {
+    string seed = 1;     // 种子
+    int32 reelLevel = 2; // 转轴等级
+  }
+  int64 userBet = 3;              // 当前倍率
+  GameStage stage = 4;            // 老虎机状态
+  ReelsInfo reelUpdate = 5;       // 转轴更新数据
+  SpinResult spinResult = 6;      // spin的结果
+  FeatureInfo feature = 7;        // feature结果
+  repeated JackPot jackpot = 8;   // jackpot的数据
+  BigWinMult multInfo = 9;        // bigwin的翻倍信息
+  SpinUserInfo spinUserInfo = 10; // 用户信息
+}
+
+
+message EnterMachine {
+	int32 id = 1;
+	int64 selectBet = 2;
+}
+
+message EnterMachineResponse {
+	int32 id = 1;
+	bool succeed = 2;
+}
+message Bonus {
+	int32 id = 1;		//老虎机ID
+	int32 selectId = 2; //选择
+	int32 selectType = 3; //类型 1bonus 2 freespin
+	string token = 4;											// 登录Token
+	bool isCasinoQuest = 5;											// 是否在冒险任务关卡
+}
+
+message BonusResponse {
+	Amazing777Bonus amazingBonusInfo = 1;
+	Firebonus777Bonus firebonus777BonusInfo = 2;
+	BigbucksBonus bigBucksBonusInfo = 3;
+	Winninghit777Bonus winninghit777BonusInfo = 4;
+	GreedyBonus greedyBonusInfo = 5;
+	Big10xBonus big10xBonusInfo = 6;
+	GoldwheelBonus goldwheelBonusInfo = 8;
+	Enormous7Bonus enormous7BonusInfo = 9;
+	GoldfortuneBonus goldfortuneBonusInfo = 10;
+	JackpotfrenzyBonus jackpotfrenzyBonusInfo = 11;
+	SpinwinBonus spinWinBonusInfo = 12;
+	PinballBonus pinballBonusInfo = 13;
+	FirerouletteBonus fireRouletteBonusInfo = 14;
+	RoyalcashBonus royalcashBonusInfo = 15;
+	LuckywheelBonus luckywheelBonusInfo = 16;
+	CrazyfireballBonus crazyfireballBonusInfo = 17;
+	LibertylBonus libertylBonusInfo = 18;
+	DiamondfreespinsBetInfo diamondfreespinsBetInfo = 19;
+	GoldfortunewheelBonus goldfortunewheelBonusInfo = 20;
+	Redf21Bonus redf21BonusInfo = 21;
+	HotWheel777Bonus hotwheel777Bonus = 23;
+	FudaoleBonus fudaoleBonusInfo = 24;
+	BravospinBonus bravospinBonusInfo = 25;
+	GoldwinnerBonus goldwinnerBonusInfo = 26;
+	GoldWheel2Bonus goldwheel2BonusInfo = 27;
+	MegacashBonus megacashBonusInfo = 28;
+	DragonfBonus dragonfBonusInfo = 29;
+	CrazyxtraBonus crazyxtraBonus = 30;
+	MontecBonus montecBonusInfo = 31;
+	WinningsBonus winningsBonus = 32;
+	AnythingbutBonus anythingbutBonusInfo = 33;
+	BurninggoldBonus burninggoldBonus = 34;
+	WildjpBonus wildjpBonusInfo = 35;
+	RunmoneyBonus runmoneyBonus = 36;
+	GoldmachinejackpotBonus goldmachinejackpotBonusInfo = 37;
+	BurningtripleBonus burningtripleBonus = 38;
+	Br89Bonus br89BonusInfo = 39;
+	Bravoball92Bonus bravoball92BonusInfo = 40;
+	Party999Bonus party999BonusInfo = 41;
+	Fortune7sBonus fortune7sBonus = 42;
+	Crystal97Bonus crystal97BonusInfo = 43;
+	MagicalgenieBonus magicalgenieBonusInfo = 44;
+}
+
+message CollectDone {
+	int32 id = 1;		//老虎机ID
+	CollectType type = 2; 	//领取类型
+	string token = 3;											// 登录Token
+}
+
+message CollectDoneResponse {
+	int32 id = 1;			//老虎机ID
+	CollectType type = 2; 		//领取类型
+	int64 balance = 3;		//金币余额 校验
+}

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Protobuf 加载测试</title>
+    <meta charset="utf-8">
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        pre {
+            background: white;
+            padding: 10px;
+            border: 1px solid #ddd;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Protobuf 加载测试</h1>
+    <div id="results"></div>
+
+    <!-- Google Protobuf 运行时库 -->
+    <script src="https://cdn.jsdelivr.net/npm/google-protobuf@3.21.2/google-protobuf.js"></script>
+    <!-- pb.js 包装器 -->
+    <script src="pb-wrapper.js"></script>
+    <!-- 生成的 protobuf 文件 -->
+    <script src="pb.js"></script>
+    <!-- 提取 proto 对象 -->
+    <script src="pb-extract.js"></script>
+
+    <script>
+        var results = document.getElementById('results');
+        
+        function addResult(message, type) {
+            var div = document.createElement('div');
+            div.className = 'test-result ' + type;
+            div.textContent = message;
+            results.appendChild(div);
+        }
+        
+        function addCode(title, code) {
+            var div = document.createElement('div');
+            div.className = 'test-result info';
+            div.innerHTML = '<strong>' + title + '</strong><pre>' + code + '</pre>';
+            results.appendChild(div);
+        }
+        
+        // 测试 1: 检查 jspb
+        if (typeof jspb !== 'undefined') {
+            addResult('✅ jspb (google-protobuf) 已加载', 'success');
+        } else {
+            addResult('❌ jspb (google-protobuf) 未加载', 'error');
+        }
+        
+        // 测试 2: 检查 module.exports
+        if (typeof module !== 'undefined' && module.exports) {
+            addResult('✅ module.exports 存在', 'success');
+            addCode('module.exports 内容', JSON.stringify(Object.keys(module.exports), null, 2));
+        } else {
+            addResult('❌ module.exports 不存在', 'error');
+        }
+        
+        // 测试 3: 检查 proto 对象
+        if (typeof proto !== 'undefined') {
+            addResult('✅ proto 对象存在', 'success');
+            
+            if (proto.pb) {
+                addResult('✅ proto.pb 对象存在', 'success');
+                addCode('proto.pb 可用的消息类型', JSON.stringify(Object.keys(proto.pb), null, 2));
+            } else {
+                addResult('❌ proto.pb 对象不存在', 'error');
+            }
+        } else {
+            addResult('❌ proto 对象不存在', 'error');
+        }
+        
+        // 测试 4: 检查关键消息类型
+        var requiredMessages = [
+            'LoginRequest',
+            'LoginResponse',
+            'EnterMachine',
+            'EnterMachineResponse',
+            'MachineInfo',
+            'MachineInfoResponse',
+            'Spin',
+            'SpinResponse'
+        ];
+        
+        if (typeof proto !== 'undefined' && proto.pb) {
+            requiredMessages.forEach(function(msgName) {
+                if (typeof proto.pb[msgName] !== 'undefined') {
+                    addResult('✅ proto.pb.' + msgName + ' 存在', 'success');
+                    
+                    // 尝试创建实例
+                    try {
+                        var instance = new proto.pb[msgName]();
+                        addResult('  ✅ 可以创建 ' + msgName + ' 实例', 'success');
+                    } catch (e) {
+                        addResult('  ❌ 无法创建 ' + msgName + ' 实例: ' + e.message, 'error');
+                    }
+                } else {
+                    addResult('❌ proto.pb.' + msgName + ' 不存在', 'error');
+                }
+            });
+        }
+        
+        // 测试 5: 完整的序列化/反序列化测试
+        if (typeof proto !== 'undefined' && proto.pb && proto.pb.EnterMachine) {
+            try {
+                var msg = new proto.pb.EnterMachine();
+                msg.setId(123);
+                msg.setSelectbet(100);
+                
+                var bytes = msg.serializeBinary();
+                addResult('✅ EnterMachine 序列化成功', 'success');
+                addCode('序列化后的字节数组', 'Length: ' + bytes.length + ' bytes');
+                
+                var decoded = proto.pb.EnterMachine.deserializeBinary(bytes);
+                var obj = decoded.toObject();
+                addResult('✅ EnterMachine 反序列化成功', 'success');
+                addCode('反序列化后的对象', JSON.stringify(obj, null, 2));
+                
+            } catch (e) {
+                addResult('❌ 序列化/反序列化测试失败: ' + e.message, 'error');
+            }
+        }
+        
+        // 显示完整的 proto.pb 结构
+        if (typeof proto !== 'undefined' && proto.pb) {
+            var structure = {};
+            for (var key in proto.pb) {
+                structure[key] = typeof proto.pb[key];
+            }
+            addCode('proto.pb 完整结构', JSON.stringify(structure, null, 2));
+        }
+    </script>
+</body>
+</html>

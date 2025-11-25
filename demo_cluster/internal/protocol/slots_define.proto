@@ -1,0 +1,120 @@
+syntax = "proto3";
+option go_package = "/pb";
+package pb;
+import "common_define.proto";
+// 基础信息
+message BaseInfo {
+  int32 id = 1;       // 老虎机ID
+  bool hasPlayed = 2; // 是否玩过
+
+  int64 userBet = 3;           // 玩家自选倍率
+  int64 defaultBet = 4;        // 默认推荐倍率
+  repeated int32 betArray = 5; // 押注数组
+
+  int64 baseMoney = 6; // 基础押注金钱
+
+  int32 reelSpeed = 7; // 转轴速度
+}
+message GameStage {
+  int32 curGameStage = 1;  // 当前的游戏阶段
+  int32 nextGameStage = 2; // 下一个游戏阶段
+}
+// 转轴更新的数据
+message ReelsInfo {
+  int32 reelVersion = 1;              // 转轴版本号
+  repeated Int32Array2 reelArray = 2; // 新转轴
+}
+// 单次摇奖结果
+message SpinResult {
+  message WinInfo {
+    // 中奖线数据结果
+    message LineInfo {
+      int32 id = 1;                       // 线ID
+      int64 win = 2;                      // 单线钱
+      int32 symbol = 3;                   // 中奖ID
+      repeated Int32Array1 positions = 4; // 位置信息
+    }
+
+    WinType type = 1;            // 中奖类型
+    int32 win = 2;               // 钱
+    int32 kindType = 3;          //
+    repeated LineInfo lines = 4; // 中奖线
+  }
+
+  repeated Int32Array2 reelsArray =
+      1; // 当次spin使用的转轴, 带有转轴则不会再去匹配预设转轴
+  repeated int32 reelsArrayId = 2;     // 当次spin使用的预设轴id
+  repeated Int32Array1 posInReels = 3; // 当次spin结果在轴中的位置
+  repeated Int32Array2 results = 4;    // 当次spin结果数组展示
+  repeated Int32Array1 holdWins = 5;   // 当次spin结果的holdwin数据
+  repeated Int32Array2 stopInfo = 6;   // 当次spin结果的stop信息
+  repeated WinInfo winInfo = 7;        // 当次spin结果的中奖信息
+
+  int64 fixedBet =
+      8; // 关卡固定倍率，如果有当前字段，玩家升级时锁定倍率，不做调整。
+}
+// 赔率信息
+message PayInfo {
+  CardsPayInfo cardsPayInfo = 1;             // 卡牌赔率信息
+  CombinationPayInfo combinationPayInfo = 2; // 混合卡牌赔率信息
+}
+
+message CardsPayInfo {
+  int32 id = 1;        // 卡牌ID
+  string cardInfo = 2; // 卡牌赔率信息
+}
+
+message CombinationPayInfo {
+  string id = 1;       // 卡牌ID
+  string cardInfo = 2; // 卡牌赔率信息
+}
+// jackpot的数据
+message JackPot {
+  int32 type = 1;
+  int64 balance = 2;
+  int64 win = 3;         // 某一档大于0 则中了这挡的jackpot
+  int64 minimumBet = 4;  // 最低押注
+  int64 coefficient = 5; // jp的系数
+}
+// 中大奖翻倍的数据
+message BigWinMult { int64 win = 1; }
+message SpinUserInfo {
+  message SpinUserBase {
+    int32 curLevel = 1;   // 当前等级
+    int64 curExp = 2;     // 当前经验
+    int64 nextExp = 3;    // 下级经验
+    int64 preExp = 4;     // 前一级经验
+    int64 balance = 5;    // 用户最终金币数
+    int64 preBalance = 6; // 押注前金币数
+  }
+
+  message LevelUpInfo {
+    int32 betDefault = 1;        // 默认赔率
+    repeated int32 betArray = 2; // 押注数组
+    RewardData reward = 3;       // 升级奖励
+    string secret = 4;           // AD密钥
+    repeated int32 rooms = 5;    // 新解锁关上列表
+    bool isNewcomerDeal = 6;     // 是否弹出新手deal
+    bool needPopup = 7;          // 是否弹出升级弹窗
+    int32 coinsRate = 8;         // 金币比率
+  }
+  SpinUserBase spinUserBase = 1;
+  LevelUpInfo levelUpInfo = 2;
+}
+
+enum CollectType {
+  COLLECT_NONE = 0; // 改名：加前缀
+  COLLECT_BONUS = 1;
+  COLLECT_FREESPIN = 2;
+}
+
+// 中奖类型
+enum WinType {
+  WIN_NONE = 0;
+  WIN_MINOR = 1;  // 小奖 （小三档第一档）
+  WIN_MEDIUM = 2; // 中奖 （小三档第二档）
+  WIN_BIG = 3;    // 大奖 （小三档第三档）
+  WIN_MEGA = 4;   // 巨大
+  WIN_EPIC = 5;   // 史诗
+  WIN_SUPER = 6;  // 超级
+}

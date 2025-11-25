@@ -58,7 +58,7 @@ func (p *actorRoom) login(session *cproto.Session, req *LoginRequest) {
 		return
 	}
 
-	agent, found := pomelo.GetAgent(session.Sid)
+	agent, found := pomelo.GetAgent(session.Sid, session.Uid)
 	if !found {
 		return
 	}
@@ -105,7 +105,7 @@ func (p *actorRoom) syncMessage(session *cproto.Session, req *SyncMessage) {
 	p.broadcast("onMessage", req)
 
 	// 扣减当前用户的余额，并通知客户端
-	agent, found := pomelo.GetAgent(session.Sid)
+	agent, found := pomelo.GetAgent(session.Sid, session.Uid)
 	if found {
 		agent.Push("onBalance", &UserBalanceResponse{
 			CurrentBalance: user.balance,

@@ -1,0 +1,10 @@
+{
+    // 指定 protoc 编译器的选项
+    "protoc.options": [
+        // 关键：添加你的 proto 文件所在的目录到搜索路径
+        "--proto_path=/Users/t/ServerProjects/classic/cherryProd/examples/demo_cluster/internal/protocol",
+        
+        // 也可以添加当前目录（这是一个好习惯，但有时不够）
+        "--proto_path=."
+    ]
+}

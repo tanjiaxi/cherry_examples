@@ -17,4 +17,6 @@ var (
 	PlayerCreateFail         int32 = 304 // 玩家创建角色失败
 	PlayerNotLogin           int32 = 305 // 玩家未登录
 	PlayerIDError            int32 = 306 // 玩家id错误
+	ServerMaintenance        int32 = 307 //服务器错误
+	NoAvailableGameServer    int32 = 308 //无法获取游戏服务器
 )

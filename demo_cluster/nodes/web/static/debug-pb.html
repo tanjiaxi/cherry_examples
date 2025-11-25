@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PB.js 调试</title>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .log { margin: 5px 0; padding: 5px; background: #f0f0f0; }
+    </style>
+</head>
+<body>
+    <h1>PB.js 加载调试</h1>
+    <div id="log"></div>
+
+    <script>
+        function log(msg) {
+            var div = document.createElement('div');
+            div.className = 'log';
+            div.textContent = msg;
+            document.getElementById('log').appendChild(div);
+            console.log(msg);
+        }
+        
+        log('Step 1: 开始加载...');
+    </script>
+
+    <!-- 1. Google Protobuf -->
+    <script src="https://cdn.jsdelivr.net/npm/google-protobuf@3.21.2/google-protobuf.js"></script>
+    <script>
+        log('Step 2: google-protobuf 加载完成');
+        log('  typeof jspb: ' + typeof jspb);
+        if (typeof jspb !== 'undefined') {
+            log('  jspb.Message: ' + typeof jspb.Message);
+            log('  jspb.BinaryReader: ' + typeof jspb.BinaryReader);
+            log('  jspb.BinaryWriter: ' + typeof jspb.BinaryWriter);
+        }
+    </script>
+
+    <!-- 2. pb-wrapper -->
+    <script src="pb-wrapper.js"></script>
+    <script>
+        log('Step 3: pb-wrapper 加载完成');
+        log('  typeof module: ' + typeof module);
+        log('  typeof exports: ' + typeof exports);
+        log('  typeof require: ' + typeof require);
+    </script>
+
+    <!-- 3. pb.js -->
+    <script src="pb.js"></script>
+    <script>
+        log('Step 4: pb.js 加载完成');
+        log('  typeof module.exports: ' + typeof module.exports);
+        log('  module.exports 是否为空对象: ' + (Object.keys(module.exports).length === 0));
+        if (Object.keys(module.exports).length > 0) {
+            log('  module.exports keys: ' + Object.keys(module.exports).slice(0, 5).join(', '));
+        }
+    </script>
+
+    <!-- 4. pb-extract -->
+    <script src="pb-extract.js"></script>
+    <script>
+        log('Step 5: pb-extract 加载完成');
+        log('  typeof proto: ' + typeof proto);
+        if (typeof proto !== 'undefined') {
+            log('  typeof proto.pb: ' + typeof proto.pb);
+            if (proto.pb) {
+                var keys = Object.keys(proto.pb);
+                log('  proto.pb keys 数量: ' + keys.length);
+                if (keys.length > 0) {
+                    log('  proto.pb keys (前10个): ' + keys.slice(0, 10).join(', '));
+                }
+            }
+        }
+        
+        // 测试创建消息
+        log('Step 6: 测试创建消息');
+        if (typeof proto !== 'undefined' && proto.pb && proto.pb.EnterMachine) {
+            try {
+                var msg = new proto.pb.EnterMachine();
+                log('  ✅ 成功创建 EnterMachine 实例');
+                msg.setId(123);
+                msg.setSelectbet(100);
+                var bytes = msg.serializeBinary();
+                log('  ✅ 序列化成功，字节数: ' + bytes.length);
+            } catch (e) {
+                log('  ❌ 错误: ' + e.message);
+            }
+        } else {
+            log('  ❌ proto.pb.EnterMachine 不存在');
+        }
+    </script>
+</body>
+</html>

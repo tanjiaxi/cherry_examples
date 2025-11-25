@@ -7,7 +7,7 @@ import (
 
 func main() {
 	app := cherry.NewApp(
-		"../config/test-discovery.json",
+		"../../config/test-discovery.json",
 		"game-2",
 		false,
 		cherry.Cluster,

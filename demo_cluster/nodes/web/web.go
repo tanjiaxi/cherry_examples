@@ -1,3 +1,11 @@
+/*
+ * @Author: t 921865806@qq.com
+ * @Date: 2025-11-25 15:57:48
+ * @LastEditors: t 921865806@qq.com
+ * @LastEditTime: 2025-11-25 16:06:52
+ * @FilePath: /examples/demo_cluster/nodes/web/web.go
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ */
 package web
 
 import (
@@ -10,12 +18,16 @@ import (
 	"github.com/cherry-game/examples/demo_cluster/nodes/web/controller"
 	"github.com/cherry-game/examples/demo_cluster/nodes/web/sdk"
 	"github.com/gin-gonic/gin"
+
+	cdiscovery "github.com/cherry-game/cherry/net/discovery"
+	cherryETCD "github.com/cherry-game/components/etcd"
 )
 
 func Run(profileFilePath, nodeID string) {
 	// 配置cherry引擎,加载profile配置文件
 	app := cherry.Configure(profileFilePath, nodeID, false, cherry.Cluster)
-
+	// 注册etcd组件（已修复protobuf版本冲突）
+	cdiscovery.Register(cherryETCD.New())
 	// 注册调度组件
 	app.Register(cherryCron.New())
 

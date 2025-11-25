@@ -1,0 +1,1214 @@
+syntax = "proto3";
+option go_package = "/pb";
+package pb;
+import "slots_define.proto";
+import "common_define.proto";
+// freespin数据结构
+message FreeSpin {
+	int32 remainCount = 1;
+	int32 totalCount = 2;
+	int64 win = 3;
+	int32 addCount = 4;
+	int64 extraMoney = 5;
+}
+
+// bonus数据结构
+message BonusBaseInfo {
+	WinType winType = 1;						// 中奖类型
+	int32 remainCount = 2;			// 剩余次数
+	int64 winMoney = 3;					// 获得奖励
+	int64 addMoney = 4;					// 额外的奖励
+}
+
+// spin结果的附加信息，如卡牌的翻倍信息等。
+message AttachInfo {
+
+}
+
+
+// spin结果的翻倍信息
+message MultipInfo {
+	int32 multipValue = 1;
+	repeated int32 multipList = 2 ;	
+	int32 multipId = 3 ;
+	int32 win = 4;
+}
+
+// GamePower数据结构
+message GamePower {
+	int64 win = 1;  //这次power给的钱
+}
+
+//////////////////////////////////////////////////// feature的通用数据结构//////////////////////////////////////////////
+// FeatureInfo数据结构
+
+message FeatureInfo {
+	// 每增加一关的feature则需要在此添加一个数据定义
+	Amazing777Feature amazing777Feature = 1;		// amazing777的feature数据
+	Firebonus777Feature firebonus777Feature = 2;
+	BigbucksFeature bigbucksFeature = 3;
+	Doublediamond777Feature doublediamond777Feature = 4;
+	Ice777Feature ice777Feature = 5;
+	Lightning777Feature lightning777Feature = 6;
+	Winninghit777Feature winninghit777Feature = 7;
+	WondershakeFeature wondershakeFeature = 8;
+	Triplediamond777Feature triplediamond777Feature = 9;
+	Big10xFeature big10xFeature = 10;
+	GreedyFeature greedyFeature = 11;
+	SuperfreespinsFeature superfreespinsFeature = 12;
+	GoldwheelFeature goldwheelFeature = 13;
+	Enormous7Feature enormous7Feature = 14;
+	GoldfortuneFeature goldfortuneFeature = 15;
+	JackpotfrenzyFeature jackpotfrenzyFeature = 16;
+	HotterFeature hotterFeature = 17;
+	PinballFeature pinballFeature = 18;
+	TripleFeature tripleFeature = 19;
+	FirerouletteFeature fireRouletteFeature = 20;
+	RedblueFeature redblueFeature = 21;
+	FlamingjewelsFeature flamingjewelsFeature = 22;
+	RoyalcashFeature royalcashFeature = 23;
+	CrystaltimeFeature crystaltimeFeature = 24;
+	SupermegaFeature supermegaFeature = 25;
+	GoldfoundryFeature goldfoundryFeature = 26;
+	CrazyfireballFeature crazyfireballFeature = 27;
+	LibertylFeature libertylFeature = 28;
+	DiamondfreespinsFeature diamondfreespinsFeature = 29;
+	Redf21Feature redf21Feature = 30;
+	HotWheel777Feature hotwheel777Feature = 31;
+	BravomachineFeature bravomachineFeature = 32;
+	RainbowFeature rainbowFeature = 33;
+	BravospinFeature bravospinFeature = 34;
+	GoldwinnerFeature goldwinnerFeature = 35;
+	GoldWheel2Feature goldWheel2Feature = 36;
+	LuckywheelFeature luckywheelFeature = 37;
+	BuffaloFeature buffaloFeature = 38;
+	GoldfortunewheelFeature goldfortunewheelFeature = 39;
+	FudaoleFeature fudaoleFeature = 40;
+	MegacashFeature megacashFeature = 41;
+	DragonfFeature dragonfFeature = 42;
+	CrazyxtraFeature crazyxtraFeature = 43;
+	Ice7775linesFeature ice7775linesFeature = 44;
+	WinningsFeature winningsFeature = 45;
+	WinningsBonusFeature winningsBonusFeature = 46;
+	BamFeature bamFeature = 47;
+	DoublewinningFeature doublewinningFeature = 48;
+	AnythingbutFeature anythingbutFeature = 49;
+	BurninggoldFeature burninggoldFeature = 50;
+	ClassicrubyFeature classicrubyFeature = 51;
+	LuckylFeature luckylFeature = 52;
+	WildjpFeature wildjpFeature = 53;
+	RunmoneyFeature runmoneyFeature = 54;
+	FortunesFeature fortunesFeature = 55;
+	SpininfernoFeature spininfernoFeature = 56;
+	GoldmachinejackpotFeature goldmachinejackpotFeature = 57;
+	BurningtripleFeature burningtripleFeature = 58;
+	IlovediamondsFeature ilovediamondsFeature = 59;
+	Br89Feature br89Feature = 60;
+	Bravoball92Feature bravoball92Feature = 61;
+	SupermeFeature supermeFeature = 62;
+	Rich94Feature rich94Feature = 63;
+	Party999Feature party999Feature = 64;
+	FourleafcloverFeature fourleafcloverFeature = 65;
+	Fortune7sFeature fortune7sFeature = 66;
+	Crystal97Feature crystal97Feature = 67;
+	TellerFeature tellerFeature = 68;
+	MagicalgenieFeature magicalgenieFeature = 69;
+	GoldtigerFeature goldtigerFeature = 70;
+	Shiny102Feature shiny102Feature = 71;
+	Aztec105Feature aztec105Feature = 72;
+}
+
+//////////////////////////////////////////////////// 具体到每一关的feature的数据结构定义//////////////////////////////////////////////
+
+/////////////////////Amazing777/////////////////////
+
+message Amazing777Bonus {
+	BonusBaseInfo baseInfo = 1;
+	repeated int32 result = 2; // [5, 5, 10, 10, 20, 20, 50, 50, 100, 1000, "x2", "x2"]
+	GameStage stage = 3;
+}
+
+
+message Amazing777Feature {
+	Amazing777Bonus bonusInfo = 1;
+}
+
+
+
+/////////////////////Firebonus777/////////////////////
+message Firebonus777Bonus {
+	BonusBaseInfo baseInfo = 1;
+	repeated int64 rewards = 2;
+	int32 endPos = 3;
+	GameStage stage = 4;
+}
+
+message Firebonus777Feature {
+	FreeSpin freeSpin = 1;
+	Firebonus777Bonus bonusInfo = 2;
+	GamePower gamePower = 3;
+}
+/////////////////////Bigbucks/////////////////////
+message BigbucksFeature {
+	BigbucksBonus bonusInfo = 1;
+}
+
+message BigbucksBonus {
+	BonusBaseInfo baseInfo = 1;
+	repeated Int32Array2 reelsArr = 2;
+	repeated int32 posInReels = 3;	
+	repeated int32 result = 4;
+	GameStage stage = 5;
+}
+
+/////////////////////Doublediamond/////////////////////
+message Doublediamond777Feature {
+	repeated int32 movePos = 1;
+}
+/////////////////////Ice777/////////////////////
+message Ice777Feature {
+	repeated int64 frozenReel = 1;
+	bool isFrozen = 2;
+}
+
+///////////////////// Lightning777 /////////////////////
+message Lightning777Feature {
+	bool isLocked = 1;
+	GamePower gamePower = 2;
+}
+
+///////////////////// Big10x /////////////////////
+message Big10xFeature{
+	BonusBaseInfo baseInfo = 1;	
+	repeated Int32Array2 reelsArray = 2;
+	repeated Int32Array1 posInReels = 3;
+	GameStage stage = 4;
+}
+
+message Big10xBonus {
+	BonusBaseInfo baseInfo = 1;
+	repeated Int32Array2 reelsArray = 2;
+	repeated Int32Array1 posInReels = 3;
+	GameStage stage = 4;
+}
+
+
+///////////////////// Winninghit777Bonus /////////////////////
+message Winninghit777Bonus {
+	BonusBaseInfo baseInfo = 1;
+	repeated int64 bigWheel = 2;
+	int32 bigPos = 3;
+	repeated int64 smallWheel = 4;
+	int32 smallPos = 5;
+	repeated int64 fsWheel = 6;
+	int64 superWin = 7;
+	int64 superAllWin = 8;
+}
+
+message Winninghit777Feature {
+	FreeSpin freeSpin = 1;
+	Winninghit777Bonus bonusInfo = 2;
+	GamePower gamePower = 3;
+}
+
+///////////////////// GoldwheelBonus /////////////////////
+message GoldwheelBonus {
+	BonusBaseInfo baseInfo = 1;
+	repeated int64 wheelCfg = 2;//转盘数组
+	int32 pos = 3;// 转盘位置
+}
+
+message GoldwheelFeature {
+	GoldwheelBonus bonusInfo = 1;
+}
+
+///////////////////// RoyalcashBonus /////////////////////
+
+message RoyalcashBonus {
+	int32 selectType = 1; //类型1   再来一次 2 主动结束
+	repeated int64 wheelCfg = 2; //数组
+	int32 remainCount = 3; //剩余次数
+	int32 totalCount = 4; //总次数
+	int32 double = 5; //翻倍
+	int32 winIdx = 6; //数组下标
+	BonusBaseInfo baseInfo = 7;
+	bool over = 8;// 结束  次数用完 或者主动结束
+}
+
+message RoyalcashFeature {
+	RoyalcashBonus bonusInfo = 1;
+}
+
+///////////////////// GoldfortuneBonus /////////////////////
+message GoldfortuneBonus {
+	int32 selectId = 1; //选择 0 - 11
+	int32 selectType = 2; //选择类型 0 - 2
+	BonusBaseInfo baseInfo = 3;
+	repeated GoldfortuneSelectList selectList = 4;//已经翻开 最后一次 把所有未翻开的也传过来
+	bool isOver = 5;// 翻到三个一样的
+}
+
+message GoldfortuneFeature {
+	GoldfortuneBonus bonusInfo = 1;
+	FreeSpin freeSpin = 2;
+	repeated int32 chooseInfo = 3;//选择次数  有数据表示触发 freeSpin
+	int32 doubleX = 4; //翻倍
+	bool isFlyGold = 5; //是否收集金币
+	int32 boxLv = 6; //宝箱等级 1 - 15  触发bonus 宝箱降级
+}
+
+message GoldfortuneSelectList {
+	int32 selectId = 1; //选择位置 0 - 11
+	int32 jpType = 2; //jp类型 1 - 4
+	bool isOpen = 3;// 打开
+}
+
+///////////////////// hotterrespin /////////////////////
+
+message HotterFeature {
+	HotterReSpin respinInfo = 1;
+	GamePower gamePower = 2;
+}
+
+message HotterReSpin {
+	int32 startPos = 1;//  开始拉轴 0 -6
+	int32 toPos = 2;//  停止拉轴 0 - 6
+    int32 doubleX = 3;//翻倍
+}
+
+///////////////////// Wondershake /////////////////////
+message  WondershakeFeature {
+	message ShockData {
+		int32 shock = 1;
+		int32 offset = 2;
+	}
+
+	FreeSpin freeSpin = 1;
+	repeated ShockData shockData = 2;
+}
+///////////////////// Triplediamond777 /////////////////////
+message  Triplediamond777Feature {
+	FreeSpin freeSpin = 1;
+}
+
+///////////////////// Greedy /////////////////////
+message GreedyFeature {
+	GreedyBonus bonusInfo = 1;
+}
+
+message GreedyBonus {
+	int32 rowIdx = 1; // 行数结果
+	int32 colIdx = 2; // 列数结果
+	int32 mulIdx = 3; // 倍数结果
+
+	bool rowOver = 4; // 行数结果确定了，不能respin
+	bool colOver = 5; // 列数结果确定了，不能respin
+	bool mulOver = 6; // 倍数结果确定了，不能respin
+
+	int32 multiple = 7;  // 当前倍数
+	WinType winType = 8; // 中奖类型
+	int64 winMoney = 9;  // 获得奖励
+}
+
+///////////////////// SuperFreespins /////////////////////
+message SuperfreespinsFeature {
+	FreeSpin freeSpin = 1;
+}
+
+///////////////////// Enormous7 /////////////////////
+message Enormous7Bonus {
+	BonusBaseInfo baseInfo = 1;
+	repeated int32 endPos = 2;
+	int32 jackpotType = 3;
+	Int32Array2 reels = 4;
+}
+
+
+message Enormous7Feature {
+	FreeSpin freeSpin = 1;
+	Enormous7Bonus enormous7BonusInfo = 2;
+	repeated int32 movePos = 3;
+	GamePower gamePower = 4;
+}
+
+///////////////////// Jackpotfrenzy /////////////////////
+message JackpotfrenzyBonus {
+	BonusBaseInfo baseInfo = 1;
+	repeated int32 boxTypeArr = 2;
+	repeated int64 openWinArr = 3;
+	repeated int32 openIndexArr = 4;
+	int32 openIndex = 5;
+	int64 openWin = 6;
+	bool over = 7;
+}
+message JackpotfrenzyFeature {
+	JackpotfrenzyBonus jackpotfrenzyBonusInfo = 1;
+}
+
+///////////////////// Spinwin /////////////////////
+message SpinwinBonus {
+	BonusBaseInfo baseInfo = 1;
+	repeated int64 wheelCfg = 2;//转盘数组
+	int32 pos = 3;// 转盘位置
+}
+
+message SpinwinFeature {
+	SpinwinBonus bonusInfo = 1;
+	FreeSpin freeSpin = 2;
+}
+///////////////////// Pinball /////////////////////
+message PinballBonus {
+	BonusBaseInfo baseInfo = 1;
+	int32 ballIndex = 2;
+	repeated int32 pinballWinArr = 3;
+}
+message PinballFeature {
+	PinballBonus pinballBonusInfo = 1;
+	repeated int32 multipleArr = 2;
+	GamePower gamePower = 3;
+}
+
+
+/////////////////////Triple/////////////////////
+message TripleFeature {
+	repeated int64 frozenReel = 1;
+	bool isFrozen = 2;
+	GamePower gamePower = 3;
+}
+
+///////////////////// Fireroulette /////////////////////
+message FirerouletteBonus {
+	BonusBaseInfo baseInfo = 1;
+	int32 ballIndex = 2;					//此次小球所停位置对应的轮盘下标
+	repeated int32 wheelArr = 3;  //轮盘数组（第一个为0，共37个）
+	repeated int32 stopArr = 4;		//停过的数字所对应的轮盘数组下标，停了几次传几个
+	int64 win = 5;								//单次赢的钱
+	int32 count = 6;
+}
+message FirerouletteFeature {
+	FirerouletteBonus firerouletteBonusInfo = 1;
+}
+
+///////////////////// Dragon888 /////////////////////
+message Dragon888Bonus {
+	BonusBaseInfo baseInfo = 1;
+	repeated int32 sliverWheelCfg = 2;	// 银转盘数据 [1, 1, -1, 1, 1, -1, 1, 1, -1, 1, 1, -1, 1, 1, 1, -1, 1]
+	repeated int32 goldWheelCfg = 3;  	// 金转盘数据
+	int32 sliverEndPos = 4;				// 银转盘停轴位置
+	int32 goldEndPos = 5;				// 金转盘停轴位置
+	float betMult = 6;					// 倍数
+	int32 jpType = 7;					// jp类型  等于0表示没中jp
+}
+message Dragon888Feature {
+	Dragon888Bonus dragon888BonusInfo = 1;
+}
+
+///////////////////// Redblue /////////////////////
+message RedblueFeature {
+	FreeSpin freeSpin = 1;
+	repeated int32 movePos = 2;
+}
+
+/////////////////////Flamingjewels/////////////////////
+message FlamingjewelsJackpots {
+	int32 type = 1;      //jp类型
+	int64 win = 2;			//单次jp赢的钱
+}
+
+message FlamingjewelsFeature {
+	FlamingjewelsJackpots flamingjewelsJackpotsList = 1;		//赢的jp列表
+}
+
+/////////////////////Hearts/////////////////////
+message HeartsFeature {
+	bool isFrozen = 1;
+	repeated int32 frozenReel = 2;
+	int32 totalCount = 3;
+}
+///////////////////// Crystaltime /////////////////////
+message CrystaltimeFeature {
+	repeated int32 movePos = 1;
+}
+
+///////////////////// luckywheel /////////////////////
+message LuckywheelBonus {
+	BonusBaseInfo baseInfo = 1;
+	repeated int64 baseMoney = 2;			// 额外获得的钱 			
+	int32 selectId = 3; 					// 选择转盘Id 1: freeSpin, 2: add, 3: 组合 4: 乘
+	repeated int64 inWheelSequence = 4;		// 转盘内圈的数据, 都是12个
+	repeated int64 midWheelSequence = 5;	// 转盘中间圈的数据
+	repeated int64 outWheelSequence = 6;	// 转盘外圈的数据
+	int32 inWheelIndex = 7;					// 内圈中奖索引
+	int32 midWheelIndex = 8;				// 中间圈中奖索引
+	int32 outWheelIndex = 9;				// 外圈中奖索引
+	int32 extendData = 10;					// 额外的数据,选择freeSpin则为freeSpin次数
+}
+
+message LuckywheelFeature {
+	FreeSpin freeSpin = 1;
+	LuckywheelBonus bonusInfo = 2;
+	GamePower gamePower = 3;
+}
+
+/////////////////////supermega/////////////////////
+message SupermegaJackpots {
+	int32 type = 1;      //jp类型
+	int64 win = 2;			//单次jp赢的钱
+}
+
+message SupermegaFeature {
+	FreeSpin freeSpin = 1;
+	SupermegaJackpots supermegaJackpotsList = 2;		//赢的jp列表
+	GamePower gamePower = 3;
+}
+
+/////////////////////goldfoundry/////////////////////
+message GoldfoundryJackpotsList {
+	bool isActive = 1;
+	int32 totalCnt = 2;
+	int32 curCnt = 3;
+	int64 winMoney = 4;
+	int32 jackpotType = 5;
+}
+
+message GoldfoundryFeature {
+	FreeSpin freeSpin = 1;
+	repeated GoldfoundryJackpotsList goldfoundryJackpotsList = 2;		//赢的jp列表
+	GamePower gamePower = 3;
+}
+
+///////////////////// CrazyfireballBonus /////////////////////
+message CrazyfireballBonus {
+	BonusBaseInfo baseInfo = 1;
+	repeated int64 ballMoney = 2;
+}
+message CrazyfireballFeature {
+	CrazyfireballBonus crazyfireballBonusInfo = 1;
+}
+
+///////////////////// buffalo /////////////////////
+message BuffaloBonus {
+	BonusBaseInfo baseInfo = 1;
+	int32 wheelIndex = 2;
+	bool over = 3;
+}
+
+message BuffaloFeature {
+	repeated int64 wheelSequence = 1;
+	BuffaloBonus bonusInfo = 2;
+}
+
+/////////////////////Libertyl/////////////////////
+message LibertylBonus {
+	BonusBaseInfo baseInfo = 1;
+	repeated int32 selectIdxList = 2;	 // 已选择的下标
+	repeated int32 selectResList = 3;  // -1为jackpot档位,  -2为+2pick, -3为+3pick
+	int32 curJpLevel = 4;		// 当前jp的level
+	int32 pickCount = 5;		// 剩余pick次数
+	int64 winCoins = 6;			// 翻开金币得的钱
+	int64 winJackpot = 7;		// 翻开jp得的钱
+}
+
+message LibertylFeature {
+	LibertylBonus bonusInfo = 1;
+}
+
+/////////////////////DiamondFreeSpins/////////////////////
+
+message DiamondfreespinsBetInfo {
+	int64 bet = 1;
+	repeated int64 fsCountArr = 2;
+}
+
+message DiamondfreespinsFeature {
+	FreeSpin freeSpin = 1;
+	int32 fsType = 2;		// 当前fs的类型
+	repeated int32 fsCountArr = 3;		// 剩余fs累计次数数组
+	bool isDestined = 4;  	// 是否必中奖（用于机台动效
+	int32 nextType = 5;			//下次fs类型
+	repeated DiamondfreespinsBetInfo betInfo = 6;  //bet对应fs累计次数
+}
+
+///////////////////// goldfortunewheel /////////////////////
+message GoldfortunewheelBonus {
+	BonusBaseInfo baseInfo = 1;
+	int32 wheelId = 2;			// 转盘id，(1: gold转盘， 2: luckywheel转盘)
+	int32 wheelIndex = 3;
+	int32 multi = 4;			// 幸运转盘倍数
+	bool over = 5;
+}
+
+message GoldfortunewheelFeature {
+	repeated int64 wheelGoldSequence = 1;		// gold转盘序列 (0代表jackpot，-1代表2x, -2代表3x, -3代表5x)
+	repeated int64 wheelLuckySequence = 2;		// lucky转盘序列
+	GoldfortunewheelBonus bonusInfo = 3;
+	GamePower gamePower = 4;
+}
+
+///////////////////// Redf21Bonus /////////////////////
+
+message Redf21Poker {
+	int32 color = 1;// 颜色 1 - 4  黑桃  红桃  梅花   方块
+	int32 point = 2;// 牌 1 - 13 对应 A - K
+}
+
+message Redf21Bonus {
+	int32 selectId = 1;// 1 主动结束   2 下一张
+	BonusBaseInfo baseInfo = 2;
+	repeated int32 doubleCfg = 3;//倍数 [21,12,10,10,4,3,2,2]
+	repeated int32 notWin = 4;//不能中的档位 [ 0 - 7]
+	int32 curDoubleIdx = 5;// 当前档位 0 - 7
+	int32 curScore = 6;// 积分
+	bool over = 7;// 结束  弹结算界面
+	repeated Redf21Poker pokerPoint = 8;//已经翻开的牌
+}
+
+message Redf21Feature {
+	Redf21Bonus bonusInfo = 1;
+}
+
+/////////////////////HotWheel777/////////////////////
+message HotWheel777Bonus {
+	BonusBaseInfo baseInfo = 1;
+	int32 wheelType = 2;
+    int32 endPos = 3;
+	bool over = 4;
+}
+
+message HotWheel777Feature {
+	HotWheel777Bonus bonusInfo = 1;
+    repeated int32 wheel1 = 2;
+    repeated int32 wheel2 = 3;
+    repeated int32 wheel3 = 4; // -1 = jp
+}
+/////////////////////Bravomachine/////////////////////
+message BravomachineFeature {
+	repeated int64 lockArr = 1; // 0代表没有锁住,大于0或者棋子id代表锁住了
+	bool isReSpinOver = 2; //是否继续respin
+	int32 reSpinModel = 3; //respin模式 1.红温模式,正转,2.正常颜色,轴倒转
+}
+
+/////////////////////RainbowFortune/////////////////////
+message RainbowFeature {
+	int32 reelColor = 1;    //转轴颜色 1-5 红、蓝、绿、紫、黄
+	GamePower gamePower = 2;
+}
+
+/////////////////////Fudaole/////////////////////
+message FudaoleBonusReward {
+	int32 selectId = 1;	// 选择的id
+	int32 reward = 2;	// 1: mini, 2: minor: 4: major, 5: maxi
+	int32 isOpen = 3;   //
+}
+
+message FudaoleBonus {
+	BonusBaseInfo baseInfo = 1;
+	repeated FudaoleBonusReward rewardInfo = 2;
+	bool over = 3;
+}
+
+message FudaoleFeature {
+	FudaoleBonus bonusInfo = 1;
+	bool goldFortune = 2;	// 是否触发good fortune玩法
+	int32 multiply = 3;
+	GamePower gamePower = 4;
+}
+
+
+///////////////////// BravospinBonus /////////////////////
+
+message BravospinBagInfo {
+	repeated int64 money = 1;//钱 
+	bool over = 2;// 彻底结束
+	repeated int32 selectId = 3;// bag  位置 0 - 2
+}
+
+message BravospinBonus {
+	BonusBaseInfo baseInfo = 1;
+	repeated int32 cfg = 2;//倍数 
+	int32 pos = 3;// 转盘位置
+	int32 jpType = 4;// 中 jackpot
+	int32 fsCount = 5;// 中 freespin
+	int32 selectType = 6; //1  bag  2 转盘
+	BravospinBagInfo bagInfo = 7; // pick  玩法 不为null  中pick holdwin
+}
+
+message BravospinFeature {
+	BravospinBonus bonusInfo = 1;// 中bonus holdwin
+	bool isBigWild = 2;// wild 在中间
+	int32 doubleX = 3;// 翻倍
+	FreeSpin freeSpin = 4;
+}
+/////////////////////GoldWinner/////////////////////
+message GoldwinnerBonusReward {
+	int32 selectIndex = 1;	// 选择的下标
+	int32 reward = 2;	// 1: 10kt, 2: 14kt: 3: 18kt, 4: 24kt
+	bool isOpen = 3;   //
+}
+
+message GoldwinnerBonus {
+	BonusBaseInfo baseInfo = 1;
+	repeated GoldwinnerBonusReward rewardInfo = 2;
+	bool over = 3;
+}
+
+message GoldwinnerFeature {
+	GoldwinnerBonus bonusInfo = 1;
+	FreeSpin freeSpin = 2;
+	GamePower gamePower = 3;
+}
+
+///////////////////// GoldWheel2 /////////////////////
+
+message GoldWheel2Bonus {
+	BonusBaseInfo baseInfo = 1;
+	int32 endPos = 2;				// 转盘停轴位置
+	int32 mult = 3;					// 结算时倍数
+	int64 wheelWin = 4;             // 结算时获得的转盘金币
+	int64 jpWin = 5;                // 结算时获得的jp总金币
+	int64 currentWin = 6;           // 本次转盘获取金币
+}
+message GoldWheel2Feature {
+	GoldWheel2Bonus bonusInfo = 1;
+	repeated int32 WheelCfg = 2;	// 转盘数据 [1, 1, -1, 1, 1, -1, 1, 1, -1, 1, 1, -1, 1, 1, 1, -1, 1]
+}
+
+///////////////////// Megacash /////////////////////
+message MegacashBonus {
+	BonusBaseInfo baseInfo = 1;
+	repeated int64 wheelSequence = 2;
+	int64 wheelIndex = 3;
+	bool over = 4;
+}
+
+message MegacashFeature {
+	repeated int64 wheelSequence = 1;	// 初始转盘转轴
+	int64 wheelIndex = 2;
+	MegacashBonus bonusInfo = 3;
+	GamePower gamePower = 4;
+}
+
+///////////////////// Dragonf /////////////////////
+message DragonfBonus {
+	int32 selectId = 1; //选择 0 - 2
+	int32 selectType = 2; //选择类型 1 bonus 2 freespin选择
+	int32 fsCount = 3; // more freespin
+	repeated int32 selectFs = 4;// 选择free  不为null [12, 10, 8]
+	BonusBaseInfo baseInfo = 5;
+	repeated DragonfPickInfo pickInfo = 6;//  第一个 为结果
+}
+
+message DragonfPickInfo {
+	repeated DragonfPickReward reward = 1;//
+}
+
+message DragonfPickReward {
+	int32 type = 1;// 0 钱 1 翻倍 2 freespin 3 jp
+	int64 money = 2;//  
+	int32 jpType = 3;// 1 - 3
+}
+
+message DragonfFreeSpin {
+	int32 remainCount = 1;
+	int32 totalCount = 2;
+	int64 win = 3;
+	int32 addCount = 4;
+	repeated int32 selectFs = 5;// 选择free  不为null [12, 10, 8] 
+	int32 fsAdd = 6;// spin 随机增加的次数
+	GamePower gamePower = 7;
+}
+
+message DragonfCollect {
+	int32 curCollect = 1;// 当前收集 数量
+	int32 totalCollect = 2;// 最大收集数量
+}
+
+message DragonfShockData {
+	int32 position = 1;// 拉轴前 珠子所在位置 -1 -- 3
+}
+
+message DragonfFeature {
+	DragonfBonus bonusInfo = 1;
+	DragonfFreeSpin freeSpin = 2;
+	int32 doubleX = 3;// 翻倍 
+	int32 collectPos = 4;// 收集珠子所在位置 0 - 2
+	DragonfCollect collect = 5;// 收集进度  bonus结束 清空
+	DragonfShockData shockData = 6;// 拉轴数据　
+}
+
+/////////////////////CrazyXtra/////////////////////
+message CrazyxtraBonus {
+	BonusBaseInfo baseInfo = 1;
+    repeated int32 rewardType = 2;
+	repeated int64 winMoneyArray = 3;
+}
+
+message CrazyxtraFeature {
+	CrazyxtraBonus bonusInfo = 1;
+	repeated int32 multArray = 2; 
+}
+/////////////////////Ice7775lines/////////////////////
+message Ice7775linesFeature {
+	repeated int64 frozenReel = 1;
+	bool isFrozen = 2;
+}
+
+///////////////////// Montec /////////////////////
+
+message MontecBonus {
+	BonusBaseInfo baseInfo = 1;
+	int32 endPos = 2;				// 转盘停轴位置
+	int32 mult = 3;					// 倍数
+	int32 count = 4;				// 转盘次数
+}
+
+message MontecFeature {
+	repeated int32 wheelCfg = 1;	// 转盘数据
+	MontecBonus bonusInfo = 2;
+}
+
+///////////////////// Winnings /////////////////////
+
+message WinningsBonus {
+	repeated float rewardCfg = 1;  //奖励格子信息 长度25  [2, 2.5, -1] 正数为金币奖励倍率， 负数-1、-2、-3 mini major grand
+	repeated int32 winIdx = 2;     //中奖格子idx [1,2]
+	repeated int32 doubleIdx = 3; 	//奖励格子是否翻倍 与winIdx对应 [0,1] 0 不翻倍 1翻倍
+	repeated int32 curWinIdx = 4;		//当前中奖格子
+	int32 remainCount = 5; 					//剩余次数
+}
+
+message WinningsFeature {
+	FreeSpin freeSpin = 1;
+	WinningsBonus normalBonusInfo = 2;
+	WinningsBonus doubleBonusInfo = 3;	//DoubleWining奖励信息 未中为null
+	bool needToChoose = 4;		//是否需要选择 (选择是否拿走奖励或进入finalwin)
+	int32 type = 5;						//当前状态 1 normal winning  2 double winning 3 final winning
+	int32 winType = 6;
+}
+
+message WinningsBonusFeature {
+	BonusBaseInfo baskInfo = 1;
+	WinningsBonus bonusInfo = 2;
+}
+
+/////////////////////bam/////////////////////
+
+message BamFeature {
+	FreeSpin freeSpin = 1;
+	GamePower gamePower = 2;
+}
+
+/////////////////////Luckyl/////////////////////
+
+message LuckylFreeSpin {
+	int32 remainCount = 1;
+	int32 totalCount = 2;
+	int64 win = 3;
+	int32 addCount = 4;
+	int64 extraMoney = 5;
+
+	int32 curLineNum = 6;// 当前spin中奖线数
+	int32 allLineNum = 7;// 总共中奖线数
+	int64 jpWin = 8;// jp总赢钱
+	int64 lineWin = 9;// 线上的钱
+	repeated	int32 needLineCfg = 10;		// 解锁jp配置 [15, 30, 60, 90, 150]
+}
+
+message LuckylFeature {
+	LuckylFreeSpin freeSpin = 1;
+}
+
+/////////////////////Double Winning/////////////////////
+
+message DoublewinningFeature {
+	FreeSpin freeSpin = 1;
+	GamePower gamePower = 2;
+}
+///////////////////// AnythingbutFeature /////////////////////
+
+message AnythingbutBonus {
+	BonusBaseInfo baseInfo = 1;
+	int32 level = 2;				// 当前bonus等级
+	int32 bank = 3;					// 当前存钱倍数
+	int32 totalCount = 4;			// 总共次数
+	int32 useCount = 5;			    // 使用的次数
+	int32 bonusMultiple = 6;        // 当前Bonus的倍率
+	int32 num = 7;                  // 骰子的点数
+	bool over = 8;                  // 是否已经需要结算了
+}
+
+message AnythingbutFeature {
+	repeated int32 bonusCfg = 1;	// bonus等级数据
+	AnythingbutBonus bonusInfo = 2;
+}
+
+///////////////////// BurninggoldFeature /////////////////////
+
+message BurninggoldBonus {
+	BonusBaseInfo baseInfo = 1;
+	repeated	int32 betInfo = 2;		// 奖励倍率
+	repeated  int32 stopInfo = 3;							// 当前中奖序号
+	int32 totalCount = 4;						// 总共次数
+	int32 remainCount = 5;					// 剩余次数
+	int64 win = 6;									// 当前bonus累计赢钱
+}
+
+message BurninggoldFeature {
+	BurninggoldBonus bonusInfo = 1;
+	FreeSpin freeSpin = 2;
+	int64 totalWin = 3;						//fs+bonus总钱数
+}
+
+///////////////////// Classicruby /////////////////////
+message ClassicrubyFeature {
+	FreeSpin freeSpin = 1;
+}
+
+///////////////////// Wildjp /////////////////////
+message WildjpBonusFsObj {
+	int32 count = 1;		// 选中fs次数
+	int32 mult = 2;		// 翻倍的结果 （-1 === wild）
+}
+
+message WildjpBonus {
+	BonusBaseInfo baseInfo = 1;
+	repeated WildjpBonusFsObj objs = 2;
+	repeated int32 selectResList = 3;
+	repeated int32 selectIdxList = 4;		// 选中的item下标
+	bool over = 5;
+}
+
+message WildjpFeature {
+	WildjpBonus bonusInfo = 1;
+	FreeSpin freeSpin = 2;
+	int32 fsMultNum = 3;					// fs翻倍次数
+  GamePower gamePower = 4;
+}
+///////////////////// RunmoneyFeature /////////////////////
+
+message RunmoneyBonus {
+	BonusBaseInfo baseInfo = 1;
+    repeated int32 startIndex = 2;//起始位置,发了几轮就是进入了几圈,最多4全
+    repeated int32 endIndex = 3;//终点位置,最后一轮起始位置和终止位置应该是一样的
+}
+
+message RunmoneyWheelCfg {
+    repeated int32 wheelCfg = 1;//一圈的配置
+}
+
+message RunmoneyFeature {
+	RunmoneyBonus bonusInfo = 1;
+    repeated RunmoneyWheelCfg wheelCfgArr = 2;//4个圈的配置
+}
+
+message FortunesFeature {
+	FreeSpin freeSpin = 1;
+	int32 jackpotLevel = 2;
+}
+
+///////////////////// SpininfernoFeature /////////////////////
+
+message SpininfernoFeature {
+	FreeSpin freeSpin = 1;
+    repeated int32 level = 2;		//温度计当前进度(0-5,5表示获得bonus奖励)
+	repeated int64 curWin = 3; 		//当前Bonus大奖金币（bonus的奖励金额，不是玩家的中奖金额）
+	repeated int64 nextWin = 4; 	//下次bonus奖励金币（玩家中bonus后，下一次bonus的奖励）
+}
+
+///////////////////// Goldmachinejackpot /////////////////////
+message GoldmachinejackpotBonus {
+	BonusBaseInfo baseInfo = 1;
+	repeated int64 wheelSequence = 2;
+	int64 wheelIndex = 3;
+	bool over = 4;
+}
+
+message GoldmachinejackpotFeature {
+	repeated int64 wheelSequence = 1;	// 初始转盘转轴
+	int64 wheelIndex = 2;
+	repeated int32 respinReels = 3;		// respin的轴, 长度3,大于0正向转，等于0不转，小于0反向转
+	repeated int32 pullReels = 4;		// 拉轴,长度3，大于0向下拉轴, 等于0不拉轴, 小于0向上拉轴(具体数值为拉轴偏移)
+	GoldmachinejackpotBonus bonusInfo = 5;
+}
+
+///////////////////// BurningtripleFeature /////////////////////
+
+message BurningtripleBonus {
+	BonusBaseInfo baseInfo = 1;
+	int32 wheelCount = 2;
+	repeated int32 endPosArr = 3;	
+	repeated int32 wheelSequence = 4;  	// 最多三个数组 
+	int64 totalWin = 5;
+	int64 jpWin = 6;
+	int32 jpType = 7;
+}
+
+message BurningtripleFeature {
+	BurningtripleBonus bonusInfo = 1;
+}
+///////////////////// Ilovediamonds /////////////////////
+message IlovediamondsFeature {
+	repeated int32 holdWinCardIds = 1;		// holdwin预告的中奖类型,用于棋子变暗变亮
+	FreeSpin freeSpin = 2;
+	GamePower gamePower = 3;
+}
+
+///////////////////// Br89 /////////////////////
+message Br89Feature {
+	repeated Int64Array2 wheelSequenceList = 1;	// 初始转盘转轴
+	Br89Bonus bonusInfo = 2;
+	GamePower gamePower = 3;
+}
+
+message Br89Bonus {
+	BonusBaseInfo baseInfo = 1;
+	int64 wheelSelectIdx = 2;		// 选中的转盘,0,1,2
+	repeated int64 wheelSequence = 3;
+	int64 wheelIndex = 4;
+	repeated int32 winJackpotList = 5;
+	bool over = 6;
+}
+
+///////////////////// Superme /////////////////////
+message SupermeFeature {
+	repeated int32 lockReels = 1;
+}
+
+///////////////////// Bravoball92 /////////////////////
+message Bravoball92Feature {
+	repeated Int64Array2 wheelSequenceList = 1;	// 初始转盘转轴jakcpot是负数,正数是金币
+	Bravoball92Bonus bonusInfo = 2;
+}
+message Bravoball92BonusBallInfo {
+    int32 ballType = 1;//球的类型,白球0，红球1
+    int32 value = 2;//球的附加值, 大于0多少Bet,小于0就是几个特殊的奖励,-1- -3 就是jackpot1-3档,-4:2x,-5:3x,-6:转盘
+    int32 showType = 3;//展示类型 0就是掉下来了,没吸走,1就是直接吸上去了,2 艰难的吸上去
+}
+message Bravoball92Bonus {
+	BonusBaseInfo baseInfo = 1;
+	int32 bonusType = 2;//Bonus类型 1 是转盘 2是摇奖机
+    int32 wheelPos = 3;//中奖的位置
+    repeated Bravoball92BonusBallInfo ballInfoArr = 4;//展示了的球的历史信息
+}
+
+///////////////////// Rich94Feature /////////////////////
+message Rich94Feature {
+	Rich94Bonus bonusInfo = 1;
+	Rich94ReSpin respinInfo = 2;
+	repeated int32 wheelCfg = 3;		// 共22个，正数表示押注倍率，负数表示翻倍倍率，-1001到-1004表示4档jp
+}
+
+message Rich94ReSpin {
+	repeated int32 lockCards = 1;			//长度为9，0表示未锁定，bonus棋子ID为9，正数*1000表示押注倍率（如759，表示0.75倍押注）， 负数*1000表示jp（如-1009表示mini）
+	int32 remainCount = 2;				//respin剩余次数
+	int32 reelsArrayId = 3;
+	repeated int32 posInReels = 4;
+	int64 winMoney = 5;
+	repeated RichJackpot jpInfo = 6;
+}
+
+message RichJackpot {
+	int32 type = 1;
+	int64 win = 2;
+}
+
+message Rich94Bonus {
+	BonusBaseInfo baseInfo = 1;
+	int32 stopPos = 2;
+}
+
+///////////////////// Party999 /////////////////////
+message CakeSeqence {
+	repeated Int64Array2 cakeSequenceList = 1;    // 每层cake上的数据， 道具是-1,-2，-3， collect-100, 问号0
+}
+
+message Party999Bonus {
+	BonusBaseInfo baseInfo = 1;
+	int32 propTimes = 2;      // 总已获取的道具数量
+	int32 moveTimes = 3;      // 总移动次数
+	int32 moveSteps = 4;      // 当前层移动次数（0~length-1）
+	int32 winTimes = 5;       // 总倍数(不包含最后一层)
+	bool over = 6;          
+}
+
+message Party999Feature {
+	Party999Bonus bonusInfo = 1;
+	repeated CakeSeqence cakeSeqence = 2; // cake上的数据, 4层
+}
+
+///////////////////// Fourleafclover /////////////////////
+message FourleafcloverFeature {
+	repeated int32 maybeWinJp = 1; // jp类型 1 - 13  [9,12,13] 最后一根轴有holdwin hodlwin的时候 可能会中哪几档的jackpot
+}
+// 可能同时中 多档jackpot 中奖线 需要这么传 id传 -1 symbol 传中奖的jackpot档位（1 - 13）
+//'lines': [{'id': -1, 'win': 627864782367, 'symbol': 13, 'positions': [{'array': [1]},{'array': [1]},{'array': [1]},
+// {'id': -1, 'win': 627864782367, 'symbol': 9, 'positions': [{'array': [1]},{'array': [1]},{'array': [1]}]
+
+///////////////////// Fortune7s /////////////////////
+message Fortune7sBonus {
+	BonusBaseInfo baseInfo = 1;
+	int32 endPos = 2;// 转盘停止位置
+}
+
+message Fortune7sFeature {
+	Fortune7sBonus bonusInfo = 1;
+	FreeSpin freeSpin = 2;
+	repeated int32 wheelCfg = 3;	// 转盘配置
+	int32 reelColor = 4; // 1-4  依次代表 红,蓝,绿,白
+}
+///////////////////// Crystal97 /////////////////////
+
+message Crystal97Bonus {
+	BonusBaseInfo baseInfo = 1;
+	repeated int32 wheelActiveArr = 2;//有中奖了的转盘数组[0,1,0]0就是没激活，1就是激活了这个转盘,
+    repeated int32 wheelRewardPosArr = 3;//中奖了的位置信息[0,0,0]就是位置信息0开始
+    int32 runCount = 4;//启动了几个转盘了,如果启动的和激活的一样了,这边就判断结束了,按顺序启动0,1,2
+}
+
+message Crystal97Feature {
+	Crystal97Bonus bonusInfo = 1;
+	repeated int32 coinWheelData =2;//金币转盘的钱,0就是jp,固定是0号位,其他都是多少倍的bet
+	repeated int32 multipleWheelData =3;//翻倍转盘,倍率
+	repeated int32 freeWheelData =4;//free次数转盘
+	FreeSpin freeSpin = 5;
+}
+
+///////////////////// Luckystar98 /////////////////////
+message Luckystar98Feature {
+	Luckystar98Bonus bonusInfo = 1;
+	Luckystar98ReSpin respinInfo = 2;
+	repeated int32 wheelCfg = 3;    // 共19个，> 0 表示金币，-1表示star
+	repeated int32 lockCards = 4;    //长度为15，0表示未锁定，bonus棋子ID为1，正数*10000表示押注倍率（如7501，表示0.75倍押注）， 负数*10000表示jp（如-20001表示minor）
+}
+
+message Luckystar98ReSpin {
+	int32 remainCount = 1;    //respin剩余次数
+	bool isStart = 2;
+	int64 winMoney = 3;
+	int32 winType = 4;
+	repeated Luckystar98Jackpot jpInfo = 5;
+}
+
+message Luckystar98Jackpot {
+	int32 type = 1;
+	int64 win = 2;
+}
+
+message Luckystar98Bonus {
+	BonusBaseInfo baseInfo = 1;
+	int32 stopPos = 2;
+	bool isStart = 3;
+	repeated int32 lockCards = 4; // 添加星星后的锁轴数组
+}
+
+/////////////////////TellerFeature/////////////////////
+message TellerFeature {
+	int32 bonusBet = 1;		//bonus翻倍信息 正数为翻倍倍率 -1为jackpot
+	repeated int32 bonusCfg = 2; //bonus选项，正数为倍率， 负数为jp
+	bool isStart = 3;		//fs是否开始
+	FreeSpin freeSpin = 4;
+}
+
+/////////////////////MagicalgenieFeature/////////////////////
+message MagicalgenieBonus {
+	BonusBaseInfo baseInfo = 1;
+	int32 select_id = 2;				// -1没有任何选择， 100是选了fs， 200是选了bonus， 0-9是选择了那10个点击的
+	repeated int32 card_list = 3;		// 中奖的card
+	repeated int32 reward_list = 4;		// bonus选择， 第0个是获奖的
+}
+
+message MagicalgenieFeature {
+	FreeSpin freeSpin = 1;
+	MagicalgenieBonus bonusInfo = 2;
+}
+/////////////////////GoldtigerFeature/////////////////////
+message GoldtigerFeature {
+	FreeSpin freeSpin = 1;
+}
+
+///////////////////// Shiny102 /////////////////////
+message Shiny102WheelReward {
+	int32 itemType = 1;		// 转盘 item 类型 (1代表钱, 2代表 fs, 3代表问号 bonus)
+	int64 reward = 2;		// 奖励	(类型为1, 该参数为钱, 类型为2, 该参数为 fs 次数, 类型为3, 该参数为问号 bonus 类型(1,2,3分别代表普通,蓝色,橙色奖励))
+	int32 extraReward = 3;	// 额外奖励 (类型为1, 该参数为额外 spin 的次数, 类型为2, 该参数为 fs 翻倍次数, 类型为3, 该参数没有值)
+}
+
+message Shiny102BetInfo {
+	int64 curBet = 1;				// 当前押注倍数
+	repeated Shiny102WheelReward wheelCfg = 2;	// 转盘数据
+}
+
+// pick 数据 selectId 1表示选择的钱, selectId 2表示选择的 fs
+message Shiny102PickBonus {
+	int64 maxWinMoney = 1;	
+	int64 minWinMoney = 2;
+	int32 maxFsTimes = 3;
+	int32 maxFsMult = 4;
+}
+
+message Shiny102NorWheelBonus {
+	repeated Shiny102WheelReward wheelCfg = 1;	// 转盘数据
+	int32 endPos = 2; 
+	Shiny102WheelReward reward = 3; 
+	int64 wheelWin = 4; // 转盘赢的钱
+}
+
+message Shiny102ExtraWheelBonus {
+	repeated int64 extraRewardWheelCfg = 1;	// 额外奖励的转盘配置
+	repeated int32 extraMultWheelCfg = 2;	// 翻倍奖励的转盘配置
+	int32 extraRewardEndPos = 3;	
+	int32 extraMultEndPos = 4;
+	int64 extraReward = 5; 
+	int32 extraMult = 6;
+	int32 extraBonusType = 7;  // 1表示选择的钱, selectId 2表示选择的 fs
+	int64 wheelWin = 8;  // 转盘赢的钱
+}
+
+message Shiny102Bonus {
+	BonusBaseInfo baseInfo = 1;
+
+	Shiny102NorWheelBonus norWheelBonus = 2;
+	Shiny102PickBonus pickBonus = 3;
+	Shiny102ExtraWheelBonus extraWheelBonus = 4;
+	Shiny102FreeSpin freeSpin = 5;
+    
+	bool over = 6; 
+	int32 bonusType = 7; // bonus 类型 1表示普通转盘 2表示pick 3表示问号 bonus 转盘
+}
+
+message Shiny102FreeSpin {
+	int32 remainCount = 1;
+	int32 totalCount = 2;
+	int64 win = 3;
+	int32 addCount = 4;
+	int32 fsTimes = 5;
+	int32 fsMult = 6;
+}
+
+message Shiny102Feature {
+	Shiny102Bonus bonusInfo = 1;
+	Shiny102FreeSpin freeSpin = 2;
+	repeated Shiny102BetInfo betInfos = 3;
+	Shiny102BetInfo curBetInfo = 4;
+	int32 refreshId = 5;			// 普通转盘需要刷新的item下标
+}
+
+/////////////////////Aztec105Feature/////////////////////
+
+message Aztec105Feature {
+	FreeSpin freeSpin = 1;
+	int32 holdWinType = 2;		//holdwin类型 1、普通holdwin  2、重复转（有机率中高倍组合奖）
+	repeated int64 rewardCfg = 3;		//转盘奖励（直接发金币数量，共12个；一进机台就发，不变）
+	Aztec105Bonus bonusInfo = 4;
+}
+
+message Aztec105Bonus {
+	BonusBaseInfo baseInfo = 1;
+	int32 type = 2;						//Bonus类型 1、金币奖励转盘 	2、Jackpot Challenge
+	int32 curIdx = 3;					//玩家已经转了几次（用于恢复，每次转转盘会请求一下bonus信息；只有金币转盘时才有)
+	repeated int32 winIdx = 4;			//玩家转中的奖励序号（对应rewardCfg的数组下标，所有中奖全发；只有金币转盘时才有）
+	int64 bonusWin = 5;					//收集scatter棋子赢的钱（用于jp challenge是展示）
+	int32 jpType = 6;					//中jp的level，没中jp为0（只有jp转盘时才有）
+	int32 jpWinIdx = 7;					//jp转盘中奖下标（只有jp转盘时才有）
+	repeated int64 jpRewardCfg = 8;		//jp转盘奖励（金币直接发金币数量，jp按-1、-2、-3、-4来发。只有jp转盘时才有）
+}

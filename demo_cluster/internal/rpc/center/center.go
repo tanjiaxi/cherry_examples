@@ -53,9 +53,10 @@ func RegisterDevAccount(app cfacade.IApplication, accountName, password, ip stri
 		Password:    password,
 		Ip:          ip,
 	}
-
+	// 构建Actor路径：center节点的account Actor
 	targetPath := GetTargetPath(app, accountActor)
 	rsp := &pb.Int32{}
+	// 通过Actor系统发送消息到Center节点的Actor
 	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, registerDevAccount, req, rsp)
 	if code.IsFail(errCode) {
 		clog.Warnf("[RegisterDevAccount] accountName = %s, errCode = %v", accountName, errCode)
@@ -84,11 +85,12 @@ func GetDevAccount(app cfacade.IApplication, accountName, password string) int64
 }
 
 // GetUID 获取帐号UID
-func GetUID(app cfacade.IApplication, sdkId, pid int32, openId string) (cfacade.UID, int32) {
+func GetUID(app cfacade.IApplication, sdkId, pid int32, openId string, deviceName string) (cfacade.UID, int32) {
 	req := &pb.User{
-		SdkId:  sdkId,
-		Pid:    pid,
-		OpenId: openId,
+		SdkId:      sdkId,
+		Pid:        pid,
+		OpenId:     openId,
+		DeviceName: deviceName,
 	}
 
 	targetPath := GetTargetPath(app, accountActor)

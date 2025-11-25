@@ -16,17 +16,19 @@ const (
 )
 
 type Token struct {
-	PID       int32  `json:"pid"`
-	OpenID    string `json:"open_id"`
-	Timestamp int64  `json:"tt"`
-	Hash      string `json:"hash"`
+	PID        int32  `json:"pid"`
+	OpenID     string `json:"open_id"`
+	Timestamp  int64  `json:"tt"`
+	DeviceName string `json:"device_name"`
+	Hash       string `json:"hash"`
 }
 
-func New(pid int32, openId string, appKey string) *Token {
+func New(pid int32, openId string, appKey string, deviceName string) *Token {
 	token := &Token{
-		PID:       pid,
-		OpenID:    openId,
-		Timestamp: cherryTime.Now().ToMillisecond(),
+		PID:        pid,
+		OpenID:     openId,
+		DeviceName: deviceName,
+		Timestamp:  cherryTime.Now().ToMillisecond(),
 	}
 
 	token.Hash = BuildHash(token, appKey)

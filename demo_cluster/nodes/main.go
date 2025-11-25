@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"net/http"
+	_ "net/http/pprof" // 1. 依然需要导入这个包，来自动注册 pprof 路由
 	"os"
 
 	cherryConst "github.com/cherry-game/cherry/const"
@@ -26,10 +29,21 @@ func main() {
 			gameCommand(),
 		},
 	}
-
+	fmt.Println("Starting pprof server on :6060")
 	_ = app.Run(os.Args)
+	startPprofServer()
 }
 
+// 2. 专门为 pprof 启动一个 HTTP 服务器的函数
+func startPprofServer() {
+	// pprof 的路由已经由 import _ "net/http/pprof" 自动注册到了 http.DefaultServeMux
+	// 我们只需要在一个新的端口上启动这个 DefaultServeMux 即可
+	fmt.Println("Starting pprof server on :6060")
+	err := http.ListenAndServe(":6060", nil)
+	if err != nil {
+		log.Fatalf("pprof server failed to start: %v", err)
+	}
+}
 func versionCommand() *cli.Command {
 	return &cli.Command{
 		Name:      "version",

@@ -30,13 +30,10 @@ func (p *actorPlayer) OnInit() {
 	// 注册 session关闭的remote函数(网关触发连接断开后，会调用RPC发送该消息)
 	p.Remote().Register("sessionClose", p.sessionClose)
 
+	//处理相同的节点actor消息
 	p.Local().Register("select", p.playerSelect) // 注册 查看角色
 	p.Local().Register("create", p.playerCreate) // 注册 创建角色
 	p.Local().Register("enter", p.playerEnter)   // 注册 进入角色
-}
-
-func (p *actorPlayer) OnStop() {
-	clog.Debugf("[actorPlayer] path = %s exit!", p.PathString())
 }
 
 // sessionClose 接收角色session关闭处理

@@ -95,13 +95,14 @@ func (p *Controller) login(c *cherryGin.Context) {
 		}
 
 		openId, found := result.GetString("open_id")
+		deviceName, found := result.GetString("device_name")
 		if found == false {
 			cherryLogger.Warnf("callback result map not found `open_id`. result = %s", result)
 			code.RenderResult(c, code.LoginError)
 			return
 		}
 
-		base64Token := token.New(pid, openId, config.Salt).ToBase64()
+		base64Token := token.New(pid, openId, config.Salt, deviceName).ToBase64()
 		code.RenderResult(c, code.OK, base64Token)
 	})
 }

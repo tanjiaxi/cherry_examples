@@ -12,6 +12,9 @@ import (
 	cherryGops "github.com/cherry-game/components/gops"
 	checkCenter "github.com/cherry-game/examples/demo_cluster/internal/component/check_center"
 	"github.com/cherry-game/examples/demo_cluster/internal/data"
+
+	cdiscovery "github.com/cherry-game/cherry/net/discovery"
+	cherryETCD "github.com/cherry-game/components/etcd"
 )
 
 // Run 运行gate节点
@@ -24,7 +27,8 @@ func Run(profileFilePath, nodeID string) {
 		true,
 		cherry.Cluster,
 	)
-
+	// 注册etcd组件（已修复protobuf版本冲突）
+	cdiscovery.Register(cherryETCD.New())
 	// 设置网络数据包解析器
 	netParser := buildPomeloParser(app)
 	//netParser := buildSimpleParser(app)
@@ -44,10 +48,11 @@ func buildPomeloParser(app *cherry.AppBuilder) cfacade.INetParser {
 	// 使用pomelo网络数据包解析器
 	agentActor := pomelo.NewActor("user")
 	//创建一个tcp监听，用于client/robot压测机器人连接网关tcp
-	agentActor.AddConnector(cconnector.NewTCP(":10011"))
+	agentActor.AddConnector(cconnector.NewTCP(app.Settings().GetString("tcp_address")))
 	//再创建一个websocket监听，用于h5客户端建立连接
 	agentActor.AddConnector(cconnector.NewWS(app.Address()))
-	//当有新连接创建Agent时，启动一个自定义(ActorAgent)的子actor
+	//当有新连接创建Agent时，启动一个自定义(ActorAgent)的子actor   // 订阅"新Agent"事件
+	//这里回调的newAgent参数，其实就是一个新的连接代理（每一个连接一个）
 	agentActor.SetOnNewAgent(func(newAgent *pomelo.Agent) {
 		childActor := &ActorAgent{}
 		newAgent.AddOnClose(childActor.onSessionClose)
@@ -55,6 +60,8 @@ func buildPomeloParser(app *cherry.AppBuilder) cfacade.INetParser {
 	})
 
 	// 设置数据路由函数
+	// 订阅"数据路由"事件
+	// 3. 路由到 ActorAgent 这里通过 sid 路由到具体的 ActorAgent
 	agentActor.SetOnDataRoute(onPomeloDataRoute)
 
 	return agentActor

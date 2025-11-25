@@ -10,13 +10,14 @@ import (
 	clog "github.com/cherry-game/cherry/logger"
 	pomeloClient "github.com/cherry-game/cherry/net/parser/pomelo/client"
 	"github.com/cherry-game/examples/demo_cluster/internal/code"
+	"github.com/cherry-game/examples/demo_cluster/robot_client/pkg/robotclient"
 	jsoniter "github.com/json-iterator/go"
 )
 
 var (
-	maxRobotNum       = 5000                    // 运行x个机器人
+	maxRobotNum       = 10                      // 运行x个机器人
 	url               = "http://127.0.0.1:8081" // web node
-	addr              = "127.0.0.1:10011"       // 网关地址(正式环境通过区服列表获取)
+	addr              = "127.0.0.1:20010"       // 网关地址(正式环境通过区服列表获取)
 	serverId    int32 = 10001                   // 测试的游戏服id
 	pid               = "2126001"               // 测试的sdk包id
 	printLog          = false                   // 是否输出详细日志
@@ -68,10 +69,10 @@ func RegisterDevAccount(url string, accounts map[string]string) {
 	}
 }
 
-func RunRobot(url, pid, userName, password, addr string, serverId int32, printLog bool) *Robot {
+func RunRobot(url, pid, userName, password, addr string, serverId int32, printLog bool) *robotclient.Robot {
 
 	// 创建客户端
-	cli := New(
+	cli := robotclient.New(
 		pomeloClient.New(
 			pomeloClient.WithRequestTimeout(10*time.Second),
 			pomeloClient.WithErrorBreak(true),

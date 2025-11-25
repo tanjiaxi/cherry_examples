@@ -67,6 +67,19 @@
             ]
         },
         {
+            "name": "gc-gate-2",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/demo_cluster/nodes/main.go",
+            "console" :"integratedTerminal",
+            "args": [
+                "gate",
+                "--path=../../config/demo-cluster.json",
+                "--node=gc-gate-2"
+            ]
+        },
+        {
             "name": "gc-game-10001",
             "type": "go",
             "request": "launch",
@@ -78,6 +91,25 @@
                 "--path=../../config/demo-cluster.json",
                 "--node=10001"
             ]
+        },
+        {
+            "name": "robot_client",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/demo_cluster/robot_client/main.go",
+            "console" :"integratedTerminal",
+            "args": []
+        }
+        ,
+        {
+            "name": "actor_demo",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/test_nats/replystrem/main.go",
+            "console" :"integratedTerminal",
+            "args": []
         }
     ]
 }

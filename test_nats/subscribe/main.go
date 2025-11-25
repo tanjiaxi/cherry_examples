@@ -1,12 +1,13 @@
 package main
 
 import (
-	cherryLogger "github.com/cherry-game/cherry/logger"
-	"github.com/nats-io/nats.go"
 	"log"
 	"os"
 	"os/signal"
 	"time"
+
+	cherryLogger "github.com/cherry-game/cherry/logger"
+	"github.com/nats-io/nats.go"
 )
 
 func main() {
@@ -21,7 +22,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-
 	nc.Subscribe(subj, func(msg *nats.Msg) {
 		cherryLogger.Debugf("111 msg = %v", msg)
 	})
@@ -29,6 +29,7 @@ func main() {
 	nc.Subscribe(subj, func(msg *nats.Msg) {
 		cherryLogger.Debugf("222 msg = %v", msg)
 	})
+
 	nc.Flush()
 
 	c := make(chan os.Signal, 1)

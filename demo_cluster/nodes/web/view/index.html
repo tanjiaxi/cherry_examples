@@ -104,6 +104,70 @@
         </form>
     </div>
 
+    <!-- Slots 游戏功能区 -->
+    <div id="p7" class="col-center-block col-lg-8 col-lg-offset-2 col-sm-10 col-sm-offset-1 col-xs-12"
+         style="display:none;">
+        <div class="panel panel-primary">
+            <div class="panel-heading">
+                <h3 class="panel-title">🎰 Slots 游戏</h3>
+            </div>
+            <div class="panel-body">
+                <form class="form-horizontal" role="form">
+                    <!-- 机器配置 -->
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">机器 ID</label>
+                        <div class="col-sm-3">
+                            <input class="form-control" id="machine-id" type="number" value="1" placeholder="输入机器ID">
+                        </div>
+                        <label class="col-sm-2 control-label">下注金额</label>
+                        <div class="col-sm-3">
+                            <input class="form-control" id="bet-amount" type="number" value="100" placeholder="输入下注金额">
+                        </div>
+                    </div>
+
+                    <!-- 操作按钮 -->
+                    <div class="form-group">
+                        <div class="col-sm-offset-2 col-sm-10">
+                            <button type="button" class="btn btn-success" id="btn-enter-machine">进入机器</button>
+                            <button type="button" class="btn btn-info" id="btn-machine-info">获取机器信息</button>
+                            <button type="button" class="btn btn-primary" id="btn-spin">Spin</button>
+                            <button type="button" class="btn btn-warning" id="btn-auto-spin">自动Spin</button>
+                            <button type="button" class="btn btn-default" id="btn-bonus">Bonus</button>
+                            <button type="button" class="btn btn-default" id="btn-collect">Collect</button>
+                        </div>
+                    </div>
+
+                    <!-- 结果显示区 -->
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">游戏结果</label>
+                        <div class="col-sm-10">
+                            <div id="slots-result" style="height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; background: #f9f9f9; font-family: monospace; font-size: 12px;">
+                                等待操作...
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 统计信息 -->
+                    <div class="form-group">
+                        <div class="col-sm-offset-2 col-sm-10">
+                            <div class="alert alert-info" role="alert">
+                                <strong>提示：</strong>
+                                <ul style="margin-bottom: 0;">
+                                    <li>先点击"进入机器"进入指定的 Slots 机器</li>
+                                    <li>点击"获取机器信息"查看当前机器状态</li>
+                                    <li>点击"Spin"进行单次旋转</li>
+                                    <li>点击"自动Spin"开始/停止自动旋转（每秒1次）</li>
+                                    <li>点击"Bonus"触发奖励功能</li>
+                                    <li>点击"Collect"收集奖励</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <div class="modal fade" id="panel_env" role="dialog" data-backdrop="static" aria-labelledby="myModalLabel">
@@ -175,11 +239,18 @@
 
         $("#btn-p3").click(server_login);
         $("#btn-p4").click(playerCreate);
-
         $("#btn-p5").click(playerEnter);
 
         $("#btn-reg").click(account_register);
         $("#btn-login").click(account_login);
+
+        // Slots 游戏按钮事件
+        $("#btn-enter-machine").click(slotsEnterMachine);
+        $("#btn-machine-info").click(slotsMachineInfo);
+        $("#btn-spin").click(slotsSpin);
+        $("#btn-auto-spin").click(slotsAutoSpin);
+        $("#btn-bonus").click(slotsBonus);
+        $("#btn-collect").click(slotsCollect);
     });
 
     function setting_info() {
@@ -270,7 +341,7 @@
             pomelo.request("gate.user.login", loginData, function (data) {
                 data = proto.pb.LoginResponse.deserializeBinary(data.body).toObject();
                 console.log(data);
-                if (data.uid > 0) {
+                if (data.userid > 0) {
                     playerSelect();
                 }
             });
@@ -345,16 +416,182 @@
             data = proto.pb.PlayerEnterResponse.deserializeBinary(data.body).toObject();
             console.log(data.guidemaps);
 
-            $("#player-info").html(JSON.stringify(playerInfo) + "角色已进入游戏，流程结束!");
+            $("#player-info").html(JSON.stringify(playerInfo) + "角色已进入游戏！");
 
             $("#p5").hide();
             $("#p6").show();
+            $("#p7").show(); // 显示 Slots 游戏功能区
         });
     }
 
     function showError(data) {
         var err = proto.pb.ErrorResponse.deserializeBinary(data.body).toObject()
         alert(err.code + err.message);
+    }
+
+    // ========== Slots 游戏函数 ==========
+    var autoSpinInterval = null;
+    var spinCount = 0;
+
+    function appendSlotsResult(message) {
+        var timestamp = new Date().toLocaleTimeString();
+        var html = $("#slots-result").html();
+        $("#slots-result").html("[" + timestamp + "] " + message + "<br>" + html);
+    }
+
+    function slotsEnterMachine() {
+        var machineId = parseInt($("#machine-id").val());
+        var betAmount = parseInt($("#bet-amount").val());
+
+        var enterRequest = new proto.pb.EnterMachine();
+        enterRequest.setId(machineId);
+        enterRequest.setSelectbet(betAmount);
+
+        var enterData = enterRequest.serializeBinary();
+
+        pomelo.request("game.slots.entermachine", enterData, function (data) {
+            if (data.isError > 0) {
+                showError(data);
+                return;
+            }
+
+            data = proto.pb.EnterMachineResponse.deserializeBinary(data.body).toObject();
+            console.log("进入机器:", data);
+            
+            if (data.succeed) {
+                appendSlotsResult("✅ 成功进入机器 ID: " + data.id);
+            } else {
+                appendSlotsResult("❌ 进入机器失败");
+            }
+        });
+    }
+
+    function slotsMachineInfo() {
+        var machineId = parseInt($("#machine-id").val());
+
+        var infoRequest = new proto.pb.MachineInfo();
+        infoRequest.setId(machineId);
+
+        var infoData = infoRequest.serializeBinary();
+
+        pomelo.request("game.slots.machineinfo", infoData, function (data) {
+            if (data.isError > 0) {
+                showError(data);
+                return;
+            }
+
+            data = proto.pb.MachineInfoResponse.deserializeBinary(data.body).toObject();
+            console.log("机器信息:", data);
+            
+            var info = "📊 机器信息:<br>";
+            info += "- ID: " + data.id + "<br>";
+            info += "- 余额: " + data.balance + "<br>";
+            info += "- 下注金额: " + data.betamount + "<br>";
+            appendSlotsResult(info);
+        });
+    }
+
+    function slotsSpin() {
+        var machineId = parseInt($("#machine-id").val());
+        var betAmount = parseInt($("#bet-amount").val());
+
+        var spinRequest = new proto.pb.Spin();
+        spinRequest.setId(machineId);
+
+        var spinData = spinRequest.serializeBinary();
+
+        pomelo.request("game.slots.spin", spinData, function (data) {
+            if (data.isError > 0) {
+                showError(data);
+                return;
+            }
+
+            data = proto.pb.SpinResponse.deserializeBinary(data.body).toObject();
+            console.log("Spin 结果:", data);
+            
+            spinCount++;
+            var result = "🎰 Spin #" + spinCount + ":<br>";
+            result += "- 机器ID: " + data.id + "<br>";
+            result += "- 总赢得: " + data.totalwin + "<br>";
+            result += "- 余额: " + data.balance + "<br>";
+            
+            if (data.resultsList && data.resultsList.length > 0) {
+                result += "- 结果: ";
+                for (var i = 0; i < data.resultsList.length; i++) {
+                    var spinResult = data.resultsList[i];
+                    result += "[" + spinResult.symbolsList.join(",") + "] 赢得:" + spinResult.win + " ";
+                }
+                result += "<br>";
+            }
+            
+            appendSlotsResult(result);
+        });
+    }
+
+    function slotsAutoSpin() {
+        if (autoSpinInterval) {
+            // 停止自动 spin
+            clearInterval(autoSpinInterval);
+            autoSpinInterval = null;
+            $("#btn-auto-spin").text("自动Spin").removeClass("btn-danger").addClass("btn-warning");
+            appendSlotsResult("⏸️ 停止自动 Spin");
+        } else {
+            // 开始自动 spin
+            $("#btn-auto-spin").text("停止自动Spin").removeClass("btn-warning").addClass("btn-danger");
+            appendSlotsResult("▶️ 开始自动 Spin (每秒1次)");
+            
+            autoSpinInterval = setInterval(function() {
+                slotsSpin();
+            }, 1000); // 每秒执行一次
+        }
+    }
+
+    function slotsBonus() {
+        var machineId = parseInt($("#machine-id").val());
+
+        var bonusRequest = new proto.pb.Bonus();
+        bonusRequest.setId(machineId);
+
+        var bonusData = bonusRequest.serializeBinary();
+
+        pomelo.request("game.slots.bonus", bonusData, function (data) {
+            if (data.isError > 0) {
+                showError(data);
+                return;
+            }
+
+            data = proto.pb.BonusResponse.deserializeBinary(data.body).toObject();
+            console.log("Bonus 结果:", data);
+            
+            var result = "🎁 Bonus:<br>";
+            result += "- 机器ID: " + data.id + "<br>";
+            result += "- 奖励: " + JSON.stringify(data) + "<br>";
+            appendSlotsResult(result);
+        });
+    }
+
+    function slotsCollect() {
+        var machineId = parseInt($("#machine-id").val());
+
+        var collectRequest = new proto.pb.CollectDone();
+        collectRequest.setId(machineId);
+
+        var collectData = collectRequest.serializeBinary();
+
+        pomelo.request("game.slots.collect", collectData, function (data) {
+            if (data.isError > 0) {
+                showError(data);
+                return;
+            }
+
+            data = proto.pb.CollectDoneResponse.deserializeBinary(data.body).toObject();
+            console.log("Collect 结果:", data);
+            
+            var result = "💰 Collect:<br>";
+            result += "- 机器ID: " + data.id + "<br>";
+            result += "- 收集: " + JSON.stringify(data) + "<br>";
+            appendSlotsResult(result);
+        });
     }
 
 </script>

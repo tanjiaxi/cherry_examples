@@ -17,6 +17,7 @@ message User {
   int32  serverId = 4; // 所在游戏服id
   int64  uid = 5;      // 用户id
   string ip = 6;       // 请求ip
+  string deviceName = 7; // 设备名
 }
 
 // 节点状态

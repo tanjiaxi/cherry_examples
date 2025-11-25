@@ -1,0 +1,213 @@
+syntax = "proto3";
+option go_package = "/pb";
+package pb;
+// 普通数组
+message Int32Array1 {
+    repeated int32 array = 1;
+}
+
+// 二维数组
+message Int32Array2 {
+    repeated Int32Array1 array = 1;
+}
+
+// 普通数组
+message Int64Array1 {
+    repeated int64 array = 1;
+}
+
+// 二维数组
+message Int64Array2 {
+    repeated Int64Array1 array = 1;
+}
+//奖励属性
+message RewardAttribute {
+    int64 gold = 1; //金币
+    int64 diamond = 2; //钻石
+    int64 shaveCard = 3; //刮刮卡
+    int64 exp = 4; //经验
+    int64 fullExp = 5; //满级需要
+    int64 level = 6; //等级
+    int64 vipExp = 7; //vip经验
+    int64 vipLevel = 8; //vip等级
+    int64 buffFreeCoin = 9; //BUFF免费金币（秒）
+    int64 buffExp = 10; //BUFF经验（秒）
+    int64 buffPig = 11; //BUFF小猪（秒）
+    int64 buffBet = 12; //BUFF下注（秒）
+    int64 buffWheel = 13; //BUFF转盘（秒）
+    int64 album1 = 14; //卡包1
+    int64 album2 = 15; //卡包2
+    int64 album3 = 16; //卡包3
+    int64 album4 = 17; //卡包4
+    int64 album5 = 18; //卡包5
+    int64 wild1 = 19; //钻石WILD卡
+    int64 wild2 = 20; //黄金WILD卡
+    int64 wild3 = 21; //普通WILD卡
+    int64 wild4 = 22; //普通WILD卡
+    int64 clubpoint = 34; //俱乐部点数
+    int64 clubfood1 = 35; //俱乐部食物1
+    int64 clubfood2 = 36; //俱乐部食物2
+    int64 clubfood3 = 37; //俱乐部食物3
+    int64 clubcard1 = 38; //俱乐部体验卡1天
+    int64 clubcard2 = 39; //俱乐部体验卡2天
+    int64 clubcard3 = 40; //俱乐部体验卡3天
+    int64 clubcard4 = 41; //俱乐部体验卡4天
+    int64 clubcard5 = 42; //俱乐部体验卡5天
+    int64 buffGamePower = 43; //gamepower
+    int64 dice = 44; //普通色子
+    int64 superdice = 45; //超级色子
+    int64 puzzlePiece = 46; //拼图碎片
+    int64 puzzleBuff1 = 47; // buff时间
+    int64 puzzleBuff2 = 48; // buff时间
+    int64 puzzleBuff3 = 49; // buff时间
+    int64 albumcollect = 50; //卡牌收集奖励
+    int64 dragondice = 51; //打龙骰子
+    int64 dragonbuff1 = 52; //打龙buff
+    int64 dragonbuff2 = 53; //打龙buff
+    int64 dragonbuff3 = 54; //打龙buff
+    int64 dragoncoinbuff = 55;
+    int64 smallbell = 56; // 圣诞节铃铛
+    int64 magiclampdice = 57; //打龙骰子
+    int64 magiclampbuff1 = 58; //打龙buff
+    int64 magiclampbuff2 = 59; //打龙buff
+    int64 magiclampbuff3 = 60; //打龙buff
+    int64 freespin = 61; // 任意关卡的 fs 次数奖励（值表示次数）
+    int64 cashcoin = 62; // 现金优惠卷
+    int64 bravocash = 63; // bravocash优惠卷
+    int64 cosmicbuff1 = 64;
+    int64 cosmicbuff2 = 65;
+    int64 cosmicbuff3 = 66;
+    int64 cosmichat = 67;
+    int64 cosmicdice = 68; //色梯色子
+    int64 cosmiccoinbuff = 69; //金币BUFF
+    int64 oceanpartypick = 70; //打龙骰子
+    int64 oceanpartybuff1 = 71; //打龙buff
+    int64 oceanpartybuff2 = 72; //打龙buff
+    int64 oceanpartybuff3 = 73; //打龙buff
+    int64 cashbackbuff1 = 74;
+    int64 cashbackbuff2 = 75;
+    int64 cashbackbuff3 = 76;
+    int64 cashbackbuff4 = 77;
+    int64 cashbackbuff5 = 78;
+    int64 cashbackbuff6 = 79;
+    int64 bingoticket = 80;
+    int64 bingobuff1 = 81;
+    int64 bingobuff2 = 82;
+    int64 bingobuff3 = 83;
+
+    int64 cookPartyBuff1 = 84;
+    int64 cookPartyBuff2 = 85;
+    int64 cookPartyBuff3 = 86;
+    int64 cookPartyBag = 87;
+    int64 lotteryTicket = 88;
+
+
+    int64 farmcannon1 = 89;
+    int64 farmcannon2 = 90;
+    int64 farmcannon3 = 91;
+    int64 farmcannon4 = 92;
+    int64 farmdice = 93;
+    int64 farmpaydice = 94;
+    int64 farmcoinbuff = 95;
+    int64 farmbuff1 = 96;
+    int64 farmbuff2 = 97;
+    int64 farmbuff3 = 98;
+
+    int64 fishingdice = 99;
+    int64 fishingbuff1 = 100;
+    int64 fishingbuff2 = 101;
+    int64 fishingbuff3 = 102;
+
+    int32 winebottle = 103; //酒瓶
+    int64 winebuff1 = 104; //酒保BUFF1 收集雪球数量翻倍
+    int64 winebuff2 = 105; //酒保BUFF2 fight中奖励翻倍
+    int64 winebuff3 = 106; //酒保BUFF3 通行证奖励翻倍
+
+    int64 wonderTravelWand = 110;
+    int64 wonderTravelBuff1 = 111;
+    int64 wonderTravelBuff2 = 112;
+    int64 wonderTravelBuff3 = 113;
+    int64 wonderTravelGoldWand = 114;
+
+    int64 roarToWinTicket = 115;
+
+    int32 luckywordletter = 116;
+    int32 luckywordwheel = 117;
+    int32 luckywordball = 118;
+    int32 luckywordbuff1 = 119;
+    int32 luckywordbuff2 = 120;
+    int32 luckywordbuff3 = 121;
+
+    int64 dragonSlayerKey = 122;
+    int64 dragonSlayerBuff1 = 123;
+    int64 dragonSlayerBuff2 = 124;
+    int64 dragonSlayerBuff3 = 125;
+    int64 dragonSlayerSword = 126;
+    int64 gamePowerProps = 127; //gamePowerProps
+
+    int64 WitchesNightbuff1 = 128; //女巫之夜buff1
+    int64 WitchesNightbuff2 = 129; //女巫之夜buff2
+    int64 WitchesNightbuff3 = 130; //女巫之夜buff3
+    int64 WitchesNighthat = 131; //女巫之夜帽子
+    int64 WitchesNightdice = 132; //女巫之夜色梯色子
+    int64 WitchesNightcoinbuff = 133; //女巫之夜金币BUFF
+
+    int32 luckybonus = 134;
+
+    int32 gacha = 135; //扭蛋道具
+
+    int32 avatar1 = 136; //头像道具
+    int32 avatar2 = 137; //头像道具
+    int32 avatar3 = 138; //头像道具
+
+    int64 CookPartyThanksGivingBuff1 = 139;
+    int64 CookPartyThanksGivingBuff2 = 140;
+    int64 CookPartyThanksGivingBuff3 = 141;
+    int64 CookPartyThanksGivingBag = 142;
+
+    int32 strength = 143;
+    int32 board = 144;
+    int64 respinOnFireTicket = 145;
+
+    int32 mysterymedusapick = 146;
+    int32 mysterymedusabuff1 = 147; //
+    int32 mysterymedusabuff2 = 148; //
+    int32 mysterymedusabuff3 = 149; //
+
+    int32 eventcoin = 150;
+
+    int32 gachachristmas = 151; //圣诞扭蛋道具
+    int32 avatar4 = 152; //头像
+    int32 avatar5 = 153; //头像
+
+    int32 stylistdice = 154;
+    int32 stylistpiece = 155;
+    int32 stylistbuff1 = 156; //
+    int32 stylistbuff2 = 157; //
+    int32 stylistbuff3 = 158; //
+
+    int64 bingoiceticket = 159;
+    int64 bingoicebuff1 = 160;
+    int64 bingoicebuff2 = 161;
+    int64 bingoicebuff3 = 162;
+
+    int64 toymasterdice = 163;
+    int64 toymasterbuff1 = 164;
+    int64 toymasterbuff2 = 165;
+    int64 toymasterbuff3 = 166;
+
+    int64 magichat = 167;
+
+    int64 ambulance = 168;
+    int64 villaindice = 170;
+    int64 villainbuff1 = 171;
+    int64 villainbuff2 = 172;
+    int64 villainbuff3 = 173;
+    int32 towerticket = 174;
+    int32 leveldoor = 175;//levelrush开门小游戏道具数量
+}
+//获取奖励数据
+message RewardData {
+    RewardAttribute items = 1; //变化值
+    RewardAttribute values = 2; //最终值
+}

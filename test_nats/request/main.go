@@ -1,12 +1,14 @@
 package main
 
 import (
-	cherryLogger "github.com/cherry-game/cherry/logger"
-	"github.com/nats-io/nats.go"
 	"log"
 	"os"
 	"os/signal"
+	"strconv"
 	"time"
+
+	cherryLogger "github.com/cherry-game/cherry/logger"
+	"github.com/nats-io/nats.go"
 )
 
 func main() {
@@ -23,10 +25,10 @@ func main() {
 
 	var i = 0
 	for {
-		if i == 10 {
+		if i == 100 {
 			break
 		}
-		rsp, err := nc.Request(subj, []byte("aaa"), 2*time.Second)
+		rsp, err := nc.Request(subj, []byte(strconv.Itoa(i)), 2*time.Second)
 		if rsp != nil {
 			cherryLogger.Debugf(string(rsp.Data), err)
 		}

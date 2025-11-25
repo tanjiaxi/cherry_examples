@@ -4,7 +4,7 @@
   "print_level": "info",
   "cluster": {
     "discovery": {
-      "mode": "nats",
+      "mode": "etcd",
       "@mode1": "mode=default,从profile-{x}.json读取node节点的配置数据",
       "@mode2": "mode=nats,通过nats->master_node_id获取已注册的节点",
       "@mode3": "mode=etcd,通过etcd同步已注册节点"
@@ -17,6 +17,17 @@
       "request_timeout": 2,
       "user": "",
       "password": ""
+    },
+    "etcd": {
+        "end_points": "dev.com:2379",
+        "@end_points": "dev.com:2379,dev1.com:2379",
+        "prefix" : "cherry",
+        "ttl": 1000,
+        "dial_timeout": 3,
+        "dial_keep_alive_time": 1,
+        "dial_keep_alive_timeout": 1,
+        "user": "",
+        "password": ""
     }
   },
   "node": {
@@ -35,19 +46,35 @@
         "node_id": "gc-center",
         "address": "",
         "__settings__": {
-          "ref_logger": "center_log"
+          "ref_logger": "center_log",
+          "db_id_list": {
+            "center_db_id": "center_db_1"
+          }
         },
         "enable": true
       }
     ],
     "gate": [
       {
-        "node_id": "^gc-gate-\\d+$",
+        "node_id": "gc-gate-1",
         "address": ":10010",
         "__settings__": {
           "db_id_list" : {
             "game_db_id": "game_db_1"
           },
+          "tcp_address": ":20010",
+          "ref_logger": "gate_log"
+        },
+        "enable": true
+      },
+      {
+        "node_id": "gc-gate-2",
+        "address": ":10011",
+        "__settings__": {
+          "db_id_list" : {
+            "game_db_id": "game_db_1"
+          },
+          "tcp_address": ":20011",
           "ref_logger": "gate_log"
         },
         "enable": true
@@ -128,5 +155,37 @@
       "password": "",
       "db": 7
     }
+  },
+  "db": {
+    "center_db_group": [
+      {
+        "enable": true,
+        "db_id": "center_db_1",
+        "dsn" : "",
+        "db_name": "classic_slots",
+        "host": "localhost",
+        "port": 5432,
+        "user_name": "postgres",
+        "password": "123456",
+        "max_idle_connect": 4,
+        "max_open_connect": 8,
+        "log_mode": true
+      }
+    ],
+    "game_db_group": [
+      {
+        "enable": true,
+        "db_id": "game_db_1",
+        "dsn" : "",
+        "db_name": "classic_slots",
+        "host": "localhost",
+        "port": 5432,
+        "user_name": "postgres",
+        "password": "123456",
+        "max_idle_connect": 4,
+        "max_open_connect": 8,
+        "log_mode": true
+      }
+    ]
   }
 }

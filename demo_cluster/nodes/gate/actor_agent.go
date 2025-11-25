@@ -30,24 +30,24 @@ func (p *ActorAgent) OnInit() {
 	duplicateLoginCode, _ = p.App().Serializer().Marshal(&cproto.I32{
 		Value: code.PlayerDuplicateLogin,
 	})
-
+	// Local：处理相同节点的actor
 	p.Local().Register("login", p.login)
+	// Remote：处理其他Actor的RPC调用
 	p.Remote().Register("setSession", p.setSession)
 }
 
-func (p *ActorAgent) setSession(req *pb.StringKeyValue) {
+func (p *ActorAgent) setSession(session *cproto.Session, req *pb.StringKeyValue) {
 	if req.Key == "" {
 		return
 	}
-
-	if agent, ok := pomelo.GetAgent(p.ActorID()); ok {
+	if agent, ok := pomelo.GetAgent(p.ActorID(), session.Uid); ok {
 		agent.Session().Set(req.Key, req.Value)
 	}
 }
 
 // login 用户登录，验证帐号 (*pb.LoginResponse, int32)
 func (p *ActorAgent) login(session *cproto.Session, req *pb.LoginRequest) {
-	agent, found := pomelo.GetAgent(p.ActorID())
+	agent, found := pomelo.GetAgent(p.ActorID(), session.Uid)
 	if !found {
 		return
 	}
@@ -66,14 +66,14 @@ func (p *ActorAgent) login(session *cproto.Session, req *pb.LoginRequest) {
 		return
 	}
 
-	// 根据token带来的sdk参数，从中心节点获取uid
-	uid, errCode := rpcCenter.GetUID(p.App(), sdkRow.SdkId, userToken.PID, userToken.OpenID)
-	if uid == 0 || code.IsFail(errCode) {
+	// 根据token带来的sdk参数，从中心节点获取userId
+	userId, errCode := rpcCenter.GetUID(p.App(), sdkRow.SdkId, userToken.PID, userToken.OpenID, userToken.DeviceName)
+	if userId == 0 || code.IsFail(errCode) {
 		agent.ResponseCode(session, code.AccountBindFail, true)
 		return
 	}
 
-	oldAgent, err := pomelo.Bind(session.Sid, uid)
+	oldAgent, err := pomelo.Bind(session.Sid, userId)
 	if err != nil {
 		agent.ResponseCode(session, code.AccountBindFail, true)
 		clog.Warn(err)
@@ -85,14 +85,14 @@ func (p *ActorAgent) login(session *cproto.Session, req *pb.LoginRequest) {
 		oldAgent.Kick(duplicateLoginCode, true)
 	}
 
-	p.checkGateSession(uid)
+	p.checkGateSession(userId)
 
 	agent.Session().Set(sessionKey.ServerID, cstring.ToString(req.ServerId))
 	agent.Session().Set(sessionKey.PID, cstring.ToString(userToken.PID))
 	agent.Session().Set(sessionKey.OpenID, userToken.OpenID)
 
 	response := &pb.LoginResponse{
-		Uid:    uid,
+		UserId: userId,
 		Pid:    userToken.PID,
 		OpenId: userToken.OpenID,
 	}
