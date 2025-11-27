@@ -100,8 +100,7 @@
             "program": "${workspaceFolder}/demo_cluster/robot_client/main.go",
             "console" :"integratedTerminal",
             "args": []
-        }
-        ,
+        },
         {
             "name": "actor_demo",
             "type": "go",
@@ -110,6 +109,55 @@
             "program": "${workspaceFolder}/test_nats/replystrem/main.go",
             "console" :"integratedTerminal",
             "args": []
+        }
+    ],
+    "compounds": [
+        {
+            "name": "🚀 启动所有集群节点 (Debug)",
+            "configurations": [
+                "gc-center",
+                "gc-web-1",
+                "gc-gate-1",
+                "gc-game-10001"
+            ],
+            "stopAll": true,
+            "presentation": {
+                "hidden": false,
+                "group": "cluster",
+                "order": 1
+            }
+        },
+        {
+            "name": "🎮 启动完整集群 (含Master)",
+            "configurations": [
+                "gc-master",
+                "gc-center",
+                "gc-web-1",
+                "gc-gate-1",
+                "gc-game-10001"
+            ],
+            "stopAll": true,
+            "presentation": {
+                "hidden": false,
+                "group": "cluster",
+                "order": 2
+            }
+        },
+        {
+            "name": "🌐 启动双网关集群",
+            "configurations": [
+                "gc-center",
+                "gc-web-1",
+                "gc-gate-1",
+                "gc-gate-2",
+                "gc-game-10001"
+            ],
+            "stopAll": true,
+            "presentation": {
+                "hidden": false,
+                "group": "cluster",
+                "order": 3
+            }
         }
     ]
 }

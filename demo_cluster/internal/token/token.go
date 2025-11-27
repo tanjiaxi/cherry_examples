@@ -1,3 +1,11 @@
+/*
+ * @Author: t 921865806@qq.com
+ * @Date: 2025-09-15 18:02:10
+ * @LastEditors: t 921865806@qq.com
+ * @LastEditTime: 2025-11-27 15:42:09
+ * @FilePath: /examples/demo_cluster/internal/token/token.go
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ */
 package token
 
 import (
@@ -23,12 +31,11 @@ type Token struct {
 	Hash       string `json:"hash"`
 }
 
-func New(pid int32, openId string, appKey string, deviceName string) *Token {
+func New(pid int32, openId string, appKey string) *Token {
 	token := &Token{
-		PID:        pid,
-		OpenID:     openId,
-		DeviceName: deviceName,
-		Timestamp:  cherryTime.Now().ToMillisecond(),
+		PID:       pid,
+		OpenID:    openId,
+		Timestamp: cherryTime.Now().ToMillisecond(),
 	}
 
 	token.Hash = BuildHash(token, appKey)

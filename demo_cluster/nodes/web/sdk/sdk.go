@@ -8,6 +8,9 @@ import (
 	"github.com/cherry-game/examples/demo_cluster/internal/data"
 )
 
+//open_id (Open ID)
+//含义：第三方平台返回的用户唯一标识。
+
 // sdk平台类型
 const (
 	DevMode  int32 = 1 // 开发模式，注册开发帐号登陆(开发时使用)

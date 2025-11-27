@@ -1,3 +1,11 @@
+<!--
+ * @Author: t 921865806@qq.com
+ * @Date: 2025-09-17 11:23:06
+ * @LastEditors: t 921865806@qq.com
+ * @LastEditTime: 2025-11-26 10:36:11
+ * @FilePath: /examples/demo_cluster/md/record.md
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+-->
 ### question
  1. grpc和nats-server怎么使用的
 
@@ -44,6 +52,16 @@
  | 性能 | 最高 | 中等 | 较低 |
  | 复杂度 | 最低 | 中等 | 最高 |
 
- #### 补救
+ 7 框架的设计约定
+| 注册类型 | 第一个参数 | 第二个参数 | 灵活性 |
+|---------|-----------|-----------|--------| 
+| Local | 必须是 *cproto.Session | 业务数据（protobuf） | ❌ 固定 | 
+| Remote | 业务数据（protobuf） | - | ✅ 灵活 |
+
+为什么这样设计？
+Local 调用：来自客户端的请求，总是需要 Session 来识别用户
+Remote 调用：Actor 之间的 RPC 调用，不需要 Session，只需要业务数据
+
+#### 补救
  1. gorm
  2. 基础项目写

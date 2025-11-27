@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	clog "github.com/cherry-game/cherry/logger"
-	"github.com/cherry-game/examples/demo_cluster/nodes/center/model"
+	"github.com/cherry-game/examples/demo_cluster/internal/model"
 	"gorm.io/gorm"
 )
 

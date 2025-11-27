@@ -1,3 +1,11 @@
+/*
+ * @Author: t 921865806@qq.com
+ * @Date: 2025-09-29 17:09:34
+ * @LastEditors: t 921865806@qq.com
+ * @LastEditTime: 2025-11-27 15:46:26
+ * @FilePath: /examples/demo_cluster/nodes/center/module/account/actor_account.go
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ */
 package account
 
 import (
@@ -46,7 +54,7 @@ func (p *ActorAccount) registerDevAccount(req *pb.DevRegister) int32 {
 }
 
 // getDevAccount 根据帐号名获取开发者帐号表
-func (p *ActorAccount) getDevAccount(req *pb.DevRegister) (*pb.Int64, int32) {
+func (p *ActorAccount) getDevAccount(req *pb.DevRegister) (*pb.String, int32) {
 	accountName := req.AccountName
 	passWord := req.Password
 
@@ -55,12 +63,13 @@ func (p *ActorAccount) getDevAccount(req *pb.DevRegister) (*pb.Int64, int32) {
 		return nil, code.AccountAuthFail
 	}
 
-	return &pb.Int64{Value: int64(devAccount.UserID)}, code.OK
+	return &pb.String{Value: devAccount.DeviceName}, code.OK
 }
 
 // getUID 获取uid
 func (p *ActorAccount) getUID(req *pb.User) (*pb.Int64, int32) {
-	accout, error := server.DevAccountWithName(req.DeviceName)
+	//req.OpenId 其实就是deviceName
+	accout, error := server.DevAccountWithName(req.OpenId)
 	if error != nil {
 		return nil, code.AccountTokenValidateFail
 	}

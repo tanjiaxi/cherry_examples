@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-20 22:33:18
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-11-24 21:10:10
+ * @LastEditTime: 2025-11-26 23:00:02
  * @FilePath: /examples/demo_cluster/nodes/game/server/ slots/component/level_data_types.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -11,7 +11,7 @@ package spinmanage
 import "fmt"
 
 // level数据结构定义
-type LevelSessionData struct {
+type RoomDataInfo struct {
 	//基础信息
 	UserId int `json:"user_id"` //用户id
 	RoomId int `json:"room_id"` //关卡id
@@ -35,10 +35,11 @@ type LevelSessionData struct {
 	NewJackpotAcc int `json:"new_jackpot_acc"` // 新玩家Jackpot标志
 
 	// 元数据（不在原始数据中，但需要）
-	CreatedAt int64 `json:"created_at"` // 创建时间
-	UpdatedAt int64 `json:"updated_at"` // 更新时间
-	Version   int   `json:"version"`    // 版本号（乐观锁）
-	IsDirty   bool  `json:"-"`          // 脏数据标记（不序列化）
+	CreatedAt    int64 `json:"created_at"`    // 创建时间
+	UpdatedAt    int64 `json:"updated_at"`    // 更新时间
+	Version      int   `json:"version"`       // 版本号（乐观锁）
+	IsDirty      bool  `json:"-"`             // 脏数据标记（不序列化）
+	RecommendBet int64 `json:"recommend_bet"` //推荐下注额
 }
 type SessionKey struct {
 	UserID int `json:"user_id"`
@@ -50,7 +51,7 @@ func (k SessionKey) String() string {
 }
 
 type SpinContext struct {
-	Session   *LevelSessionData
+	Session   *RoomDataInfo
 	Bet       int64 //本次下注
 	TimeStamp int64 //时间戳
 }

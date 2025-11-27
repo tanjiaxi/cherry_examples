@@ -43,7 +43,7 @@ func onPomeloDataRoute(agent *pomelo.Agent, route *pmessage.Route, msg *pmessage
 		agent.Kick(notLoginRsp, true)
 		return
 	}
-	//检测是不是相同的节点（相同的服务）
+	//检测是不是相同的节点（相同的服务）比如都是gate
 	if agent.NodeType() == route.NodeType() {
 		targetPath := cfacade.NewChildPath(agent.NodeID(), route.HandleName(), session.Sid)
 		pomelo.LocalDataRoute(agent, session, route, msg, targetPath)

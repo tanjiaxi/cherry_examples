@@ -51,6 +51,7 @@ func (p *Controller) register(c *cherryGin.Context) {
 // login 根据pid获取sdkConfig，与第三方进行帐号登陆效验
 // http://127.0.0.1/login?pid=2126001&account=test1&password=test1
 func (p *Controller) login(c *cherryGin.Context) {
+	//平台id，产品 ID、项目 ID 或 包 ID
 	pid := c.GetInt32("pid", 0, true)
 
 	if pid < 1 {
@@ -95,14 +96,13 @@ func (p *Controller) login(c *cherryGin.Context) {
 		}
 
 		openId, found := result.GetString("open_id")
-		deviceName, found := result.GetString("device_name")
 		if found == false {
 			cherryLogger.Warnf("callback result map not found `open_id`. result = %s", result)
 			code.RenderResult(c, code.LoginError)
 			return
 		}
 
-		base64Token := token.New(pid, openId, config.Salt, deviceName).ToBase64()
+		base64Token := token.New(pid, openId, config.Salt).ToBase64()
 		code.RenderResult(c, code.OK, base64Token)
 	})
 }

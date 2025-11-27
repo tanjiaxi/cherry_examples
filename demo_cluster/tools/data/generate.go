@@ -1,3 +1,11 @@
+/*
+ * @Author: t 921865806@qq.com
+ * @Date: 2025-09-29 15:53:44
+ * @LastEditors: t 921865806@qq.com
+ * @LastEditTime: 2025-11-27 09:48:10
+ * @FilePath: /examples/demo_cluster/tools/data/generate.go
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ */
 package main
 
 import (
@@ -41,8 +49,9 @@ func main() {
 	// 	gen.FieldType("client_device_info", "*string"),
 	// 	gen.FieldType("ip_info", "*string"),
 	// )
-	// g.GenerateModel("slots_user")
+	g.GenerateModel("slots_user")
 	g.GenerateModel("user_bind")
+	g.GenerateModel("n2_cfg_level")
 
 	// 或者，为数据库中的所有表生成模型
 	// g.ApplyBasic(g.GenerateAllTable()...)

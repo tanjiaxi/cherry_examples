@@ -67,30 +67,29 @@ func RegisterDevAccount(app cfacade.IApplication, accountName, password, ip stri
 }
 
 // GetDevAccount 获取帐号信息
-func GetDevAccount(app cfacade.IApplication, accountName, password string) int64 {
+func GetDevAccount(app cfacade.IApplication, accountName, password string) string {
 	req := &pb.DevRegister{
 		AccountName: accountName,
 		Password:    password,
 	}
 
 	targetPath := GetTargetPath(app, accountActor)
-	rsp := &pb.Int64{}
+	rsp := &pb.String{}
 	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, getDevAccount, req, rsp)
 	if code.IsFail(errCode) {
 		clog.Warnf("[GetDevAccount] accountName = %s, errCode = %v", accountName, errCode)
-		return 0
+		return ""
 	}
 
 	return rsp.Value
 }
 
 // GetUID 获取帐号UID
-func GetUID(app cfacade.IApplication, sdkId, pid int32, openId string, deviceName string) (cfacade.UID, int32) {
+func GetUID(app cfacade.IApplication, sdkId, pid int32, openId string) (cfacade.UID, int32) {
 	req := &pb.User{
-		SdkId:      sdkId,
-		Pid:        pid,
-		OpenId:     openId,
-		DeviceName: deviceName,
+		SdkId:  sdkId,
+		Pid:    pid,
+		OpenId: openId,
 	}
 
 	targetPath := GetTargetPath(app, accountActor)

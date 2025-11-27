@@ -36,11 +36,11 @@ func (p *ActorAgent) OnInit() {
 	p.Remote().Register("setSession", p.setSession)
 }
 
-func (p *ActorAgent) setSession(session *cproto.Session, req *pb.StringKeyValue) {
+func (p *ActorAgent) setSession(req *pb.StringKeyValue) {
 	if req.Key == "" {
 		return
 	}
-	if agent, ok := pomelo.GetAgent(p.ActorID(), session.Uid); ok {
+	if agent, ok := pomelo.GetAgent(p.ActorID(), 0); ok {
 		agent.Session().Set(req.Key, req.Value)
 	}
 }
@@ -67,7 +67,7 @@ func (p *ActorAgent) login(session *cproto.Session, req *pb.LoginRequest) {
 	}
 
 	// 根据token带来的sdk参数，从中心节点获取userId
-	userId, errCode := rpcCenter.GetUID(p.App(), sdkRow.SdkId, userToken.PID, userToken.OpenID, userToken.DeviceName)
+	userId, errCode := rpcCenter.GetUID(p.App(), sdkRow.SdkId, userToken.PID, userToken.OpenID)
 	if userId == 0 || code.IsFail(errCode) {
 		agent.ResponseCode(session, code.AccountBindFail, true)
 		return
