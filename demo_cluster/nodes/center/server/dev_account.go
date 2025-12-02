@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-09-29 16:42:25
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-11-28 10:55:28
+ * @LastEditTime: 2025-12-02 14:01:03
  * @FilePath: /examples/demo_cluster/nodes/center/server/dev_account.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -69,7 +69,7 @@ func loadDevAccount() {
 }
 func createUser() (*model.SlotsUser, error) {
 	var userInfo = &model.SlotsUser{
-		UserLevel:     0,
+		UserLevel:     1,
 		CurExp:        "0",
 		ExpPercent:    0,
 		Money:         10000,

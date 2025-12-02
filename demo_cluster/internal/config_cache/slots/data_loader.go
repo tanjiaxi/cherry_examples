@@ -10,14 +10,14 @@
 package slots
 
 import (
+	"fmt"
 	"time"
 
 	clog "github.com/cherry-game/cherry/logger"
-	toolUtils "github.com/cherry-game/examples/demo_cluster/internal/common"
-	"github.com/cherry-game/examples/demo_cluster/internal/component/db"
+	"github.com/cherry-game/examples/demo_cluster/internal/component/db" //结构
+	dbData "github.com/cherry-game/examples/demo_cluster/internal/db"    //具体数据
 	gameModel "github.com/cherry-game/examples/demo_cluster/internal/model"
 	logicGameModel "github.com/cherry-game/examples/demo_cluster/internal/model/logic_model"
-	"github.com/jinzhu/copier"
 )
 
 type ConfigSnapshot struct {
@@ -25,10 +25,10 @@ type ConfigSnapshot struct {
 	LoadTime int64 //加载时间
 
 	//配置数据
-	N2CfgCard     map[int32]*gameModel.N2CfgCard
-	N2CfgReelRoom map[int32]*logicGameModel.N2CfgReelRoom
-	N2CfgRoomlist map[int32]*gameModel.N2CfgRoomlist
-	N2CfgLevel    map[int32]*gameModel.N2CfgLevel //key是levelid
+	N2CfgCard        map[int32]*gameModel.N2CfgCard
+	N2CfgReelRoom    map[int32]*logicGameModel.N2CfgReelRoom
+	N2CfgRoomlist    map[int32]*gameModel.N2CfgRoomlist
+	FromatN2CfgLevel map[int32]*dbData.FormatLevelConfig //key是levelid
 }
 type DataLoader struct {
 }
@@ -37,28 +37,29 @@ func NewDataLoader() *DataLoader {
 	return &DataLoader{}
 }
 
+// 后期的map key应该是id+schama 分配置
 func (d *DataLoader) LoadAllConfig() (*ConfigSnapshot, error) {
 	configSnapshot := ConfigSnapshot{
-		Version:       time.Now().Unix(),
-		LoadTime:      time.Now().Unix(),
-		N2CfgCard:     make(map[int32]*gameModel.N2CfgCard),
-		N2CfgReelRoom: make(map[int32]*logicGameModel.N2CfgReelRoom),
-		N2CfgRoomlist: make(map[int32]*gameModel.N2CfgRoomlist),
-		N2CfgLevel:    make(map[int32]*gameModel.N2CfgLevel),
+		Version:          time.Now().Unix(),
+		LoadTime:         time.Now().Unix(),
+		N2CfgCard:        make(map[int32]*gameModel.N2CfgCard),
+		N2CfgReelRoom:    make(map[int32]*logicGameModel.N2CfgReelRoom),
+		N2CfgRoomlist:    make(map[int32]*gameModel.N2CfgRoomlist),
+		FromatN2CfgLevel: make(map[int32]*dbData.FormatLevelConfig),
 	}
 	//加载配置
-	if err := d.LoadCardConfig(&configSnapshot); err != nil {
+	if err := d.LoadCardConfig(&configSnapshot, "public"); err != nil {
 		clog.Panic("load card config failed: %w", err)
 	}
-	if err := d.LoadRoomConfig(&configSnapshot); err != nil {
+	if err := d.LoadRoomConfig(&configSnapshot, "public"); err != nil {
 		clog.Panic("load room config failed: %w", err)
 	}
 
-	if err := d.LoadReelRoomConfig(&configSnapshot); err != nil {
+	if err := d.LoadReelRoomConfig(&configSnapshot, "public"); err != nil {
 		clog.Panic("load reel room config failed: %w", err)
 	}
 
-	if err := d.LoadLevelConfig(&configSnapshot); err != nil {
+	if err := d.LoadLevelConfig(&configSnapshot, "public"); err != nil {
 		clog.Panic("load level config failed: %w", err)
 	}
 	return &configSnapshot, nil
@@ -68,7 +69,7 @@ func (d *DataLoader) LoadAllConfig() (*ConfigSnapshot, error) {
  * @description:
  * @return {*}
  */
-func (d *DataLoader) LoadCardConfig(configSnapshot *ConfigSnapshot) error {
+func (d *DataLoader) LoadCardConfig(configSnapshot *ConfigSnapshot, schema string) error {
 	var cardConfig []*gameModel.N2CfgCard
 	//从数据库查找
 	result := db.GetDB().Find(&cardConfig)
@@ -83,7 +84,7 @@ func (d *DataLoader) LoadCardConfig(configSnapshot *ConfigSnapshot) error {
 }
 
 // room 配置
-func (d *DataLoader) LoadRoomConfig(configSnapshot *ConfigSnapshot) error {
+func (d *DataLoader) LoadRoomConfig(configSnapshot *ConfigSnapshot, schema string) error {
 	var roomConfig []*gameModel.N2CfgRoomlist
 	//从数据库查找
 	result := db.GetDB().Find(&roomConfig)
@@ -96,27 +97,15 @@ func (d *DataLoader) LoadRoomConfig(configSnapshot *ConfigSnapshot) error {
 	}
 	return nil
 }
-func (d *DataLoader) LoadReelRoomConfig(configSnapshot *ConfigSnapshot) error {
-	var reelRoomConfig []*gameModel.N2CfgReelRoom
-	var logicReelRoomConfig []*logicGameModel.N2CfgReelRoom
+func (d *DataLoader) LoadReelRoomConfig(configSnapshot *ConfigSnapshot, schema string) error {
 	//从数据库查找
-	result := db.GetDB().Find(&reelRoomConfig)
-	if result.Error != nil {
-		return result.Error
+	reelRoomConfig := dbData.GetReelRoomConfig()
+	if reelRoomConfig == nil {
+		return fmt.Errorf("no reel config")
 	}
-	logicReelRoomConfig = make([]*logicGameModel.N2CfgReelRoom, len(reelRoomConfig))
-	//利用反射复制两个结构中相同的值
-	err := copier.Copy(&logicReelRoomConfig, &reelRoomConfig)
-	if err != nil {
-		clog.Panic("copy reelRoomConfig err: %v", err)
-	}
-	//转换为镜像map
-	for i, v := range reelRoomConfig {
-		reelsequencesByte, err := toolUtils.DecompressBase64Zlib(v.Reelsequences)
-		if err != nil {
-			clog.Panic("DecompressBase64Zlib reelRoomConfig err: %v", err)
-		}
-		logicReelRoomConfig[i].Reelsequences = reelsequencesByte
+	logicReelRoomConfig := dbData.FromatReelRoomConfig(reelRoomConfig)
+	if logicReelRoomConfig == nil {
+		return fmt.Errorf("format error")
 	}
 	for _, v := range logicReelRoomConfig {
 		configSnapshot.N2CfgReelRoom[v.RoomID] = v
@@ -124,16 +113,18 @@ func (d *DataLoader) LoadReelRoomConfig(configSnapshot *ConfigSnapshot) error {
 	return nil
 }
 
-func (d *DataLoader) LoadLevelConfig(configSnapshot *ConfigSnapshot) error {
-	var levelConfig []*gameModel.N2CfgLevel
-	//从数据库查找
-	result := db.GetDB().Find(&levelConfig)
-	if result.Error != nil {
-		return result.Error
+func (d *DataLoader) LoadLevelConfig(configSnapshot *ConfigSnapshot, schema string) error {
+	var levelConfig = dbData.GetLevelConfig()
+	if levelConfig == nil {
+		return fmt.Errorf("no level config")
 	}
 	//转换为镜像map
 	for _, v := range levelConfig {
-		configSnapshot.N2CfgLevel[v.Levelid] = v
+		formatConfig, err := dbData.FormatData(v)
+		if err != nil {
+			return err
+		}
+		configSnapshot.FromatN2CfgLevel[v.Levelid] = formatConfig
 	}
 	return nil
 }

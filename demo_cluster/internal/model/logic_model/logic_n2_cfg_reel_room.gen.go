@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-26 16:47:59
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-11-26 16:49:11
+ * @LastEditTime: 2025-12-02 16:25:01
  * @FilePath: /examples/demo_cluster/nodes/game/model/logic_model/logic_n2_cfg_reel_room.gen.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -12,32 +12,50 @@
 
 package model
 
+import "encoding/json"
+
+// 2. 对应 config 对象
+type GameConfig struct {
+	Version     string          `json:"version"`
+	ReelsStart  []int32         `json:"reels_start"`
+	ReelsWeight [][]float64     `json:"reels_weight"` // 注意：这里是 float
+	ReelsConfig json.RawMessage `json:"reels_config"`
+}
+
+// 3. 根对象
+type SlotData struct {
+	// 对应 JSON: "symbolsSequences": [ [ [...], [...] ], ... ]
+	// 这是一个三维数组：[方案索引][滚轴索引][图标索引]
+	SymbolsSequences [][][]int32 `json:"symbolsSequences"`
+	Config           GameConfig  `json:"config"`
+}
+
 const TableNameN2CfgReelRoom = "n2_cfg_reel_room"
 
 // N2CfgReelRoom mapped from table <n2_cfg_reel_room>
 type N2CfgReelRoom struct {
-	RoomID            int32   `gorm:"column:room_id;primaryKey" json:"room_id"`
-	TP                string  `gorm:"column:t_p" json:"t_p"`
-	TWeight           string  `gorm:"column:t_weight;default:NULL" json:"t_weight"`
-	TAddhot           string  `gorm:"column:t_addhot;default:NULL" json:"t_addhot"`
-	SpecialAniP       float32 `gorm:"column:special_ani_p" json:"special_ani_p"`
-	SpecialHot        int32   `gorm:"column:special_hot" json:"special_hot"`
-	SpecialP          string  `gorm:"column:special_p;default:NULL" json:"special_p"`
-	SpecialHotreduce  float32 `gorm:"column:special_hotreduce" json:"special_hotreduce"`
-	Hot1              string  `gorm:"column:hot1;default:NULL" json:"hot1"`
-	NHotreduce        float32 `gorm:"column:N_hotreduce" json:"N_hotreduce"`
-	NBtoBP            string  `gorm:"column:NBtoB_p;default:NULL" json:"NBtoB_p"`
-	Reelsequences     []byte  `gorm:"column:reelsequences" json:"reelsequences"`
-	BonusWin          string  `gorm:"column:bonus_win" json:"bonus_win"`
-	BonusBasePaytable string  `gorm:"column:bonus_base_paytable;default:NULL" json:"bonus_base_paytable"`
-	BonusAveragewin   float64 `gorm:"column:bonus_averagewin" json:"bonus_averagewin"`
-	CupAnimP          float32 `gorm:"column:cup_anim_p" json:"cup_anim_p"`
-	CupP              float32 `gorm:"column:cup_p" json:"cup_p"`
-	CollectWin        string  `gorm:"column:collect_win" json:"collect_win"`
-	SpecialValue      string  `gorm:"column:special_value" json:"special_value"`
-	Version           int32   `gorm:"column:version" json:"version"`
-	Seed              string  `gorm:"column:seed;default:0" json:"seed"`
-	RoomReelLevel     int32   `gorm:"column:room_reel_level;default:3" json:"room_reel_level"`
+	RoomID            int32    `gorm:"column:room_id;primaryKey" json:"room_id"`
+	TP                string   `gorm:"column:t_p" json:"t_p"`
+	TWeight           string   `gorm:"column:t_weight;default:NULL" json:"t_weight"`
+	TAddhot           string   `gorm:"column:t_addhot;default:NULL" json:"t_addhot"`
+	SpecialAniP       float32  `gorm:"column:special_ani_p" json:"special_ani_p"`
+	SpecialHot        int32    `gorm:"column:special_hot" json:"special_hot"`
+	SpecialP          string   `gorm:"column:special_p;default:NULL" json:"special_p"`
+	SpecialHotreduce  float32  `gorm:"column:special_hotreduce" json:"special_hotreduce"`
+	Hot1              string   `gorm:"column:hot1;default:NULL" json:"hot1"`
+	NHotreduce        float32  `gorm:"column:N_hotreduce" json:"N_hotreduce"`
+	NBtoBP            string   `gorm:"column:NBtoB_p;default:NULL" json:"NBtoB_p"`
+	Reelsequences     SlotData `gorm:"column:reelsequences" json:"reelsequences"`
+	BonusWin          string   `gorm:"column:bonus_win" json:"bonus_win"`
+	BonusBasePaytable string   `gorm:"column:bonus_base_paytable;default:NULL" json:"bonus_base_paytable"`
+	BonusAveragewin   float64  `gorm:"column:bonus_averagewin" json:"bonus_averagewin"`
+	CupAnimP          float32  `gorm:"column:cup_anim_p" json:"cup_anim_p"`
+	CupP              float32  `gorm:"column:cup_p" json:"cup_p"`
+	CollectWin        string   `gorm:"column:collect_win" json:"collect_win"`
+	SpecialValue      string   `gorm:"column:special_value" json:"special_value"`
+	Version           int32    `gorm:"column:version" json:"version"`
+	Seed              string   `gorm:"column:seed;default:0" json:"seed"`
+	RoomReelLevel     int32    `gorm:"column:room_reel_level;default:3" json:"room_reel_level"`
 }
 
 // TableName N2CfgReelRoom's table name

@@ -9,7 +9,7 @@ message BaseInfo {
 
   int64 userBet = 3;           // 玩家自选倍率
   int64 defaultBet = 4;        // 默认推荐倍率
-  repeated int32 betArray = 5; // 押注数组
+  repeated int64 betArray = 5; // 押注数组
 
   int64 baseMoney = 6; // 基础押注金钱
 
@@ -90,7 +90,7 @@ message SpinUserInfo {
 
   message LevelUpInfo {
     int32 betDefault = 1;        // 默认赔率
-    repeated int32 betArray = 2; // 押注数组
+    repeated int64 betArray = 2; // 押注数组
     RewardData reward = 3;       // 升级奖励
     string secret = 4;           // AD密钥
     repeated int32 rooms = 5;    // 新解锁关上列表

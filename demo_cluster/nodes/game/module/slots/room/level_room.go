@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-20 22:24:38
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-12-01 22:20:20
+ * @LastEditTime: 2025-12-02 17:46:06
  * @FilePath: /examples/demo_cluster/nodes/game/module/slots/room/level_room.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -123,18 +123,31 @@ func (r *ActorRoom) machineinfo(session *cproto.Session, req *pb.MachineInfo) {
 	if err != nil {
 		clog.Errorf("获取游戏阶段失败: roomId=%d, err=%v", roomId, err)
 	}
-
+	initReels, err := machine.GetReelsInfo()
+	if err != nil {
+		clog.Errorf("获取轴数据失败: roomId=%d, err=%v", roomId, err)
+	}
+	payTable, err := machine.GetPayTable()
+	if err != nil {
+		clog.Errorf("获取PayTable数据失败: roomId=%d, err=%v", roomId, err)
+	}
+	feature, err := machine.GetFeature()
+	if err != nil {
+		clog.Errorf("获取fature数据失败: roomId=%d, err=%v", roomId, err)
+	}
 	// 7. 构造响应
 	response := &pb.MachineInfoResponse{
 		// 根据实际 protobuf 定义填充字段
 		// 示例: Base: baseInfo, GameStage: gameStage
+		Base:      baseInfo,
+		Stage:     gameStage,
+		InitReels: initReels,
+		PayTable:  payTable,
+		Feature:   feature,
+		// 其他字段...
 	}
-	_ = baseInfo
-	_ = gameStage
-
-	clog.Infof("获取机器信息成功: userId=%d, roomId=%d, version=%d",
-		userInfo.UserId, roomId, n2CfgRoomlist.Version)
-
+	clog.Infof("获取机器信息成功: userId=%d, roomId=%d, version=%d ,feature=%v",
+		userInfo.UserId, roomId, n2CfgRoomlist.Version, feature)
 	r.Response(session, response)
 }
 

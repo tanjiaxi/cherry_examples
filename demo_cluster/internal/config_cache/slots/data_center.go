@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-20 23:45:18
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-12-01 22:33:26
+ * @LastEditTime: 2025-12-02 11:24:36
  * @FilePath: /examples/demo_cluster/nodes/game/db/slots/data_center.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -15,6 +15,7 @@ import (
 
 	"github.com/DmitriyVTitov/size"
 	clog "github.com/cherry-game/cherry/logger"
+	dbData "github.com/cherry-game/examples/demo_cluster/internal/db" //具体数据
 	gameModel "github.com/cherry-game/examples/demo_cluster/internal/model"
 	logicGameModel "github.com/cherry-game/examples/demo_cluster/internal/model/logic_model"
 )
@@ -117,8 +118,8 @@ func (dc *DataCenter) GetN2CfgReelRoom(ruleId int32) (*logicGameModel.N2CfgReelR
 	return allN2CfgReelRoom[ruleId], nil
 }
 
-func (dc *DataCenter) GetN2CLevel(levelid int32) (*gameModel.N2CfgLevel, error) {
-	allN2CfgReel := dc.getSnapshot().N2CfgLevel
+func (dc *DataCenter) GetN2CLevel(levelid int32) (*dbData.FormatLevelConfig, error) {
+	allN2CfgReel := dc.getSnapshot().FromatN2CfgLevel
 	if allN2CfgReel[levelid] == nil {
 		clog.Panic("levelConfig %d no reel  config ", levelid)
 		return nil, fmt.Errorf("room %d no reel  config ", levelid)

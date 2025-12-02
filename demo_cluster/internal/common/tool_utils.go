@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-26 17:03:16
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-11-26 17:03:54
+ * @LastEditTime: 2025-12-02 11:01:10
  * @FilePath: /examples/demo_cluster/internal/common/tool_utils.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -14,6 +14,8 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"strconv"
+	"strings"
 )
 
 // DecompressBase64Zlib 接收一个 base64 字符串，返回解压后的字节切片
@@ -41,4 +43,31 @@ func DecompressBase64Zlib(encodedStr string) ([]byte, error) {
 	}
 
 	return decompressedData, nil
+}
+
+// SplitToInts 将 "10,20,50" 格式的字符串转换为 []int 切片
+// s: 源字符串
+// sep: 分隔符 (例如 ",")
+func SplitNumber(str, sep string) ([]int, error) {
+	if str == "" {
+		return []int{}, nil
+	}
+	// 1. 分割字符串
+	parts := strings.Split(str, sep)
+
+	result := make([]int, 0, len(parts))
+	for _, part := range parts {
+		// 2. 去除首尾空格 (防止配置写成 "10, 20" 导致转换失败)
+		trimmed := strings.TrimSpace(part)
+		if trimmed == "" {
+			continue // 跳过空项，比如 "10,,20"
+		}
+		val, err := strconv.Atoi(trimmed)
+		if err != nil {
+			return nil, err // 如果配置有误（比如写了 "10,abc"），返回错误
+		}
+
+		result = append(result, val)
+	}
+	return result, nil
 }

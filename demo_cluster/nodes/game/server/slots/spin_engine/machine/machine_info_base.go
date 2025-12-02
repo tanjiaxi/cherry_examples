@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-26 14:19:10
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-12-01 23:36:43
+ * @LastEditTime: 2025-12-02 16:51:33
  * @FilePath: /examples/demo_cluster/nodes/game/server/slots/spin_engine/machine/machine_info_base.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -12,10 +12,12 @@ import (
 	"fmt"
 
 	cproto "github.com/cherry-game/cherry/net/proto"
+	"github.com/cherry-game/examples/demo_cluster/internal/code"
 	configCacheSlots "github.com/cherry-game/examples/demo_cluster/internal/config_cache/slots"
 	gameModel "github.com/cherry-game/examples/demo_cluster/internal/model"
 	logicGameModel "github.com/cherry-game/examples/demo_cluster/internal/model/logic_model"
 	"github.com/cherry-game/examples/demo_cluster/internal/pb"
+	gameDb "github.com/cherry-game/examples/demo_cluster/nodes/game/db"
 	spinManager "github.com/cherry-game/examples/demo_cluster/nodes/game/server/slots/spin_manager"
 )
 
@@ -75,17 +77,28 @@ func (b *BaseMachine) GetBase() (*pb.BaseInfo, error) {
 	// do something//
 	baseInfo := &pb.BaseInfo{}
 	//需要获取levelconfig
-	_, err := configCacheSlots.GetInstance().GetN2CLevel(b.userInfo.Level)
+	fromatN2CfgLevel, err := configCacheSlots.GetInstance().GetN2CLevel(b.userInfo.Level)
 	if err != nil {
 		return nil, err
 	}
 	//getUserLevelConfig
 	//需要获取betResult
-	speBetNum := int64(1000)
-	curBetNum := int64(1000)
+	//costCoinsM 临时为1
+	bets, _, _, err := gameDb.FormatUserBetArr(fromatN2CfgLevel, b.roomId, code.CostCoinsM, code.Schama)
+	if err != nil {
+		return nil, err
+	}
+	speBetNum := b.getSpeNetNum()
+	curBetNum := b.roomDataInfo.CurBetNum
+
+	if curBetNum < int64(bets[0]) {
+		curBetNum = int64(bets[0])
+	} else if curBetNum > int64(bets[len(bets)-1]) {
+		curBetNum = int64(bets[len(bets)-1])
+	}
 
 	baseInfo.Id = b.roomId
-	baseInfo.BetArray = []int32{1000, 10000, 100000}
+	baseInfo.BetArray = bets
 	baseInfo.BaseMoney = b.roomConfig.Betbaseamount
 	baseInfo.ReelSpeed = 0
 	baseInfo.HasPlayed = b.roomDataInfo.SpinNum > 0
@@ -107,26 +120,35 @@ func (b *BaseMachine) ConvertStage() (gameStage *pb.GameStage, err error) {
 	}
 	return gameStage, nil
 }
-func (b *BaseMachine) GetReelsInfo() error {
-	// 默认实现，子类可以重写
-	// TODO: 实现卷轴信息获取逻辑
-	return nil
+func (b *BaseMachine) GetReelsInfo() (*pb.ReelsInfo, error) {
+	version := b.reelCofig.Version
+	reelArray := gameDb.ToArrList(&b.reelCofig.Reelsequences)
+	reelsInfo := &pb.ReelsInfo{
+		ReelVersion: version,
+		ReelArray:   reelArray,
+	}
+
+	return reelsInfo, nil
 }
 
-func (b *BaseMachine) GetPayTable() error {
+func (b *BaseMachine) GetPayTable() ([]*pb.PayInfo, error) {
 	// 默认实现，子类可以重写
 	// TODO: 实现赔付表获取逻辑
-	return nil
+	return nil, nil
 }
 
-func (b *BaseMachine) GetFeature() error {
+func (b *BaseMachine) GetFeature() (*pb.FeatureInfo, error) {
 	// 默认实现，子类可以重写
 	// TODO: 实现特性信息获取逻辑
-	return nil
+	return nil, nil
 }
 
 func (b *BaseMachine) GetJackpot() error {
 	// 默认实现，子类可以重写
 	// TODO: 实现 Jackpot 信息获取逻辑
 	return nil
+}
+func (b *BaseMachine) getSpeNetNum() int64 {
+	speNum := b.roomDataInfo.SpeSpinBet
+	return speNum
 }

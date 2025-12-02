@@ -78,6 +78,7 @@ goog.exportSymbol('proto.pb.DragonfShockData', null, global);
 goog.exportSymbol('proto.pb.Enormous7Bonus', null, global);
 goog.exportSymbol('proto.pb.Enormous7Feature', null, global);
 goog.exportSymbol('proto.pb.FeatureInfo', null, global);
+goog.exportSymbol('proto.pb.FeatureInfo.FeatureCase', null, global);
 goog.exportSymbol('proto.pb.Firebonus777Bonus', null, global);
 goog.exportSymbol('proto.pb.Firebonus777Feature', null, global);
 goog.exportSymbol('proto.pb.FirerouletteBonus', null, global);
@@ -302,7 +303,7 @@ if (goog.DEBUG && !COMPILED) {
  * @constructor
  */
 proto.pb.FeatureInfo = function(opt_data) {
-  jspb.Message.initialize(this, opt_data, 0, -1, null, null);
+  jspb.Message.initialize(this, opt_data, 0, -1, null, proto.pb.FeatureInfo.oneofGroups_);
 };
 goog.inherits(proto.pb.FeatureInfo, jspb.Message);
 if (goog.DEBUG && !COMPILED) {
@@ -4517,6 +4518,102 @@ proto.pb.GamePower.prototype.setWin = function(value) {
 
 
 
+/**
+ * Oneof group definitions for this message. Each group defines the field
+ * numbers belonging to that group. When of these fields' value is set, all
+ * other fields in the group are cleared. During deserialization, if multiple
+ * fields are encountered for a group, only the last value seen will be kept.
+ * @private {!Array<!Array<number>>}
+ * @const
+ */
+proto.pb.FeatureInfo.oneofGroups_ = [[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72]];
+
+/**
+ * @enum {number}
+ */
+proto.pb.FeatureInfo.FeatureCase = {
+  FEATURE_NOT_SET: 0,
+  AMAZING777FEATURE: 1,
+  FIREBONUS777FEATURE: 2,
+  BIGBUCKSFEATURE: 3,
+  DOUBLEDIAMOND777FEATURE: 4,
+  ICE777FEATURE: 5,
+  LIGHTNING777FEATURE: 6,
+  WINNINGHIT777FEATURE: 7,
+  WONDERSHAKEFEATURE: 8,
+  TRIPLEDIAMOND777FEATURE: 9,
+  BIG10XFEATURE: 10,
+  GREEDYFEATURE: 11,
+  SUPERFREESPINSFEATURE: 12,
+  GOLDWHEELFEATURE: 13,
+  ENORMOUS7FEATURE: 14,
+  GOLDFORTUNEFEATURE: 15,
+  JACKPOTFRENZYFEATURE: 16,
+  HOTTERFEATURE: 17,
+  PINBALLFEATURE: 18,
+  TRIPLEFEATURE: 19,
+  FIREROULETTEFEATURE: 20,
+  REDBLUEFEATURE: 21,
+  FLAMINGJEWELSFEATURE: 22,
+  ROYALCASHFEATURE: 23,
+  CRYSTALTIMEFEATURE: 24,
+  SUPERMEGAFEATURE: 25,
+  GOLDFOUNDRYFEATURE: 26,
+  CRAZYFIREBALLFEATURE: 27,
+  LIBERTYLFEATURE: 28,
+  DIAMONDFREESPINSFEATURE: 29,
+  REDF21FEATURE: 30,
+  HOTWHEEL777FEATURE: 31,
+  BRAVOMACHINEFEATURE: 32,
+  RAINBOWFEATURE: 33,
+  BRAVOSPINFEATURE: 34,
+  GOLDWINNERFEATURE: 35,
+  GOLDWHEEL2FEATURE: 36,
+  LUCKYWHEELFEATURE: 37,
+  BUFFALOFEATURE: 38,
+  GOLDFORTUNEWHEELFEATURE: 39,
+  FUDAOLEFEATURE: 40,
+  MEGACASHFEATURE: 41,
+  DRAGONFFEATURE: 42,
+  CRAZYXTRAFEATURE: 43,
+  ICE7775LINESFEATURE: 44,
+  WINNINGSFEATURE: 45,
+  WINNINGSBONUSFEATURE: 46,
+  BAMFEATURE: 47,
+  DOUBLEWINNINGFEATURE: 48,
+  ANYTHINGBUTFEATURE: 49,
+  BURNINGGOLDFEATURE: 50,
+  CLASSICRUBYFEATURE: 51,
+  LUCKYLFEATURE: 52,
+  WILDJPFEATURE: 53,
+  RUNMONEYFEATURE: 54,
+  FORTUNESFEATURE: 55,
+  SPININFERNOFEATURE: 56,
+  GOLDMACHINEJACKPOTFEATURE: 57,
+  BURNINGTRIPLEFEATURE: 58,
+  ILOVEDIAMONDSFEATURE: 59,
+  BR89FEATURE: 60,
+  BRAVOBALL92FEATURE: 61,
+  SUPERMEFEATURE: 62,
+  RICH94FEATURE: 63,
+  PARTY999FEATURE: 64,
+  FOURLEAFCLOVERFEATURE: 65,
+  FORTUNE7SFEATURE: 66,
+  CRYSTAL97FEATURE: 67,
+  TELLERFEATURE: 68,
+  MAGICALGENIEFEATURE: 69,
+  GOLDTIGERFEATURE: 70,
+  SHINY102FEATURE: 71,
+  AZTEC105FEATURE: 72
+};
+
+/**
+ * @return {proto.pb.FeatureInfo.FeatureCase}
+ */
+proto.pb.FeatureInfo.prototype.getFeatureCase = function() {
+  return /** @type {proto.pb.FeatureInfo.FeatureCase} */(jspb.Message.computeOneofCase(this, proto.pb.FeatureInfo.oneofGroups_[0]));
+};
+
 
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
@@ -5639,7 +5736,7 @@ proto.pb.FeatureInfo.prototype.getAmazing777feature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setAmazing777feature = function(value) {
-  return jspb.Message.setWrapperField(this, 1, value);
+  return jspb.Message.setOneofWrapperField(this, 1, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -5676,7 +5773,7 @@ proto.pb.FeatureInfo.prototype.getFirebonus777feature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setFirebonus777feature = function(value) {
-  return jspb.Message.setWrapperField(this, 2, value);
+  return jspb.Message.setOneofWrapperField(this, 2, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -5713,7 +5810,7 @@ proto.pb.FeatureInfo.prototype.getBigbucksfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setBigbucksfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 3, value);
+  return jspb.Message.setOneofWrapperField(this, 3, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -5750,7 +5847,7 @@ proto.pb.FeatureInfo.prototype.getDoublediamond777feature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setDoublediamond777feature = function(value) {
-  return jspb.Message.setWrapperField(this, 4, value);
+  return jspb.Message.setOneofWrapperField(this, 4, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -5787,7 +5884,7 @@ proto.pb.FeatureInfo.prototype.getIce777feature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setIce777feature = function(value) {
-  return jspb.Message.setWrapperField(this, 5, value);
+  return jspb.Message.setOneofWrapperField(this, 5, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -5824,7 +5921,7 @@ proto.pb.FeatureInfo.prototype.getLightning777feature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setLightning777feature = function(value) {
-  return jspb.Message.setWrapperField(this, 6, value);
+  return jspb.Message.setOneofWrapperField(this, 6, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -5861,7 +5958,7 @@ proto.pb.FeatureInfo.prototype.getWinninghit777feature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setWinninghit777feature = function(value) {
-  return jspb.Message.setWrapperField(this, 7, value);
+  return jspb.Message.setOneofWrapperField(this, 7, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -5898,7 +5995,7 @@ proto.pb.FeatureInfo.prototype.getWondershakefeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setWondershakefeature = function(value) {
-  return jspb.Message.setWrapperField(this, 8, value);
+  return jspb.Message.setOneofWrapperField(this, 8, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -5935,7 +6032,7 @@ proto.pb.FeatureInfo.prototype.getTriplediamond777feature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setTriplediamond777feature = function(value) {
-  return jspb.Message.setWrapperField(this, 9, value);
+  return jspb.Message.setOneofWrapperField(this, 9, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -5972,7 +6069,7 @@ proto.pb.FeatureInfo.prototype.getBig10xfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setBig10xfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 10, value);
+  return jspb.Message.setOneofWrapperField(this, 10, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -6009,7 +6106,7 @@ proto.pb.FeatureInfo.prototype.getGreedyfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setGreedyfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 11, value);
+  return jspb.Message.setOneofWrapperField(this, 11, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -6046,7 +6143,7 @@ proto.pb.FeatureInfo.prototype.getSuperfreespinsfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setSuperfreespinsfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 12, value);
+  return jspb.Message.setOneofWrapperField(this, 12, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -6083,7 +6180,7 @@ proto.pb.FeatureInfo.prototype.getGoldwheelfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setGoldwheelfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 13, value);
+  return jspb.Message.setOneofWrapperField(this, 13, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -6120,7 +6217,7 @@ proto.pb.FeatureInfo.prototype.getEnormous7feature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setEnormous7feature = function(value) {
-  return jspb.Message.setWrapperField(this, 14, value);
+  return jspb.Message.setOneofWrapperField(this, 14, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -6157,7 +6254,7 @@ proto.pb.FeatureInfo.prototype.getGoldfortunefeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setGoldfortunefeature = function(value) {
-  return jspb.Message.setWrapperField(this, 15, value);
+  return jspb.Message.setOneofWrapperField(this, 15, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -6194,7 +6291,7 @@ proto.pb.FeatureInfo.prototype.getJackpotfrenzyfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setJackpotfrenzyfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 16, value);
+  return jspb.Message.setOneofWrapperField(this, 16, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -6231,7 +6328,7 @@ proto.pb.FeatureInfo.prototype.getHotterfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setHotterfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 17, value);
+  return jspb.Message.setOneofWrapperField(this, 17, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -6268,7 +6365,7 @@ proto.pb.FeatureInfo.prototype.getPinballfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setPinballfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 18, value);
+  return jspb.Message.setOneofWrapperField(this, 18, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -6305,7 +6402,7 @@ proto.pb.FeatureInfo.prototype.getTriplefeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setTriplefeature = function(value) {
-  return jspb.Message.setWrapperField(this, 19, value);
+  return jspb.Message.setOneofWrapperField(this, 19, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -6342,7 +6439,7 @@ proto.pb.FeatureInfo.prototype.getFireroulettefeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setFireroulettefeature = function(value) {
-  return jspb.Message.setWrapperField(this, 20, value);
+  return jspb.Message.setOneofWrapperField(this, 20, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -6379,7 +6476,7 @@ proto.pb.FeatureInfo.prototype.getRedbluefeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setRedbluefeature = function(value) {
-  return jspb.Message.setWrapperField(this, 21, value);
+  return jspb.Message.setOneofWrapperField(this, 21, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -6416,7 +6513,7 @@ proto.pb.FeatureInfo.prototype.getFlamingjewelsfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setFlamingjewelsfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 22, value);
+  return jspb.Message.setOneofWrapperField(this, 22, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -6453,7 +6550,7 @@ proto.pb.FeatureInfo.prototype.getRoyalcashfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setRoyalcashfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 23, value);
+  return jspb.Message.setOneofWrapperField(this, 23, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -6490,7 +6587,7 @@ proto.pb.FeatureInfo.prototype.getCrystaltimefeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setCrystaltimefeature = function(value) {
-  return jspb.Message.setWrapperField(this, 24, value);
+  return jspb.Message.setOneofWrapperField(this, 24, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -6527,7 +6624,7 @@ proto.pb.FeatureInfo.prototype.getSupermegafeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setSupermegafeature = function(value) {
-  return jspb.Message.setWrapperField(this, 25, value);
+  return jspb.Message.setOneofWrapperField(this, 25, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -6564,7 +6661,7 @@ proto.pb.FeatureInfo.prototype.getGoldfoundryfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setGoldfoundryfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 26, value);
+  return jspb.Message.setOneofWrapperField(this, 26, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -6601,7 +6698,7 @@ proto.pb.FeatureInfo.prototype.getCrazyfireballfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setCrazyfireballfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 27, value);
+  return jspb.Message.setOneofWrapperField(this, 27, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -6638,7 +6735,7 @@ proto.pb.FeatureInfo.prototype.getLibertylfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setLibertylfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 28, value);
+  return jspb.Message.setOneofWrapperField(this, 28, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -6675,7 +6772,7 @@ proto.pb.FeatureInfo.prototype.getDiamondfreespinsfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setDiamondfreespinsfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 29, value);
+  return jspb.Message.setOneofWrapperField(this, 29, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -6712,7 +6809,7 @@ proto.pb.FeatureInfo.prototype.getRedf21feature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setRedf21feature = function(value) {
-  return jspb.Message.setWrapperField(this, 30, value);
+  return jspb.Message.setOneofWrapperField(this, 30, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -6749,7 +6846,7 @@ proto.pb.FeatureInfo.prototype.getHotwheel777feature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setHotwheel777feature = function(value) {
-  return jspb.Message.setWrapperField(this, 31, value);
+  return jspb.Message.setOneofWrapperField(this, 31, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -6786,7 +6883,7 @@ proto.pb.FeatureInfo.prototype.getBravomachinefeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setBravomachinefeature = function(value) {
-  return jspb.Message.setWrapperField(this, 32, value);
+  return jspb.Message.setOneofWrapperField(this, 32, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -6823,7 +6920,7 @@ proto.pb.FeatureInfo.prototype.getRainbowfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setRainbowfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 33, value);
+  return jspb.Message.setOneofWrapperField(this, 33, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -6860,7 +6957,7 @@ proto.pb.FeatureInfo.prototype.getBravospinfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setBravospinfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 34, value);
+  return jspb.Message.setOneofWrapperField(this, 34, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -6897,7 +6994,7 @@ proto.pb.FeatureInfo.prototype.getGoldwinnerfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setGoldwinnerfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 35, value);
+  return jspb.Message.setOneofWrapperField(this, 35, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -6934,7 +7031,7 @@ proto.pb.FeatureInfo.prototype.getGoldwheel2feature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setGoldwheel2feature = function(value) {
-  return jspb.Message.setWrapperField(this, 36, value);
+  return jspb.Message.setOneofWrapperField(this, 36, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -6971,7 +7068,7 @@ proto.pb.FeatureInfo.prototype.getLuckywheelfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setLuckywheelfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 37, value);
+  return jspb.Message.setOneofWrapperField(this, 37, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -7008,7 +7105,7 @@ proto.pb.FeatureInfo.prototype.getBuffalofeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setBuffalofeature = function(value) {
-  return jspb.Message.setWrapperField(this, 38, value);
+  return jspb.Message.setOneofWrapperField(this, 38, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -7045,7 +7142,7 @@ proto.pb.FeatureInfo.prototype.getGoldfortunewheelfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setGoldfortunewheelfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 39, value);
+  return jspb.Message.setOneofWrapperField(this, 39, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -7082,7 +7179,7 @@ proto.pb.FeatureInfo.prototype.getFudaolefeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setFudaolefeature = function(value) {
-  return jspb.Message.setWrapperField(this, 40, value);
+  return jspb.Message.setOneofWrapperField(this, 40, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -7119,7 +7216,7 @@ proto.pb.FeatureInfo.prototype.getMegacashfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setMegacashfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 41, value);
+  return jspb.Message.setOneofWrapperField(this, 41, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -7156,7 +7253,7 @@ proto.pb.FeatureInfo.prototype.getDragonffeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setDragonffeature = function(value) {
-  return jspb.Message.setWrapperField(this, 42, value);
+  return jspb.Message.setOneofWrapperField(this, 42, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -7193,7 +7290,7 @@ proto.pb.FeatureInfo.prototype.getCrazyxtrafeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setCrazyxtrafeature = function(value) {
-  return jspb.Message.setWrapperField(this, 43, value);
+  return jspb.Message.setOneofWrapperField(this, 43, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -7230,7 +7327,7 @@ proto.pb.FeatureInfo.prototype.getIce7775linesfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setIce7775linesfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 44, value);
+  return jspb.Message.setOneofWrapperField(this, 44, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -7267,7 +7364,7 @@ proto.pb.FeatureInfo.prototype.getWinningsfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setWinningsfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 45, value);
+  return jspb.Message.setOneofWrapperField(this, 45, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -7304,7 +7401,7 @@ proto.pb.FeatureInfo.prototype.getWinningsbonusfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setWinningsbonusfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 46, value);
+  return jspb.Message.setOneofWrapperField(this, 46, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -7341,7 +7438,7 @@ proto.pb.FeatureInfo.prototype.getBamfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setBamfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 47, value);
+  return jspb.Message.setOneofWrapperField(this, 47, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -7378,7 +7475,7 @@ proto.pb.FeatureInfo.prototype.getDoublewinningfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setDoublewinningfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 48, value);
+  return jspb.Message.setOneofWrapperField(this, 48, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -7415,7 +7512,7 @@ proto.pb.FeatureInfo.prototype.getAnythingbutfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setAnythingbutfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 49, value);
+  return jspb.Message.setOneofWrapperField(this, 49, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -7452,7 +7549,7 @@ proto.pb.FeatureInfo.prototype.getBurninggoldfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setBurninggoldfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 50, value);
+  return jspb.Message.setOneofWrapperField(this, 50, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -7489,7 +7586,7 @@ proto.pb.FeatureInfo.prototype.getClassicrubyfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setClassicrubyfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 51, value);
+  return jspb.Message.setOneofWrapperField(this, 51, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -7526,7 +7623,7 @@ proto.pb.FeatureInfo.prototype.getLuckylfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setLuckylfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 52, value);
+  return jspb.Message.setOneofWrapperField(this, 52, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -7563,7 +7660,7 @@ proto.pb.FeatureInfo.prototype.getWildjpfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setWildjpfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 53, value);
+  return jspb.Message.setOneofWrapperField(this, 53, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -7600,7 +7697,7 @@ proto.pb.FeatureInfo.prototype.getRunmoneyfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setRunmoneyfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 54, value);
+  return jspb.Message.setOneofWrapperField(this, 54, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -7637,7 +7734,7 @@ proto.pb.FeatureInfo.prototype.getFortunesfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setFortunesfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 55, value);
+  return jspb.Message.setOneofWrapperField(this, 55, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -7674,7 +7771,7 @@ proto.pb.FeatureInfo.prototype.getSpininfernofeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setSpininfernofeature = function(value) {
-  return jspb.Message.setWrapperField(this, 56, value);
+  return jspb.Message.setOneofWrapperField(this, 56, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -7711,7 +7808,7 @@ proto.pb.FeatureInfo.prototype.getGoldmachinejackpotfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setGoldmachinejackpotfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 57, value);
+  return jspb.Message.setOneofWrapperField(this, 57, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -7748,7 +7845,7 @@ proto.pb.FeatureInfo.prototype.getBurningtriplefeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setBurningtriplefeature = function(value) {
-  return jspb.Message.setWrapperField(this, 58, value);
+  return jspb.Message.setOneofWrapperField(this, 58, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -7785,7 +7882,7 @@ proto.pb.FeatureInfo.prototype.getIlovediamondsfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setIlovediamondsfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 59, value);
+  return jspb.Message.setOneofWrapperField(this, 59, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -7822,7 +7919,7 @@ proto.pb.FeatureInfo.prototype.getBr89feature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setBr89feature = function(value) {
-  return jspb.Message.setWrapperField(this, 60, value);
+  return jspb.Message.setOneofWrapperField(this, 60, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -7859,7 +7956,7 @@ proto.pb.FeatureInfo.prototype.getBravoball92feature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setBravoball92feature = function(value) {
-  return jspb.Message.setWrapperField(this, 61, value);
+  return jspb.Message.setOneofWrapperField(this, 61, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -7896,7 +7993,7 @@ proto.pb.FeatureInfo.prototype.getSupermefeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setSupermefeature = function(value) {
-  return jspb.Message.setWrapperField(this, 62, value);
+  return jspb.Message.setOneofWrapperField(this, 62, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -7933,7 +8030,7 @@ proto.pb.FeatureInfo.prototype.getRich94feature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setRich94feature = function(value) {
-  return jspb.Message.setWrapperField(this, 63, value);
+  return jspb.Message.setOneofWrapperField(this, 63, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -7970,7 +8067,7 @@ proto.pb.FeatureInfo.prototype.getParty999feature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setParty999feature = function(value) {
-  return jspb.Message.setWrapperField(this, 64, value);
+  return jspb.Message.setOneofWrapperField(this, 64, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -8007,7 +8104,7 @@ proto.pb.FeatureInfo.prototype.getFourleafcloverfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setFourleafcloverfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 65, value);
+  return jspb.Message.setOneofWrapperField(this, 65, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -8044,7 +8141,7 @@ proto.pb.FeatureInfo.prototype.getFortune7sfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setFortune7sfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 66, value);
+  return jspb.Message.setOneofWrapperField(this, 66, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -8081,7 +8178,7 @@ proto.pb.FeatureInfo.prototype.getCrystal97feature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setCrystal97feature = function(value) {
-  return jspb.Message.setWrapperField(this, 67, value);
+  return jspb.Message.setOneofWrapperField(this, 67, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -8118,7 +8215,7 @@ proto.pb.FeatureInfo.prototype.getTellerfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setTellerfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 68, value);
+  return jspb.Message.setOneofWrapperField(this, 68, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -8155,7 +8252,7 @@ proto.pb.FeatureInfo.prototype.getMagicalgeniefeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setMagicalgeniefeature = function(value) {
-  return jspb.Message.setWrapperField(this, 69, value);
+  return jspb.Message.setOneofWrapperField(this, 69, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -8192,7 +8289,7 @@ proto.pb.FeatureInfo.prototype.getGoldtigerfeature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setGoldtigerfeature = function(value) {
-  return jspb.Message.setWrapperField(this, 70, value);
+  return jspb.Message.setOneofWrapperField(this, 70, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -8229,7 +8326,7 @@ proto.pb.FeatureInfo.prototype.getShiny102feature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setShiny102feature = function(value) {
-  return jspb.Message.setWrapperField(this, 71, value);
+  return jspb.Message.setOneofWrapperField(this, 71, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 
@@ -8266,7 +8363,7 @@ proto.pb.FeatureInfo.prototype.getAztec105feature = function() {
  * @return {!proto.pb.FeatureInfo} returns this
 */
 proto.pb.FeatureInfo.prototype.setAztec105feature = function(value) {
-  return jspb.Message.setWrapperField(this, 72, value);
+  return jspb.Message.setOneofWrapperField(this, 72, proto.pb.FeatureInfo.oneofGroups_[0], value);
 };
 
 

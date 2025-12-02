@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-12-01 14:33:32
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-12-01 22:30:11
+ * @LastEditTime: 2025-12-02 16:51:55
  * @FilePath: /examples/demo_cluster/nodes/game/server/slots/spin_engine/machine/machine_factory.go
  * @Description: 使用映射的方式实现，工厂模式
  */

@@ -432,7 +432,7 @@ proto.pb.BaseInfo.deserializeBinaryFromReader = function(msg, reader) {
       msg.setDefaultbet(value);
       break;
     case 5:
-      var values = /** @type {!Array<number>} */ (reader.isDelimited() ? reader.readPackedInt32() : [reader.readInt32()]);
+      var values = /** @type {!Array<number>} */ (reader.isDelimited() ? reader.readPackedInt64() : [reader.readInt64()]);
       for (var i = 0; i < values.length; i++) {
         msg.addBetarray(values[i]);
       }
@@ -504,7 +504,7 @@ proto.pb.BaseInfo.serializeBinaryToWriter = function(message, writer) {
   }
   f = message.getBetarrayList();
   if (f.length > 0) {
-    writer.writePackedInt32(
+    writer.writePackedInt64(
       5,
       f
     );
@@ -599,7 +599,7 @@ proto.pb.BaseInfo.prototype.setDefaultbet = function(value) {
 
 
 /**
- * repeated int32 betArray = 5;
+ * repeated int64 betArray = 5;
  * @return {!Array<number>}
  */
 proto.pb.BaseInfo.prototype.getBetarrayList = function() {
@@ -3425,7 +3425,7 @@ proto.pb.SpinUserInfo.LevelUpInfo.deserializeBinaryFromReader = function(msg, re
       msg.setBetdefault(value);
       break;
     case 2:
-      var values = /** @type {!Array<number>} */ (reader.isDelimited() ? reader.readPackedInt32() : [reader.readInt32()]);
+      var values = /** @type {!Array<number>} */ (reader.isDelimited() ? reader.readPackedInt64() : [reader.readInt64()]);
       for (var i = 0; i < values.length; i++) {
         msg.addBetarray(values[i]);
       }
@@ -3495,7 +3495,7 @@ proto.pb.SpinUserInfo.LevelUpInfo.serializeBinaryToWriter = function(message, wr
   }
   f = message.getBetarrayList();
   if (f.length > 0) {
-    writer.writePackedInt32(
+    writer.writePackedInt64(
       2,
       f
     );
@@ -3565,7 +3565,7 @@ proto.pb.SpinUserInfo.LevelUpInfo.prototype.setBetdefault = function(value) {
 
 
 /**
- * repeated int32 betArray = 2;
+ * repeated int64 betArray = 2;
  * @return {!Array<number>}
  */
 proto.pb.SpinUserInfo.LevelUpInfo.prototype.getBetarrayList = function() {
