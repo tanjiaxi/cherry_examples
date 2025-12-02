@@ -9771,7 +9771,7 @@ proto.pb.Player.prototype.toObject = function(opt_includeInstance) {
  */
 proto.pb.Player.toObject = function(includeInstance, msg) {
   var f, obj = {
-    playerid: jspb.Message.getFieldWithDefault(msg, 1, 0),
+    userid: jspb.Message.getFieldWithDefault(msg, 1, 0),
     playername: jspb.Message.getFieldWithDefault(msg, 2, ""),
     gender: jspb.Message.getFieldWithDefault(msg, 3, 0),
     level: jspb.Message.getFieldWithDefault(msg, 4, 0),
@@ -9815,7 +9815,7 @@ proto.pb.Player.deserializeBinaryFromReader = function(msg, reader) {
     switch (field) {
     case 1:
       var value = /** @type {number} */ (reader.readInt64());
-      msg.setPlayerid(value);
+      msg.setUserid(value);
       break;
     case 2:
       var value = /** @type {string} */ (reader.readString());
@@ -9866,7 +9866,7 @@ proto.pb.Player.prototype.serializeBinary = function() {
  */
 proto.pb.Player.serializeBinaryToWriter = function(message, writer) {
   var f = undefined;
-  f = message.getPlayerid();
+  f = message.getUserid();
   if (f !== 0) {
     writer.writeInt64(
       1,
@@ -9912,10 +9912,10 @@ proto.pb.Player.serializeBinaryToWriter = function(message, writer) {
 
 
 /**
- * optional int64 playerId = 1;
+ * optional int64 userId = 1;
  * @return {number}
  */
-proto.pb.Player.prototype.getPlayerid = function() {
+proto.pb.Player.prototype.getUserid = function() {
   return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 1, 0));
 };
 
@@ -9924,7 +9924,7 @@ proto.pb.Player.prototype.getPlayerid = function() {
  * @param {number} value
  * @return {!proto.pb.Player} returns this
  */
-proto.pb.Player.prototype.setPlayerid = function(value) {
+proto.pb.Player.prototype.setUserid = function(value) {
   return jspb.Message.setProto3IntField(this, 1, value);
 };
 
@@ -10928,8 +10928,7 @@ proto.cherry.proto.pb.User.toObject = function(includeInstance, msg) {
     openid: jspb.Message.getFieldWithDefault(msg, 3, ""),
     serverid: jspb.Message.getFieldWithDefault(msg, 4, 0),
     uid: jspb.Message.getFieldWithDefault(msg, 5, 0),
-    ip: jspb.Message.getFieldWithDefault(msg, 6, ""),
-    devicename: jspb.Message.getFieldWithDefault(msg, 7, "")
+    ip: jspb.Message.getFieldWithDefault(msg, 6, "")
   };
 
   if (includeInstance) {
@@ -10989,10 +10988,6 @@ proto.cherry.proto.pb.User.deserializeBinaryFromReader = function(msg, reader) {
     case 6:
       var value = /** @type {string} */ (reader.readString());
       msg.setIp(value);
-      break;
-    case 7:
-      var value = /** @type {string} */ (reader.readString());
-      msg.setDevicename(value);
       break;
     default:
       reader.skipField();
@@ -11062,13 +11057,6 @@ proto.cherry.proto.pb.User.serializeBinaryToWriter = function(message, writer) {
   if (f.length > 0) {
     writer.writeString(
       6,
-      f
-    );
-  }
-  f = message.getDevicename();
-  if (f.length > 0) {
-    writer.writeString(
-      7,
       f
     );
   }
@@ -11180,24 +11168,6 @@ proto.cherry.proto.pb.User.prototype.getIp = function() {
  */
 proto.cherry.proto.pb.User.prototype.setIp = function(value) {
   return jspb.Message.setProto3StringField(this, 6, value);
-};
-
-
-/**
- * optional string deviceName = 7;
- * @return {string}
- */
-proto.cherry.proto.pb.User.prototype.getDevicename = function() {
-  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 7, ""));
-};
-
-
-/**
- * @param {string} value
- * @return {!proto.cherry.proto.pb.User} returns this
- */
-proto.cherry.proto.pb.User.prototype.setDevicename = function(value) {
-  return jspb.Message.setProto3StringField(this, 7, value);
 };
 
 

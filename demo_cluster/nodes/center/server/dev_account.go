@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-09-29 16:42:25
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-11-27 15:22:29
+ * @LastEditTime: 2025-11-28 10:55:28
  * @FilePath: /examples/demo_cluster/nodes/center/server/dev_account.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -68,8 +68,7 @@ func loadDevAccount() {
 	cherryLogger.Info("preload DevAccountTable")
 }
 func createUser() (*model.SlotsUser, error) {
-	var userInfo *model.SlotsUser
-	userInfo = &model.SlotsUser{
+	var userInfo = &model.SlotsUser{
 		UserLevel:     0,
 		CurExp:        "0",
 		ExpPercent:    0,
@@ -79,6 +78,7 @@ func createUser() (*model.SlotsUser, error) {
 		CreateTime:    cherryTime.Now().Time,
 		LoginTime:     cherryTime.Now().Time,
 		LastLoginTime: cherryTime.Now().Time,
+		LoginStamp:    cherryTime.Now().Time,
 		Birthday:      "1970-01-01",
 	}
 	userInfo, err := db.CreateUserInfo(userInfo)
@@ -89,8 +89,7 @@ func createUser() (*model.SlotsUser, error) {
 	return userInfo, nil
 }
 func createDevice(userId int32, accountName string, ip string, password string) (*model.SlotsDevice, error) {
-	var account *model.SlotsDevice
-	account = &model.SlotsDevice{
+	var account = &model.SlotsDevice{
 		UserID:            userId,
 		DeviceName:        accountName,
 		ClientIP:          ip,
@@ -101,8 +100,6 @@ func createDevice(userId int32, accountName string, ip string, password string) 
 		ClientDeviceInfo:  nil,
 		IPInfo:            nil,
 	}
-	// db.devAccountCache.Put(accountName, account)
-	// TODO 保存db
 	account, err := db.CreateAccount(account)
 	if err != nil {
 		cherryLogger.Panic("create account failed, err: %v", err)

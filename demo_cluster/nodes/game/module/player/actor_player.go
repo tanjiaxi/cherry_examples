@@ -1,12 +1,16 @@
 package player
 
 import (
+	"fmt"
+	"strconv"
+
 	cstring "github.com/cherry-game/cherry/extend/string"
 	clog "github.com/cherry-game/cherry/logger"
 	"github.com/cherry-game/cherry/net/parser/pomelo"
 	cproto "github.com/cherry-game/cherry/net/proto"
 	"github.com/cherry-game/examples/demo_cluster/internal/code"
 	"github.com/cherry-game/examples/demo_cluster/internal/data"
+	commonDb "github.com/cherry-game/examples/demo_cluster/internal/db"
 	"github.com/cherry-game/examples/demo_cluster/internal/event"
 	tableModel "github.com/cherry-game/examples/demo_cluster/internal/model"
 	"github.com/cherry-game/examples/demo_cluster/internal/pb"
@@ -20,8 +24,8 @@ type (
 	// 作为玩家数据的中心，管理玩家的所有核心数据
 	actorPlayer struct {
 		pomelo.ActorBase
-		isOnline bool // 玩家是否在线
-		playerId int64
+		isOnline bool  // 玩家是否在线
+		userId   int64 //这就是userId
 		uid      int64
 
 		// 玩家核心数据（从数据库加载，内存缓存）
@@ -30,7 +34,7 @@ type (
 
 	// PlayerData 玩家核心数据
 	PlayerData struct {
-		*tableModel.SlotsUser
+		tableModel.SlotsUser
 	}
 )
 
@@ -46,10 +50,10 @@ func (p *actorPlayer) OnInit() {
 	p.Local().Register("enter", p.playerEnter)   // 注册 进入角色
 
 	// 注册玩家数据访问方法（供其他Actor RPC调用）
-	p.Remote().Register("getPlayerData", p.GetPlayerData)
-	p.Remote().Register("updateMoney", p.UpdateMoney)
-	p.Remote().Register("getMoney", p.GetMoney)
-	p.Remote().Register("getLevel", p.GetLevel)
+	p.Remote().Register("getPlayerData", p.getPlayerData)
+	// p.Remote().Register("updateMoney", p.UpdateMoney)
+	// p.Remote().Register("getMoney", p.GetMoney)
+	// p.Remote().Register("getLevel", p.GetLevel)
 }
 
 // sessionClose 接收角色session关闭处理
@@ -64,11 +68,11 @@ func (p *actorPlayer) sessionClose() {
 // playerSelect 玩家查询角色列表
 func (p *actorPlayer) playerSelect(session *cproto.Session, _ *pb.None) {
 	response := &pb.PlayerSelectResponse{}
-
-	playerId := db.GetPlayerIdWithUID(session.Uid)
-	if playerId > 0 {
+	//这里改为userId
+	userId := session.Uid
+	if userId > 0 {
 		// 游戏设定单服单角色，协议设计成可返回多角色
-		playerTable, found := db.GetPlayerTable(playerId)
+		playerTable, found := db.GetPlayerTable(userId)
 		if found {
 			playerInfo := buildPBPlayer(playerTable)
 			response.List = append(response.List, &playerInfo)
@@ -128,8 +132,8 @@ func (p *actorPlayer) playerCreate(session *cproto.Session, req *pb.PlayerCreate
 
 // playerEnter 玩家进入游戏
 func (p *actorPlayer) playerEnter(session *cproto.Session, req *pb.Int64) {
-	playerId := req.Value
-	if playerId < 1 {
+	userId := req.Value
+	if userId < 1 {
 		p.ResponseCode(session, code.PlayerIDError)
 		return
 	}
@@ -142,34 +146,42 @@ func (p *actorPlayer) playerEnter(session *cproto.Session, req *pb.Int64) {
 	}
 
 	// 保存进入游戏的玩家对应的agentPath
-	online.BindPlayer(playerId, playerTable.UID, session.AgentPath)
+	online.BindPlayer(userId, playerTable.UID, session.AgentPath)
 
 	// 设置网关节点session的PlayerID属性
 	if session.ActorPath() != "" {
 		p.Call(session.ActorPath(), "setSession", &pb.StringKeyValue{
 			Key:   sessionKey.PlayerID,
-			Value: cstring.ToString(playerId),
+			Value: cstring.ToString(userId),
 		})
 	}
 
 	p.uid = playerTable.UID
-	p.playerId = playerTable.PlayerId
+	p.userId = playerTable.PlayerId
 	p.isOnline = true // 设置为在线状态
 
 	// 加载玩家数据到内存
-	if err := p.loadPlayerData(); err != nil {
-		clog.Errorf("[actorPlayer] 加载玩家数据失败: %v", err)
-	}
+	// if err := p.loadPlayerData(); err != nil {
+	// 	clog.Errorf("[actorPlayer] 加载玩家数据失败: %v", err)
+	// }
 
 	// 这里改为客户端主动请求更佳
 	// [01]推送角色 道具数据
-	//module.Item.ListPush(session, playerId)
+	// module.Item.ListPush(session, userId)
 	// [02]推送角色 英雄数据
-	//module.Hero.ListPush(session, playerId)
+	//module.Hero.ListPush(session, userId)
 	// [03]推送角色 成就数据
-	//module.Achieve.CheckNewAndPush(playerId, true, true)
+	//module.Achieve.CheckNewAndPush(userId, true, true)
 	// [04]推送角色 邮件数据
-	//module.Mail.ListPush(session, playerId)
+	//module.Mail.ListPush(session, userId)
+
+	//查找游戏玩家数据
+	err := p.loadPlayerData(int32(userId))
+	if err != nil {
+		clog.Errorf("user info is nil")
+		p.ResponseCode(session, code.PlayerIDError)
+		return
+	}
 
 	// [99]最后推送 角色进入游戏响应结果
 	response := &pb.PlayerEnterResponse{}
@@ -178,13 +190,13 @@ func (p *actorPlayer) playerEnter(session *cproto.Session, req *pb.Int64) {
 	p.Response(session, response)
 
 	// 角色登录事件
-	loginEvent := event.NewPlayerLogin(p.ActorID(), playerId)
+	loginEvent := event.NewPlayerLogin(p.ActorID(), userId)
 	p.PostEvent(&loginEvent)
 }
 
 func buildPBPlayer(playerTable *db.PlayerTable) pb.Player {
 	return pb.Player{
-		PlayerId:   playerTable.PlayerId,
+		UserId:     playerTable.PlayerId,
 		PlayerName: playerTable.Name,
 		Level:      playerTable.Level,
 		CreateTime: playerTable.CreateTime,
@@ -196,64 +208,70 @@ func buildPBPlayer(playerTable *db.PlayerTable) pb.Player {
 // ========== 玩家数据访问方法 ==========
 
 // loadPlayerData 从数据库加载玩家数据到内存
-func (p *actorPlayer) loadPlayerData() error {
-	playerTable, found := db.GetPlayerTable(p.playerId)
-	if !found {
-		return cerror.Error("player not found")
+func (p *actorPlayer) loadPlayerData(userId int32) error {
+	//查找游戏玩家数据
+	userInfo := commonDb.GetUserAllInfo(userId)
+	if userInfo == nil {
+		clog.Errorf("user info is nil")
+		return fmt.Errorf("user info is nil")
 	}
-
-	p.playerData = &PlayerData{
-		PlayerId: playerTable.PlayerId,
-		Name:     playerTable.Name,
-		Level:    playerTable.Level,
-		Exp:      playerTable.Exp,
-		Money:    100000, // TODO: 从资产表加载
-		Diamond:  1000,   // TODO: 从资产表加载
-	}
-
-	clog.Infof("[actorPlayer] 加载玩家数据: playerId=%d, level=%d, money=%d",
-		p.playerId, p.playerData.Level, p.playerData.Money)
+	//这里是指针copy
+	p.playerData = &PlayerData{}
+	//这里是值copy
+	p.playerData.SlotsUser = *userInfo
 
 	return nil
 }
 
 // GetPlayerData 获取玩家数据（Remote方法，供其他Actor调用）
-func (p *actorPlayer) GetPlayerData() *PlayerData {
-	if p.playerData == nil {
-		p.loadPlayerData()
-	}
-	return p.playerData
-}
-
-// UpdateMoney 更新玩家金币（Remote方法）
-func (p *actorPlayer) UpdateMoney(delta int64) (newMoney int64, err error) {
-	if p.playerData == nil {
-		return 0, cerror.Error("player data not loaded")
+func (p *actorPlayer) getPlayerData(msg *pb.Int32) (*pb.GetUserInfoResponse, int32) {
+	if p.playerData == nil || p.playerData.UserID == 0 {
+		err := p.loadPlayerData(msg.Value)
+		if err != nil {
+			clog.Errorf("[actorPlayer] 加载玩家数据失败: %v", err)
+			return nil, code.PlayerIDError
+		}
 	}
 
-	p.playerData.Money += delta
-
-	// TODO: 持久化到数据库
-	// db.UpdatePlayerMoney(p.playerId, p.playerData.Money)
-
-	clog.Infof("[actorPlayer] 更新金币: playerId=%d, delta=%d, newMoney=%d",
-		p.playerId, delta, p.playerData.Money)
-
-	return p.playerData.Money, nil
+	CurExp, _ := strconv.ParseInt(p.playerData.CurExp, 10, 64)
+	return &pb.GetUserInfoResponse{
+		UserId:  p.playerData.UserID,
+		Money:   float32(p.playerData.Money),
+		Diamond: p.playerData.Diamond,
+		Level:   p.playerData.UserLevel,
+		CurExp:  CurExp,
+	}, code.OK
 }
 
-// GetMoney 获取玩家金币（Remote方法）
-func (p *actorPlayer) GetMoney() int64 {
-	if p.playerData == nil {
-		p.loadPlayerData()
-	}
-	return p.playerData.Money
-}
+// // UpdateMoney 更新玩家金币（Remote方法）
+// func (p *actorPlayer) UpdateMoney(delta int64) (newMoney int64, err error) {
+// 	if p.playerData == nil {
+// 		return 0, cerror.Error("player data not loaded")
+// 	}
 
-// GetLevel 获取玩家等级（Remote方法）
-func (p *actorPlayer) GetLevel() int32 {
-	if p.playerData == nil {
-		p.loadPlayerData()
-	}
-	return p.playerData.Level
-}
+// 	p.playerData.Money += delta
+
+// 	// TODO: 持久化到数据库
+// 	// db.UpdatePlayerMoney(p.userId, p.playerData.Money)
+
+// 	clog.Infof("[actorPlayer] 更新金币: userId=%d, delta=%d, newMoney=%d",
+// 		p.userId, delta, p.playerData.Money)
+
+// 	return p.playerData.Money, nil
+// }
+
+// // GetMoney 获取玩家金币（Remote方法）
+// func (p *actorPlayer) GetMoney() int64 {
+// 	if p.playerData == nil {
+// 		p.loadPlayerData()
+// 	}
+// 	return p.playerData.Money
+// }
+
+// // GetLevel 获取玩家等级（Remote方法）
+// func (p *actorPlayer) GetLevel() int32 {
+// 	if p.playerData == nil {
+// 		p.loadPlayerData()
+// 	}
+// 	return p.playerData.Level
+// }

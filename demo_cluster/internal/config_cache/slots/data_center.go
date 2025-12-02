@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-20 23:45:18
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-11-27 16:07:51
+ * @LastEditTime: 2025-12-01 22:33:26
  * @FilePath: /examples/demo_cluster/nodes/game/db/slots/data_center.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -108,13 +108,13 @@ func (dc *DataCenter) GetRoomConfig(roomID int32) (*gameModel.N2CfgRoomlist, err
 	}
 	return n2CfgRoomlist, nil
 }
-func (dc *DataCenter) GetN2CfgReelRoom(roomID int32) (*logicGameModel.N2CfgReelRoom, error) {
+func (dc *DataCenter) GetN2CfgReelRoom(ruleId int32) (*logicGameModel.N2CfgReelRoom, error) {
 	allN2CfgReelRoom := dc.getSnapshot().N2CfgReelRoom
-	if allN2CfgReelRoom[roomID] == nil {
-		clog.Panic("room %d no reel room config ", roomID)
-		return nil, fmt.Errorf("room %d no reel room config ", roomID)
+	if allN2CfgReelRoom[ruleId] == nil {
+		clog.Panic("room %d no reel room config ", ruleId)
+		return nil, fmt.Errorf("room %d no reel room config ", ruleId)
 	}
-	return allN2CfgReelRoom[roomID], nil
+	return allN2CfgReelRoom[ruleId], nil
 }
 
 func (dc *DataCenter) GetN2CLevel(levelid int32) (*gameModel.N2CfgLevel, error) {

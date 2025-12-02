@@ -2,11 +2,11 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-20 22:24:38
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-11-26 17:26:17
+ * @LastEditTime: 2025-12-01 22:20:20
  * @FilePath: /examples/demo_cluster/nodes/game/module/slots/room/level_room.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
-package slots
+package room
 
 import (
 	"sync"
@@ -15,8 +15,11 @@ import (
 	clog "github.com/cherry-game/cherry/logger"
 	"github.com/cherry-game/cherry/net/parser/pomelo"
 	cproto "github.com/cherry-game/cherry/net/proto"
+	"github.com/cherry-game/examples/demo_cluster/internal/code"
 	configCacheSlots "github.com/cherry-game/examples/demo_cluster/internal/config_cache/slots"
 	"github.com/cherry-game/examples/demo_cluster/internal/pb"
+	rpcGame "github.com/cherry-game/examples/demo_cluster/internal/rpc/game"
+	spinEngine "github.com/cherry-game/examples/demo_cluster/nodes/game/server/slots/spin_engine/machine"
 	spinManager "github.com/cherry-game/examples/demo_cluster/nodes/game/server/slots/spin_manager"
 )
 
@@ -27,7 +30,6 @@ type (
 		pomelo.ActorBase
 		curRoomId int32
 
-		balance         int
 		roomDataManager *spinManager.RoomDataManager
 		levelMutex      *sync.RWMutex
 		//同步控制
@@ -66,16 +68,74 @@ func (r *ActorRoom) enterMachine(session *cproto.Session, req *pb.EnterMachine) 
 }
 func (r *ActorRoom) machineinfo(session *cproto.Session, req *pb.MachineInfo) {
 	roomId := req.Id
+
+	// 1. 验证房间配置
 	n2CfgRoomlist, error := configCacheSlots.GetInstance().GetRoomConfig(roomId)
 	if error != nil || n2CfgRoomlist == nil {
 		response := &pb.ErrorResponse{
-			Code:    110004,
-			Message: "没有关卡room 配置",
+			Code:    code.NoRoomConfig,
+			Message: "no room config",
 		}
 		r.Response(session, response)
+		return
 	}
-	//初始化关卡数据
-	// r.roomDataManager.InitSessionData(session, n2CfgRoomlist)
+
+	// 2. 获取用户信息
+	userInfo := rpcGame.GetUserInfo(r.Actor, session)
+	if userInfo == nil || userInfo.UserId == 0 {
+		response := &pb.ErrorResponse{
+			Code:    code.PlayerNoUserInfo,
+			Message: "no user info",
+		}
+		r.Response(session, response)
+		return
+	}
+
+	// 3. 获取或初始化房间数据
+	roomDataInfo := r.roomDataManager.GetLevelSessionDataByRoomId(int32(userInfo.UserId), roomId)
+	ruleId := roomId % 1000
+	// 4. 使用工厂创建对应的 Machine（根据 roomId 自动选择 MachineInfo1 或 MachineInfo2）
+	machine := spinEngine.CreateMachineByType(ruleId, roomId, session, roomDataInfo, userInfo)
+	if machine == nil {
+		clog.Errorf("创建 Machine 失败: roomId=%d, err=%v", roomId)
+		response := &pb.ErrorResponse{
+			Code:    code.NoRoomConfig,
+			Message: "no room config",
+		}
+		r.Response(session, response)
+		return
+	}
+	machine.InitData()
+	// 5. 获取机器基础信息
+	baseInfo, err := machine.GetBase()
+	if err != nil {
+		clog.Errorf("获取机器基础信息失败: roomId=%d, err=%v", roomId, err)
+		response := &pb.ErrorResponse{
+			Code:    110006,
+			Message: "get machine info failed",
+		}
+		r.Response(session, response)
+		return
+	}
+
+	// 6. 获取游戏阶段
+	gameStage, err := machine.ConvertStage()
+	if err != nil {
+		clog.Errorf("获取游戏阶段失败: roomId=%d, err=%v", roomId, err)
+	}
+
+	// 7. 构造响应
+	response := &pb.MachineInfoResponse{
+		// 根据实际 protobuf 定义填充字段
+		// 示例: Base: baseInfo, GameStage: gameStage
+	}
+	_ = baseInfo
+	_ = gameStage
+
+	clog.Infof("获取机器信息成功: userId=%d, roomId=%d, version=%d",
+		userInfo.UserId, roomId, n2CfgRoomlist.Version)
+
+	r.Response(session, response)
 }
 
 func (r *ActorRoom) spin(session *cproto.Session, _ *pb.Spin) {

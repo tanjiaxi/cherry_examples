@@ -14,9 +14,9 @@ import (
 
 	clog "github.com/cherry-game/cherry/logger"
 	toolUtils "github.com/cherry-game/examples/demo_cluster/internal/common"
+	"github.com/cherry-game/examples/demo_cluster/internal/component/db"
 	gameModel "github.com/cherry-game/examples/demo_cluster/internal/model"
 	logicGameModel "github.com/cherry-game/examples/demo_cluster/internal/model/logic_model"
-	"github.com/cherry-game/examples/demo_cluster/nodes/game/db"
 	"github.com/jinzhu/copier"
 )
 

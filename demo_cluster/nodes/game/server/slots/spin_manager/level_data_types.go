@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-20 22:33:18
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-11-26 23:00:02
+ * @LastEditTime: 2025-12-01 14:21:43
  * @FilePath: /examples/demo_cluster/nodes/game/server/ slots/component/level_data_types.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -13,8 +13,8 @@ import "fmt"
 // level数据结构定义
 type RoomDataInfo struct {
 	//基础信息
-	UserId int `json:"user_id"` //用户id
-	RoomId int `json:"room_id"` //关卡id
+	UserId int32 `json:"user_id"` //用户id
+	RoomId int32 `json:"room_id"` //关卡id
 	//下注信息
 	CurBetNum  int64 `json:"cur_bet_num"`  //当前下注数
 	SpeSpinBet int64 `json:"spe_spin_bet"` // 特殊Spin下注额

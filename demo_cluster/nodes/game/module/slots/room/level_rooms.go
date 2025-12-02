@@ -2,11 +2,11 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-20 22:24:34
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-11-26 11:32:44
+ * @LastEditTime: 2025-11-28 17:49:06
  * @FilePath: /examples/demo_cluster/nodes/game/module/slots/room/level_rooms.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
-package slots
+package room
 
 import (
 	"time"

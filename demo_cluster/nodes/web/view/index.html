@@ -117,7 +117,7 @@
                     <div class="form-group">
                         <label class="col-sm-2 control-label">机器 ID</label>
                         <div class="col-sm-3">
-                            <input class="form-control" id="machine-id" type="number" value="1" placeholder="输入机器ID">
+                            <input class="form-control" id="machine-id" type="number" value="1001" placeholder="输入机器ID">
                         </div>
                         <label class="col-sm-2 control-label">下注金额</label>
                         <div class="col-sm-3">
@@ -339,6 +339,7 @@
 
             // request login
             pomelo.request("gate.user.login", loginData, function (data) {
+             console.log("gate.user.login",data);
                 data = proto.pb.LoginResponse.deserializeBinary(data.body).toObject();
                 console.log(data);
                 if (data.userid > 0) {
@@ -370,7 +371,7 @@
     }
 
     function setPlayerList() {
-        var opt = "<option value='" + playerInfo.playerid + "'>" + playerInfo.playername + "</option>";
+        var opt = "<option value='" + playerInfo.userid + "'>" + playerInfo.playername + "</option>";
         $("#player-list").append(opt);
     }
 
@@ -391,7 +392,7 @@
             }
 
             data = proto.pb.PlayerCreateResponse.deserializeBinary(data.body).toObject();
-            if (data.player.playerid > 0) {
+            if (data.player.userid > 0) {
                 playerInfo = data.player;
                 setPlayerList();
                 console.log(data.player);
@@ -403,7 +404,7 @@
 
     function playerEnter() {
         var enterRequest = new proto.pb.Int64();
-        enterRequest.setValue(playerInfo.playerid);
+        enterRequest.setValue(playerInfo.userid);
 
         var enterData = enterRequest.serializeBinary();
 

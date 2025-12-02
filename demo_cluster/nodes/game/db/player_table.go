@@ -6,7 +6,6 @@ import (
 	cproto "github.com/cherry-game/cherry/net/proto"
 	"github.com/cherry-game/examples/demo_cluster/internal/code"
 	"github.com/cherry-game/examples/demo_cluster/internal/data"
-	"github.com/cherry-game/examples/demo_cluster/internal/guid"
 	sessionKey "github.com/cherry-game/examples/demo_cluster/internal/session_key"
 )
 
@@ -17,7 +16,7 @@ type PlayerTable struct {
 	UID            int64  `gorm:"column:uid;comment:'用户id'" json:"uid"`
 	ServerId       int32  `gorm:"column:server_id;comment:'创角时的游戏服id'" json:"serverId"`
 	MergedServerId int32  `gorm:"column:merged_server_id;comment:'合服后的游戏服id'" json:"mergedServerId"`
-	PlayerId       int64  `gorm:"column:player_id;primary_key;comment:'角色id'" json:"playerId"`
+	PlayerId       int64  `gorm:"column:player_id;primary_key;comment:'角色id'" json:"userId"`
 	Name           string `gorm:"column:player_name;comment:'角色名称'" json:"name"`
 	Gender         int32  `gorm:"column:gender;comment:'角色性别'" json:"gender"`
 	Level          int32  `gorm:"column:level;comment:'角色等级'" json:"level"`
@@ -44,7 +43,7 @@ func CreatePlayer(session *cproto.Session, name string, serverId int32, playerIn
 		return nil, code.PlayerNameExist
 	}
 
-	playerId := guid.Next() // new player id
+	userId := session.Uid // new player id ,这里使用userId
 	pid := session.GetInt32(sessionKey.PID)
 	openId := session.GetString(sessionKey.OpenID)
 
@@ -63,7 +62,7 @@ func CreatePlayer(session *cproto.Session, name string, serverId int32, playerIn
 		UID:            session.Uid,
 		ServerId:       serverId,
 		MergedServerId: serverId,
-		PlayerId:       playerId,
+		PlayerId:       userId,
 		Name:           name,
 		Gender:         playerInit.Gender,
 		Level:          playerInit.Level,
@@ -72,9 +71,9 @@ func CreatePlayer(session *cproto.Session, name string, serverId int32, playerIn
 	}
 
 	// 先进缓存
-	playerTableCache.Put(playerId, playerTable)
+	playerTableCache.Put(userId, playerTable)
 	playerNameCache.Put(name, playerTable.PlayerId) // 缓存角色名
-	uidCache.Put(playerTable.UID, playerId)
+	uidCache.Put(playerTable.UID, userId)
 
 	// TODO 保存db
 
@@ -89,8 +88,8 @@ func CreatePlayer(session *cproto.Session, name string, serverId int32, playerIn
 func PlayerNameIsExist(playerName string) (int64, bool) {
 	val, found := playerNameCache.GetIfPresent(playerName)
 	if found {
-		playerId := val.(int64)
-		return playerId, true
+		userId := val.(int64)
+		return userId, true
 	}
 
 	// TODO 从数据库查，数据存在先保存到 playerNameCache
@@ -102,9 +101,9 @@ func PlayerNameIsExist(playerName string) (int64, bool) {
 func GetPlayerIds(playerIds []int64) []int64 {
 	var list []int64
 
-	for _, playerId := range playerIds {
-		if _, found := GetPlayerTable(playerId); found {
-			list = append(list, playerId)
+	for _, userId := range playerIds {
+		if _, found := GetPlayerTable(userId); found {
+			list = append(list, userId)
 		}
 	}
 
@@ -112,8 +111,8 @@ func GetPlayerIds(playerIds []int64) []int64 {
 }
 
 // GetPlayerName 获取玩家角色名
-func GetPlayerName(playerId int64) string {
-	playerTable, found := GetPlayerTable(playerId)
+func GetPlayerName(userId int64) string {
+	playerTable, found := GetPlayerTable(userId)
 	if !found {
 		return ""
 	}
@@ -121,8 +120,8 @@ func GetPlayerName(playerId int64) string {
 	return playerTable.Name
 }
 
-func GetPlayerTable(playerId int64) (*PlayerTable, bool) {
-	val, found := playerTableCache.GetIfPresent(playerId)
+func GetPlayerTable(userId int64) (*PlayerTable, bool) {
+	val, found := playerTableCache.GetIfPresent(userId)
 	if found {
 		return val.(*PlayerTable), true
 	}
