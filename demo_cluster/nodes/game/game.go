@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-09-15 18:02:10
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-12-01 16:37:19
+ * @LastEditTime: 2025-12-02 22:47:37
  * @FilePath: /examples/demo_cluster/nodes/game/game.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -27,8 +27,7 @@ import (
 	cdiscovery "github.com/cherry-game/cherry/net/discovery"
 	cherryETCD "github.com/cherry-game/components/etcd"
 	cherryGORM "github.com/cherry-game/examples/demo_cluster/internal/component/pg_gorm"
-
-	"github.com/cherry-game/examples/demo_cluster/nodes/game/server/slots/spin_engine/machine"
+	slotsLeveCore "github.com/cherry-game/examples/demo_cluster/nodes/game/server/slots/core"
 )
 
 func Run(profileFilePath, nodeID string) {
@@ -61,12 +60,11 @@ func Run(profileFilePath, nodeID string) {
 	app.Register(commonDb.New())
 	//注册配置etcd缓存组件
 	app.Register(checkConfigVersion.New("/cherry/config/slots/levels/", configCacheSlots.GetInstance()))
-
+	//注册关卡相关逻辑
+	app.Register(slotsLeveCore.New())
 	app.AddActors(
 		&player.ActorPlayers{},
 		&slotsRoom.ActorRooms{},
 	)
-	//注册machine
-	machine.RegisterMachineAll()
 	app.Startup()
 }
