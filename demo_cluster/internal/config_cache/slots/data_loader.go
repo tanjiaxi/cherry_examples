@@ -11,6 +11,7 @@ package slots
 
 import (
 	"fmt"
+	"reflect"
 	"time"
 
 	clog "github.com/cherry-game/cherry/logger"
@@ -28,7 +29,9 @@ type ConfigSnapshot struct {
 	N2CfgCard        map[int32]*gameModel.N2CfgCard
 	N2CfgReelRoom    map[int32]*logicGameModel.N2CfgReelRoom
 	N2CfgRoomlist    map[int32]*gameModel.N2CfgRoomlist
-	FromatN2CfgLevel map[int32]*dbData.FormatLevelConfig //key是levelid
+	FromatN2CfgLevel map[int32]*dbData.FormatLevelConfig     //key是levelid
+	FromatLines      map[string]*dbData.CommonLines          //key是levelid
+	FromatLineIds    map[string]*dbData.FormatLinesIdsConfig //key是levelid
 }
 type DataLoader struct {
 }
@@ -46,6 +49,8 @@ func (d *DataLoader) LoadAllConfig() (*ConfigSnapshot, error) {
 		N2CfgReelRoom:    make(map[int32]*logicGameModel.N2CfgReelRoom),
 		N2CfgRoomlist:    make(map[int32]*gameModel.N2CfgRoomlist),
 		FromatN2CfgLevel: make(map[int32]*dbData.FormatLevelConfig),
+		FromatLines:      make(map[string]*dbData.CommonLines),
+		FromatLineIds:    make(map[string]*dbData.FormatLinesIdsConfig),
 	}
 	//加载配置
 	if err := d.LoadCardConfig(&configSnapshot, "public"); err != nil {
@@ -61,6 +66,33 @@ func (d *DataLoader) LoadAllConfig() (*ConfigSnapshot, error) {
 
 	if err := d.LoadLevelConfig(&configSnapshot, "public"); err != nil {
 		clog.Panic("load level config failed: %w", err)
+	}
+	if err := LoadLinesConfig[gameModel.Lines3x3](&configSnapshot, 3, 3, "public"); err != nil {
+		clog.Panic("load Lines3x3 config failed: %w", err)
+	}
+	if err := LoadLinesConfig[gameModel.Lines3x4](&configSnapshot, 3, 4, "public"); err != nil {
+		clog.Panic("load Lines3x4 failed: %w", err)
+	}
+	if err := LoadLinesConfig[gameModel.Lines3x5](&configSnapshot, 3, 5, "public"); err != nil {
+		clog.Panic("load Lines3x5 failed: %w", err)
+	}
+	if err := LoadLinesConfig[gameModel.Lines3x6](&configSnapshot, 3, 6, "public"); err != nil {
+		clog.Panic("load Lines3x6 failed: %w", err)
+	}
+	if err := LoadLinesConfig[gameModel.Lines4x3](&configSnapshot, 4, 3, "public"); err != nil {
+		clog.Panic("load Lines4x3 failed: %w", err)
+	}
+	if err := LoadLinesConfig[gameModel.Lines4x5](&configSnapshot, 4, 5, "public"); err != nil {
+		clog.Panic("load Lines4x5 failed: %w", err)
+	}
+	if err := LoadLinesConfig[gameModel.Lines4x6](&configSnapshot, 4, 6, "public"); err != nil {
+		clog.Panic("load Lines4x6 failed: %w", err)
+	}
+	if err := LoadLinesConfig[gameModel.Lines5x5](&configSnapshot, 5, 5, "public"); err != nil {
+		clog.Panic("load Lines5x5 failed: %w", err)
+	}
+	if err := d.LoadLinesIdsConfig(&configSnapshot, "public"); err != nil {
+		clog.Panic("load LinesIds config failed: %w", err)
 	}
 	return &configSnapshot, nil
 }
@@ -125,6 +157,99 @@ func (d *DataLoader) LoadLevelConfig(configSnapshot *ConfigSnapshot, schema stri
 			return err
 		}
 		configSnapshot.FromatN2CfgLevel[v.Levelid] = formatConfig
+	}
+	return nil
+}
+func (d *DataLoader) LoadLinesIdsConfig(configSnapshot *ConfigSnapshot, schema string) error {
+	var linesIdsConfig, err = dbData.GetLinesIdsConfig()
+	if err != nil {
+		return err
+	}
+	//转换为镜像map
+	for _, v := range linesIdsConfig {
+		configSnapshot.FromatLineIds[v.Xy] = v
+	}
+	return nil
+}
+func LoadLinesConfig[T any](configSnapshot *ConfigSnapshot, x, y int, schema string) error {
+	var lines []*T
+	var commonLines []*dbData.CommonLines
+	//为了，少写代码，必须利用反射，利用反射就必须把db，放在这里
+	result := db.GetDB().Find(&lines)
+	if result.Error != nil {
+		return result.Error
+	}
+	for _, v := range lines {
+		val := reflect.ValueOf(v).Elem() // 获取指针指向的值
+		lines, err := dbData.FormatLinesConfig(x, y, val.FieldByName("Line").String())
+		if err != nil {
+			return err
+		}
+		common := &dbData.CommonLines{
+			ID:       int(val.FieldByName("ID").Int()), // Int() 返回 int64，强转为 int32
+			LinesArr: lines,
+		}
+		commonLines = append(commonLines, common)
+	}
+	storeConfigSnapshot(configSnapshot, x, y, commonLines)
+	//当然也可以用下面的这种工厂模式的方式
+	// switch linesMod.(type) {
+	// case gameModel.Lines3x3:
+	// 	data, err := dbData.GetLinesConfig(linesMod1, x, y)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	storeConfigSnapshot(configSnapshot, x, y, data)
+	// case gameModel.Lines3x4:
+	// 	data, err := dbData.GetLinesConfig[gameModel.Lines3x4](x, y)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	storeConfigSnapshot(configSnapshot, x, y, data)
+	// case gameModel.Lines3x5:
+	// 	data, err := dbData.GetLinesConfig[gameModel.Lines3x5](x, y)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	storeConfigSnapshot(configSnapshot, x, y, data)
+
+	// case gameModel.Lines3x6:
+	// 	data, err := dbData.GetLinesConfig[gameModel.Lines3x6](x, y)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	storeConfigSnapshot(configSnapshot, x, y, data)
+
+	// case gameModel.Lines4x3:
+	// 	data, err := dbData.GetLinesConfig[gameModel.Lines4x3](x, y)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	storeConfigSnapshot(configSnapshot, x, y, data)
+
+	// case gameModel.Lines4x5:
+	// 	data, err := dbData.GetLinesConfig[gameModel.Lines4x5](x, y)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	storeConfigSnapshot(configSnapshot, x, y, data)
+
+	// case gameModel.Lines5x5:
+	// 	data, err := dbData.GetLinesConfig[gameModel.Lines5x5](x, y)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	storeConfigSnapshot(configSnapshot, x, y, data)
+	// }
+	return nil
+}
+func getLineKeyName(x, y, id int) string {
+	return fmt.Sprintf("%dx%d_%d", x, y, id)
+}
+func storeConfigSnapshot(configSnapshot *ConfigSnapshot, x, y int, data []*dbData.CommonLines) error {
+	for _, v := range data {
+		key := getLineKeyName(x, y, v.ID)
+		configSnapshot.FromatLines[key] = v
 	}
 	return nil
 }

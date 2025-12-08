@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-09-17 11:23:06
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-11-26 10:36:11
+ * @LastEditTime: 2025-12-03 16:47:33
  * @FilePath: /examples/demo_cluster/md/record.md
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 -->
@@ -61,6 +61,13 @@
 为什么这样设计？
 Local 调用：来自客户端的请求，总是需要 Session 来识别用户
 Remote 调用：Actor 之间的 RPC 调用，不需要 Session，只需要业务数据
+### golang注意事项
+
+1，获取数据，然后修改数据，要注意数据一致性问题 （一致性和高性能会存在冲突）
+ 1. 比如修改数据中途中断了，就是错误的数据
+ 2. 如果使用copy数据，然后再赋值回去，要考虑gc问题，如果qps比较高，就会产生大量的内存垃圾，可以使用内存池（不过这是保证数据一致性问题）
+ 3. 可以约束，处理逻辑函数不修改数据，然后返回需要修改数据，然后赋值到原始数据上，性能最好（还是不能完全保证数据一致性问题）
+   1.怎么约束呢，使用interface，提供read接口，不提供write接口，然后在修改数据的时候，使用copy，然后赋值回去，这样就不会产生内存垃圾，性能也会更好
 
 #### 补救
  1. gorm

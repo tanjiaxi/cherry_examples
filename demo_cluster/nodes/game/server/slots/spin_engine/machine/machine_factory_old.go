@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-12-01 14:33:32
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-12-01 22:29:58
+ * @LastEditTime: 2025-12-08 14:12:35
  * @FilePath: /examples/demo_cluster/nodes/game/server/slots/spin_engine/machine/machine_factory.go
  * @Description: Machine 使用简单的switch语句来创建不同的Machine实例，这里只是一个简单的示例，实际项目中可能需要更复杂的逻辑来决定使用哪个Machine实例。
  */
@@ -16,7 +16,7 @@ import (
 
 	cproto "github.com/cherry-game/cherry/net/proto"
 	configCacheSlots "github.com/cherry-game/examples/demo_cluster/internal/config_cache/slots"
-	spinManager "github.com/cherry-game/examples/demo_cluster/nodes/game/server/slots/spin_manager"
+	slotsModel "github.com/cherry-game/examples/demo_cluster/nodes/game/model"
 )
 
 // DefaultMachineFactoryOld 默认机器工厂
@@ -36,7 +36,7 @@ func NewMachineFactoryOld() *DefaultMachineFactoryOld {
 func (f *DefaultMachineFactoryOld) CreateMachine(
 	roomId int32,
 	session *cproto.Session,
-	roomDataInfo *spinManager.RoomDataInfo,
+	roomDataInfo *slotsModel.RoomDataInfo,
 ) (IMachine, error) {
 	// 从配置中获取房间信息，判断使用哪个 Machine
 	roomConfig, err := configCacheSlots.GetInstance().GetRoomConfig(roomId)
@@ -84,7 +84,7 @@ func (f *DefaultMachineFactoryOld) CreateMachine(
 func CreateMachineByRoomIdOld(
 	roomId int32,
 	session *cproto.Session,
-	roomDataInfo *spinManager.RoomDataInfo,
+	roomDataInfo *slotsModel.RoomDataInfo,
 ) (IMachine, error) {
 	factory := NewMachineFactoryOld()
 	return factory.CreateMachine(roomId, session, roomDataInfo)

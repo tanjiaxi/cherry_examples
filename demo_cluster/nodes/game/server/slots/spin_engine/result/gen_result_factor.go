@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-12-02 17:49:48
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-12-02 21:59:33
+ * @LastEditTime: 2025-12-08 15:29:32
  * @FilePath: /examples/demo_cluster/nodes/game/server/slots/spin_engine/result/gen_result1.go
  * @Description: 关卡工厂模式
  */
@@ -16,10 +16,11 @@ type GenRusultFactoryFunc func() ResultInterface
 
 var genRusultRegistry = make(map[int32]GenRusultFactoryFunc)
 
-func GetGenResltByRoomId(ruleId int32) {
+func CreatGenResltByRoomId(ruleId int32) ResultInterface {
 	if factoryFunc, ok := genRusultRegistry[ruleId]; ok {
-		factoryFunc()
+		return factoryFunc()
 	}
+	return nil
 }
 func RegisteGenResltFactory(ruleId int32, factoryFunc GenRusultFactoryFunc) {
 	if factoryFunc, ok := genRusultRegistry[ruleId]; ok {
@@ -32,8 +33,8 @@ func RegisteGenResltFactory(ruleId int32, factoryFunc GenRusultFactoryFunc) {
 
 // 注册所有关卡逻辑
 func RegisteAllGenReslt() {
-	RegisteGenResltFactory(1, func() ResultInterface {
+	RegisteGenResltFactory(86, func() ResultInterface {
 		GenResultBase := NewGenResultBase()
-		return NewGenResult1(*GenResultBase)
+		return NewGenResult86(*GenResultBase)
 	})
 }

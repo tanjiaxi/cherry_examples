@@ -14,7 +14,7 @@ package machine
 import (
 	cproto "github.com/cherry-game/cherry/net/proto"
 	"github.com/cherry-game/examples/demo_cluster/internal/pb"
-	spinManager "github.com/cherry-game/examples/demo_cluster/nodes/game/server/slots/spin_manager"
+	slotsModel "github.com/cherry-game/examples/demo_cluster/nodes/game/model"
 )
 
 // IMachine 定义所有 Machine 必须实现的接口
@@ -49,5 +49,5 @@ type IMachine interface {
 
 // MachineFactory 机器工厂接口
 type MachineFactory interface {
-	CreateMachine(roomId int32, session *cproto.Session, roomDataInfo *spinManager.RoomDataInfo) (IMachine, error)
+	CreateMachine(roomId int32, session *cproto.Session, roomDataInfo *slotsModel.RoomDataInfo) (IMachine, error)
 }

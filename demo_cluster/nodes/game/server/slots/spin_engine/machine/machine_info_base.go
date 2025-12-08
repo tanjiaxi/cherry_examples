@@ -18,13 +18,13 @@ import (
 	logicGameModel "github.com/cherry-game/examples/demo_cluster/internal/model/logic_model"
 	"github.com/cherry-game/examples/demo_cluster/internal/pb"
 	gameDb "github.com/cherry-game/examples/demo_cluster/nodes/game/db"
-	spinManager "github.com/cherry-game/examples/demo_cluster/nodes/game/server/slots/spin_manager"
+	slotsModel "github.com/cherry-game/examples/demo_cluster/nodes/game/model"
 )
 
 type BaseMachine struct {
 	roomId       int32
 	session      *cproto.Session
-	roomDataInfo *spinManager.RoomDataInfo
+	roomDataInfo *slotsModel.RoomDataInfo
 	roomConfig   *gameModel.N2CfgRoomlist
 	reelCofig    *logicGameModel.N2CfgReelRoom
 	userInfo     *pb.GetUserInfoResponse
@@ -32,7 +32,7 @@ type BaseMachine struct {
 	ruleId       int32
 }
 
-func NewBaseMachine(roomId int32, session *cproto.Session, roomDataInfo *spinManager.RoomDataInfo, userInfo *pb.GetUserInfoResponse, ruleId int32) *BaseMachine {
+func NewBaseMachine(roomId int32, session *cproto.Session, roomDataInfo *slotsModel.RoomDataInfo, userInfo *pb.GetUserInfoResponse, ruleId int32) *BaseMachine {
 	return &BaseMachine{
 		roomId:       roomId,
 		session:      session,
