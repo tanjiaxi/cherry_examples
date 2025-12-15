@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	maxRobotNum       = 10                      // 运行x个机器人
+	maxRobotNum       = 1                       // 运行x个机器人
 	url               = "http://127.0.0.1:8081" // web node
 	addr              = "127.0.0.1:20010"       // 网关地址(正式环境通过区服列表获取)
 	serverId    int32 = 10001                   // 测试的游戏服id
@@ -29,7 +29,7 @@ func main() {
 
 	accounts := make(map[string]string)
 	for i := 1; i <= maxRobotNum; i++ {
-		key := fmt.Sprintf("test%d", i)
+		key := fmt.Sprintf("robottest%d", i)
 		accounts[key] = key
 	}
 

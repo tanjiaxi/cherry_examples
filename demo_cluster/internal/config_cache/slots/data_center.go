@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-20 23:45:18
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-12-02 11:24:36
+ * @LastEditTime: 2025-12-09 18:17:47
  * @FilePath: /examples/demo_cluster/nodes/game/db/slots/data_center.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -18,6 +18,7 @@ import (
 	dbData "github.com/cherry-game/examples/demo_cluster/internal/db" //具体数据
 	gameModel "github.com/cherry-game/examples/demo_cluster/internal/model"
 	logicGameModel "github.com/cherry-game/examples/demo_cluster/internal/model/logic_model"
+	"github.com/jinzhu/copier"
 )
 
 type DataCenter struct {
@@ -38,6 +39,11 @@ func GetInstance() *DataCenter {
 		instance = &DataCenter{}
 	})
 	return instance
+}
+
+// SetLoader 设置数据加载器（用于测试）
+func (dc *DataCenter) SetLoader(loader *DataLoader) {
+	dc.loader = loader
 }
 func (dc *DataCenter) Init() *ConfigSnapshot {
 	return dc.snapshotAuto.Load().(*ConfigSnapshot)
@@ -75,17 +81,22 @@ func (dc *DataCenter) Reload() error {
 /*
 roomID  规则房间ID 1，2，3
 */
-func (dc *DataCenter) GetCardConfig(roomID int32) (map[int32]*gameModel.N2CfgCard, error) {
-	n2CfgCard := make(map[int32]*gameModel.N2CfgCard)
+func (dc *DataCenter) GetCardConfig(ruleId int32) (map[int32]*dbData.FormatCardConfig, error) {
+	n2CfgCard := make(map[int32]*dbData.FormatCardConfig)
 	allN2CfgCard := dc.getSnapshot().N2CfgCard
 	for _, v := range allN2CfgCard {
-		if v.RoomID == roomID {
-			n2CfgCard[v.Cardindex] = v
+		if v.RoomID == ruleId {
+			newCardConfig := dbData.FormatCardConfig{}
+			err := copier.Copy(&newCardConfig, &v)
+			if err != nil {
+				return nil, fmt.Errorf("Copier Data  failed")
+			}
+			n2CfgCard[v.Cardindex] = &newCardConfig
 		}
 	}
 	if len(n2CfgCard) == 0 {
-		clog.Panic("room %d no card config ", roomID)
-		return nil, fmt.Errorf("room %d no card config ", roomID)
+		clog.Panic("room %d no card config ", ruleId)
+		return nil, fmt.Errorf("room %d no card config ", ruleId)
 	}
 	return n2CfgCard, nil
 }
@@ -125,4 +136,24 @@ func (dc *DataCenter) GetN2CLevel(levelid int32) (*dbData.FormatLevelConfig, err
 		return nil, fmt.Errorf("room %d no reel  config ", levelid)
 	}
 	return allN2CfgReel[levelid], nil
+}
+func (dc *DataCenter) GetFromatLines(x, y, id int) (*dbData.CommonLines, error) {
+	fromatLines := dc.getSnapshot().FromatLines
+	key := getLineKeyName(x, y, id)
+	if fromatLines[key] == nil {
+		clog.Panic("FromatLines %d no reel  config ", id)
+		return nil, fmt.Errorf("FromatLines %d no  config ", id)
+	}
+
+	return fromatLines[key], nil
+}
+func (dc *DataCenter) GetFromatLineIds(x, y int) (*dbData.FormatLinesIdsConfig, error) {
+	fromatLineIds := dc.getSnapshot().FromatLineIds
+	key := getLineIdsKeyName(x, y)
+	if fromatLineIds[key] == nil { //xy= 4*5
+		clog.Panic("fromatLineIds %s no config ", key)
+		return nil, fmt.Errorf("fromatLineIds %s no  config ", key)
+	}
+
+	return fromatLineIds[key], nil
 }

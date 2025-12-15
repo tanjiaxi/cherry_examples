@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-20 22:24:38
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-12-08 15:38:10
+ * @LastEditTime: 2025-12-14 21:18:51
  * @FilePath: /examples/demo_cluster/nodes/game/module/slots/room/level_room.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -101,7 +101,7 @@ func (r *ActorRoom) machineinfo(session *cproto.Session, req *pb.MachineInfo) {
 		r.Response(session, response)
 		return
 	}
-	ruleId := roomId % 1000
+	ruleId := roomId / 1000
 	// 4. 使用工厂创建对应的 Machine（根据 roomId 自动选择 MachineInfo1 或 MachineInfo2）
 	machine := spinEngine.CreateMachineByType(ruleId, roomId, session, roomDataInfo, userInfo)
 	if machine == nil {
@@ -161,8 +161,8 @@ func (r *ActorRoom) machineinfo(session *cproto.Session, req *pb.MachineInfo) {
 
 func (r *ActorRoom) spin(session *cproto.Session, req *pb.Spin) {
 	roomId := req.Id
-	ruleId := roomId % 1000
-	curBet := req.CurBet
+	ruleId := roomId / 1000
+	curBet := 10000 //req.CurBet
 	// 2. 获取用户信息
 	userInfo := rpcGame.GetUserInfo(r.Actor, session)
 	if userInfo == nil || userInfo.UserId == 0 {
@@ -196,14 +196,37 @@ func (r *ActorRoom) spin(session *cproto.Session, req *pb.Spin) {
 		r.Response(session, response)
 		return
 	}
-	spinManager.ReadySPin(roomId, ruleId, false, curBet, req.CurCost, roomDataInfo)
-	response := &pb.ErrorResponse{
-		Code:    code.OK,
-		Message: "succes",
+	// 1. 验证房间配置
+	n2CfgRoomlist, error := configCacheSlots.GetInstance().GetRoomConfig(roomId)
+	if error != nil || n2CfgRoomlist == nil {
+		response := &pb.ErrorResponse{
+			Code:    code.NoRoomConfig,
+			Message: "no room config",
+		}
+		r.Response(session, response)
+		return
+	}
+	SpinResult, err := spinManager.ReadySPin(roomId, ruleId, false, int(curBet), n2CfgRoomlist, roomDataInfo)
+	if err != nil {
+		response := &pb.ErrorResponse{
+			Code:    code.GetRulstInfoError,
+			Message: "spin rrsults error",
+		}
+		r.Response(session, response)
+		return
 	}
 	clog.Infof("spin: userId=%d, roomId=%d, version=%d ,feature=%v",
 		userInfo.UserId, roomId, roomDataInfo.Version, roomDataInfo)
-	r.Response(session, response)
+	SpinResponse := &pb.SpinResponse{
+		SpinResult:   SpinResult,
+		Id:           roomId,
+		SeedInfo:     nil,
+		UserBet:      int64(curBet),
+		Jackpot:      nil,
+		MultInfo:     nil,
+		SpinUserInfo: nil,
+	}
+	r.Response(session, SpinResponse)
 }
 func (r *ActorRoom) bonus(session *cproto.Session, _ *pb.Bonus) {
 

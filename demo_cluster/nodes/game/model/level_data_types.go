@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-20 22:33:18
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-12-08 15:34:58
+ * @LastEditTime: 2025-12-09 22:05:45
  * @FilePath: /examples/demo_cluster/nodes/game/server/ slots/component/level_data_types.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -39,6 +39,8 @@ type RoomDataInfo struct {
 
 	// Jackpot相关
 	NewJackpotAcc int `json:"new_jackpot_acc"` // 新玩家Jackpot标志
+	StageType     int `json:"stage_type"`      // 阶段类型,一般就是reSpoin使用
+	LastReelLevel int `json:"last_reel_level"` // 上一次卷轴等级
 
 	// 元数据（不在原始数据中，但需要）
 	CreatedAt    int64 `json:"created_at"`    // 创建时间

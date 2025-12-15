@@ -15,13 +15,13 @@ import (
 	"github.com/cherry-game/examples/demo_cluster/internal/component/db"
 )
 
-type line struct {
-	x int
-	y int
+type Line struct {
+	X int
+	Y int
 }
 type CommonLines struct {
 	ID       int
-	LinesArr []line
+	LinesArr []Line
 }
 type CommonLinesConfig struct {
 	ID   int32
@@ -48,15 +48,15 @@ func GetLinesConfig(lines []interface{}, x, y int) (commonLines []*CommonLines, 
 	}
 	return commonLines, nil
 }
-func FormatLinesConfig(x, y int, lines string) ([]line, error) {
+func FormatLinesConfig(x, y int, lines string) ([]Line, error) {
 	linesArr := strings.Split(strings.TrimSpace(lines), ",")
-	formatLines := make([]line, 0, len(linesArr))
+	formatLines := make([]Line, 0, len(linesArr))
 	for i := 0; i < y; i++ {
 		for j := 0; j < x; j++ {
 			if linesArr[j*y+i] == "1" {
-				line := line{
-					x: j,
-					y: i,
+				line := Line{
+					X: j,
+					Y: i,
 				}
 				formatLines = append(formatLines, line)
 			}

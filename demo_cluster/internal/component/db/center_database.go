@@ -62,6 +62,11 @@ func GetDB() *gorm.DB {
 	return gameDB
 }
 
+// SetTestDB 设置测试数据库连接（仅用于测试）
+func SetTestDB(db *gorm.DB) {
+	gameDB = db
+}
+
 // autoMigrate 自动迁移表结构
 // func autoMigrate() error {
 // 	db := GetDB()

@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-26 17:03:16
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-12-03 17:41:39
+ * @LastEditTime: 2025-12-08 22:36:38
  * @FilePath: /examples/demo_cluster/internal/common/tool_utils.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -69,6 +69,24 @@ func SplitNumber(str, sep string) ([]int, error) {
 		}
 
 		result = append(result, val)
+	}
+	return result, nil
+}
+func SplitString(str, sep string) ([]string, error) {
+	if str == "" {
+		return []string{}, nil
+	}
+	// 1. 分割字符串
+	parts := strings.Split(str, sep)
+
+	result := make([]string, 0, len(parts))
+	for _, part := range parts {
+		// 2. 去除首尾空格 (防止配置写成 "10, 20" 导致转换失败)
+		trimmed := strings.TrimSpace(part)
+		if trimmed == "" {
+			continue // 跳过空项，比如 "10,,20"
+		}
+		result = append(result, trimmed)
 	}
 	return result, nil
 }

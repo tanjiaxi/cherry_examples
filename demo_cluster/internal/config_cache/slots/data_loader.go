@@ -12,6 +12,7 @@ package slots
 import (
 	"fmt"
 	"reflect"
+	"sync"
 	"time"
 
 	clog "github.com/cherry-game/cherry/logger"
@@ -26,7 +27,7 @@ type ConfigSnapshot struct {
 	LoadTime int64 //加载时间
 
 	//配置数据
-	N2CfgCard        map[int32]*gameModel.N2CfgCard
+	N2CfgCard        map[int32]*dbData.FormatCardConfig
 	N2CfgReelRoom    map[int32]*logicGameModel.N2CfgReelRoom
 	N2CfgRoomlist    map[int32]*gameModel.N2CfgRoomlist
 	FromatN2CfgLevel map[int32]*dbData.FormatLevelConfig     //key是levelid
@@ -45,13 +46,22 @@ func (d *DataLoader) LoadAllConfig() (*ConfigSnapshot, error) {
 	configSnapshot := ConfigSnapshot{
 		Version:          time.Now().Unix(),
 		LoadTime:         time.Now().Unix(),
-		N2CfgCard:        make(map[int32]*gameModel.N2CfgCard),
+		N2CfgCard:        make(map[int32]*dbData.FormatCardConfig),
 		N2CfgReelRoom:    make(map[int32]*logicGameModel.N2CfgReelRoom),
 		N2CfgRoomlist:    make(map[int32]*gameModel.N2CfgRoomlist),
 		FromatN2CfgLevel: make(map[int32]*dbData.FormatLevelConfig),
 		FromatLines:      make(map[string]*dbData.CommonLines),
 		FromatLineIds:    make(map[string]*dbData.FormatLinesIdsConfig),
 	}
+	configWait := sync.WaitGroup{}
+	configWait.Add(1)
+	go func() {
+		if err := d.LoadLevelConfig(&configSnapshot, "public"); err != nil {
+			clog.Panic("load level config failed: %w", err)
+		}
+		configWait.Done()
+	}()
+
 	//加载配置
 	if err := d.LoadCardConfig(&configSnapshot, "public"); err != nil {
 		clog.Panic("load card config failed: %w", err)
@@ -62,10 +72,6 @@ func (d *DataLoader) LoadAllConfig() (*ConfigSnapshot, error) {
 
 	if err := d.LoadReelRoomConfig(&configSnapshot, "public"); err != nil {
 		clog.Panic("load reel room config failed: %w", err)
-	}
-
-	if err := d.LoadLevelConfig(&configSnapshot, "public"); err != nil {
-		clog.Panic("load level config failed: %w", err)
 	}
 	if err := LoadLinesConfig[gameModel.Lines3x3](&configSnapshot, 3, 3, "public"); err != nil {
 		clog.Panic("load Lines3x3 config failed: %w", err)
@@ -94,6 +100,7 @@ func (d *DataLoader) LoadAllConfig() (*ConfigSnapshot, error) {
 	if err := d.LoadLinesIdsConfig(&configSnapshot, "public"); err != nil {
 		clog.Panic("load LinesIds config failed: %w", err)
 	}
+	configWait.Wait()
 	return &configSnapshot, nil
 }
 
@@ -104,13 +111,17 @@ func (d *DataLoader) LoadAllConfig() (*ConfigSnapshot, error) {
 func (d *DataLoader) LoadCardConfig(configSnapshot *ConfigSnapshot, schema string) error {
 	var cardConfig []*gameModel.N2CfgCard
 	//从数据库查找
-	result := db.GetDB().Find(&cardConfig)
-	if result.Error != nil {
-		return result.Error
+	cardConfig = dbData.GetCardConfig()
+	if cardConfig == nil {
+		return fmt.Errorf("no card config")
 	}
 	//转换为镜像map
 	for _, v := range cardConfig {
-		configSnapshot.N2CfgCard[v.Kid] = v
+		formatCardConfig, err := dbData.FormatCardConfigData(v)
+		if err != nil {
+			return err
+		}
+		configSnapshot.N2CfgCard[v.Kid] = formatCardConfig
 	}
 	return nil
 }
@@ -245,6 +256,9 @@ func LoadLinesConfig[T any](configSnapshot *ConfigSnapshot, x, y int, schema str
 }
 func getLineKeyName(x, y, id int) string {
 	return fmt.Sprintf("%dx%d_%d", x, y, id)
+}
+func getLineIdsKeyName(x, y int) string {
+	return fmt.Sprintf("%d*%d", x, y)
 }
 func storeConfigSnapshot(configSnapshot *ConfigSnapshot, x, y int, data []*dbData.CommonLines) error {
 	for _, v := range data {

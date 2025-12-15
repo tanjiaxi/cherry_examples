@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-09-15 18:02:10
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-12-03 17:09:26
+ * @LastEditTime: 2025-12-14 21:10:10
  * @FilePath: /examples/demo_cluster/internal/code/code.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -31,6 +31,7 @@ var (
 	NoRoomConfig             int32 = 310 //无法获取房间配置
 	NoRoomPlayerData         int32 = 311 //无法获取房间玩家数据
 	UpdateRoomPlayerDataFial int32 = 312 //更新房间玩家数据失败
+	GetRulstInfoError        int32 = 313 //获取房间信息失败
 )
 
 // 临时变量

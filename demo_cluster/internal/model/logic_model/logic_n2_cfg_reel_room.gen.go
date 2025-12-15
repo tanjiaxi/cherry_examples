@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-26 16:47:59
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-12-02 16:25:01
+ * @LastEditTime: 2025-12-10 17:13:16
  * @FilePath: /examples/demo_cluster/nodes/game/model/logic_model/logic_n2_cfg_reel_room.gen.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -16,10 +16,10 @@ import "encoding/json"
 
 // 2. 对应 config 对象
 type GameConfig struct {
-	Version     string          `json:"version"`
-	ReelsStart  []int32         `json:"reels_start"`
-	ReelsWeight [][]float64     `json:"reels_weight"` // 注意：这里是 float
-	ReelsConfig json.RawMessage `json:"reels_config"`
+	Version     string            `json:"version"`
+	ReelsStart  []int32           `json:"reels_start"`
+	ReelsWeight [][]float64       `json:"reels_weight"` // 注意：这里是 float
+	ReelsConfig []json.RawMessage `json:"reels_config"`
 }
 
 // 3. 根对象

@@ -33,7 +33,8 @@ type (
 
 func New(client *cherryClient.Client) *Robot {
 	return &Robot{
-		Client: client,
+		Client:   client,
+		PrintLog: true,
 	}
 }
 
@@ -186,6 +187,18 @@ func (p *Robot) ActorEnter() error {
 	return nil
 }
 
+// actorEnterEnterMachine 角色进入机台
+func (p *Robot) ActorEnterEnterMachine() {
+
+}
+
+// ActorMachineInfo 角色机台信息
+func (p *Robot) ActorMachine() {}
+
+// ActorSpin 角色进入机台spin
+func (p *Robot) ActorSpin() {
+
+}
 func (p *Robot) RandSleep() {
 	time.Sleep(time.Duration(rand.Int31n(10)) * time.Millisecond)
 }
