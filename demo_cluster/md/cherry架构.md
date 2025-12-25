@@ -1079,3 +1079,8 @@ Actor 模型的标准实现
 内部状态串行修改
 
 这个架构文档涵盖了Cherry框架的核心概念和实现细节，可以作为学习和开发的参考指南。
+
+### 新思想，
+actor区分：
+1:区分玩家的actor，比如玩家actor，需要childId，来区分来玩家，也需要一个父的actor来接受消息，然后转发到对应的childId 的actor
+2：全局的actor， 比如center的actor

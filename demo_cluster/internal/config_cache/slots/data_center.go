@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-20 23:45:18
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-12-09 18:17:47
+ * @LastEditTime: 2025-12-17 22:41:54
  * @FilePath: /examples/demo_cluster/nodes/game/db/slots/data_center.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -16,7 +16,6 @@ import (
 	"github.com/DmitriyVTitov/size"
 	clog "github.com/cherry-game/cherry/logger"
 	dbData "github.com/cherry-game/examples/demo_cluster/internal/db" //具体数据
-	gameModel "github.com/cherry-game/examples/demo_cluster/internal/model"
 	logicGameModel "github.com/cherry-game/examples/demo_cluster/internal/model/logic_model"
 	"github.com/jinzhu/copier"
 )
@@ -83,42 +82,28 @@ roomID  规则房间ID 1，2，3
 */
 func (dc *DataCenter) GetCardConfig(ruleId int32) (map[int32]*dbData.FormatCardConfig, error) {
 	n2CfgCard := make(map[int32]*dbData.FormatCardConfig)
-	allN2CfgCard := dc.getSnapshot().N2CfgCard
-	for _, v := range allN2CfgCard {
-		if v.RoomID == ruleId {
-			newCardConfig := dbData.FormatCardConfig{}
-			err := copier.Copy(&newCardConfig, &v)
-			if err != nil {
-				return nil, fmt.Errorf("Copier Data  failed")
-			}
-			n2CfgCard[v.Cardindex] = &newCardConfig
+	if cfg, ok := dc.getSnapshot().RoomCardIndex[ruleId]; ok {
+		return cfg, nil
+		err := copier.Copy(&n2CfgCard, &cfg)
+		if err != nil {
+			return nil, fmt.Errorf("Copier Data  failed")
 		}
+		return n2CfgCard, nil
 	}
-	if len(n2CfgCard) == 0 {
-		clog.Panic("room %d no card config ", ruleId)
-		return nil, fmt.Errorf("room %d no card config ", ruleId)
-	}
-	return n2CfgCard, nil
+	return nil, fmt.Errorf("room %d no card config", ruleId)
 }
 
 //获取room配置
 /*
 roomID  真实房间ID 1001 ，1002
 */
-func (dc *DataCenter) GetRoomConfig(roomID int32) (*gameModel.N2CfgRoomlist, error) {
+func (dc *DataCenter) GetRoomConfig(roomID int32) (IRoomListConfig, error) {
 	allN2CfgRoomlist := dc.getSnapshot().N2CfgRoomlist
-	var n2CfgRoomlist *gameModel.N2CfgRoomlist
-	for _, v := range allN2CfgRoomlist {
-		if v.RoomID == roomID {
-			n2CfgRoomlist = v
-			break
-		}
+	if n2CfgRoomlist, ok := allN2CfgRoomlist[roomID]; ok {
+		return NewRoomListConfig(n2CfgRoomlist), nil
 	}
-	if n2CfgRoomlist == nil {
-		clog.Panic("room %d no room config ", roomID)
-		return nil, fmt.Errorf("room %d no room config ", roomID)
-	}
-	return n2CfgRoomlist, nil
+	clog.Panic("room %d no room config ", roomID)
+	return nil, fmt.Errorf("room %d no room config ", roomID)
 }
 func (dc *DataCenter) GetN2CfgReelRoom(ruleId int32) (*logicGameModel.N2CfgReelRoom, error) {
 	allN2CfgReelRoom := dc.getSnapshot().N2CfgReelRoom

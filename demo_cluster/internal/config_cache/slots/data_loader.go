@@ -28,6 +28,7 @@ type ConfigSnapshot struct {
 
 	//配置数据
 	N2CfgCard        map[int32]*dbData.FormatCardConfig
+	RoomCardIndex    map[int32]map[int32]*dbData.FormatCardConfig
 	N2CfgReelRoom    map[int32]*logicGameModel.N2CfgReelRoom
 	N2CfgRoomlist    map[int32]*gameModel.N2CfgRoomlist
 	FromatN2CfgLevel map[int32]*dbData.FormatLevelConfig     //key是levelid
@@ -44,9 +45,12 @@ func NewDataLoader() *DataLoader {
 // 后期的map key应该是id+schama 分配置
 func (d *DataLoader) LoadAllConfig() (*ConfigSnapshot, error) {
 	configSnapshot := ConfigSnapshot{
-		Version:          time.Now().Unix(),
-		LoadTime:         time.Now().Unix(),
-		N2CfgCard:        make(map[int32]*dbData.FormatCardConfig),
+		Version:  time.Now().Unix(),
+		LoadTime: time.Now().Unix(),
+
+		N2CfgCard:     make(map[int32]*dbData.FormatCardConfig),
+		RoomCardIndex: make(map[int32]map[int32]*dbData.FormatCardConfig),
+
 		N2CfgReelRoom:    make(map[int32]*logicGameModel.N2CfgReelRoom),
 		N2CfgRoomlist:    make(map[int32]*gameModel.N2CfgRoomlist),
 		FromatN2CfgLevel: make(map[int32]*dbData.FormatLevelConfig),
@@ -121,6 +125,10 @@ func (d *DataLoader) LoadCardConfig(configSnapshot *ConfigSnapshot, schema strin
 		if err != nil {
 			return err
 		}
+		if _, ok := configSnapshot.RoomCardIndex[v.RoomID]; !ok {
+			configSnapshot.RoomCardIndex[v.RoomID] = make(map[int32]*dbData.FormatCardConfig)
+		}
+		configSnapshot.RoomCardIndex[v.RoomID][v.Kid] = formatCardConfig
 		configSnapshot.N2CfgCard[v.Kid] = formatCardConfig
 	}
 	return nil
@@ -136,7 +144,7 @@ func (d *DataLoader) LoadRoomConfig(configSnapshot *ConfigSnapshot, schema strin
 	}
 	//转换为镜像map
 	for _, v := range roomConfig {
-		configSnapshot.N2CfgRoomlist[v.Kid] = v
+		configSnapshot.N2CfgRoomlist[v.RoomID] = v
 	}
 	return nil
 }

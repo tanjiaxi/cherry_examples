@@ -1,10 +1,13 @@
 package rpcCenter
 
 import (
+	"time"
+
 	cfacade "github.com/cherry-game/cherry/facade"
 	clog "github.com/cherry-game/cherry/logger"
 	"github.com/cherry-game/examples/demo_cluster/internal/code"
 	"github.com/cherry-game/examples/demo_cluster/internal/pb"
+	"github.com/cherry-game/examples/demo_cluster/nodes/center/server"
 )
 
 // route = 节点类型.节点handler.remote函数
@@ -86,6 +89,23 @@ func GetDevAccount(app cfacade.IApplication, accountName, password string) strin
 
 // GetUID 获取帐号UID
 func GetUID(app cfacade.IApplication, sdkId, pid int32, openId string) (cfacade.UID, int32) {
+	startTime := time.Now()
+	accout, err := server.DevAccountWithName(openId)
+	if err != nil {
+		return 0, code.AccountTokenValidateFail
+	}
+	userId, ok := server.BindUID(sdkId, pid, openId, accout.UserID)
+	if userId == 0 || !ok {
+		return 0, code.AccountBindFail
+	}
+
+	elapsed := time.Since(startTime)
+	clog.Debugf("getUID代码执行耗时: %s ,id: %s ,count: %d ", elapsed, openId)
+	return int64(userId), code.OK
+}
+
+// GetUID 获取帐号UID
+func GetUID1(app cfacade.IApplication, sdkId, pid int32, openId string) (cfacade.UID, int32) {
 	req := &pb.User{
 		SdkId:  sdkId,
 		Pid:    pid,
@@ -102,7 +122,6 @@ func GetUID(app cfacade.IApplication, sdkId, pid int32, openId string) (cfacade.
 
 	return rsp.Value, code.OK
 }
-
 func GetCenterNodeID(app cfacade.IApplication) string {
 	list := app.Discovery().ListByType(centerType)
 	if len(list) > 0 {

@@ -119,7 +119,7 @@ func (p *actorPlayer) playerCreate(session *cproto.Session, req *pb.PlayerCreate
 	// TODO 更新最后一次登陆的角色信息到中心节点
 
 	// 抛出角色创建事件
-	playerCreateEvent := event.NewPlayerCreate(newPlayerTable.PlayerId, req.PlayerName, req.Gender)
+	playerCreateEvent := event.NewPlayerCreate(newPlayerTable.UserId, req.PlayerName, req.Gender)
 	p.PostEvent(&playerCreateEvent)
 
 	playerInfo := buildPBPlayer(newPlayerTable)
@@ -157,7 +157,7 @@ func (p *actorPlayer) playerEnter(session *cproto.Session, req *pb.Int64) {
 	}
 
 	p.uid = playerTable.UID
-	p.userId = playerTable.PlayerId
+	p.userId = playerTable.UserId
 	p.isOnline = true // 设置为在线状态
 
 	// 加载玩家数据到内存
@@ -196,7 +196,7 @@ func (p *actorPlayer) playerEnter(session *cproto.Session, req *pb.Int64) {
 
 func buildPBPlayer(playerTable *db.PlayerTable) pb.Player {
 	return pb.Player{
-		UserId:     playerTable.PlayerId,
+		UserId:     playerTable.UserId,
 		PlayerName: playerTable.Name,
 		Level:      playerTable.Level,
 		CreateTime: playerTable.CreateTime,

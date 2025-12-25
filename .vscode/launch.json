@@ -2,6 +2,15 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "robot_client",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/demo_cluster/robot_client/main.go",
+            "console" :"integratedTerminal",
+            "args": []
+        },
+        {
             "name":"demo-chat",
             "type":"go",
             "request":"launch",
@@ -80,26 +89,49 @@
             ]
         },
         {
-            "name": "gc-game-10001",
+            "name": "gc-gate-3",
             "type": "go",
             "request": "launch",
             "mode": "debug",
             "program": "${workspaceFolder}/demo_cluster/nodes/main.go",
             "console" :"integratedTerminal",
             "args": [
-                "game",
+                "gate",
                 "--path=../../config/demo-cluster.json",
-                "--node=10001"
+                "--node=gc-gate-3"
             ]
         },
         {
-            "name": "robot_client",
+            "name": "gc-game-10001",
             "type": "go",
             "request": "launch",
             "mode": "debug",
-            "program": "${workspaceFolder}/demo_cluster/robot_client/main.go",
-            "console" :"integratedTerminal",
-            "args": []
+            "program": "${workspaceFolder}/demo_cluster/nodes/main.go",
+            "console": "integratedTerminal",
+            "args": [
+                "game",
+                "--path=../../config/demo-cluster.json",
+                "--node=10001"
+            ],
+            // "env": {
+            //     "GODEBUG": "gctrace=1"
+            // }
+        },
+        {
+            "name": "gc-game-10002",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/demo_cluster/nodes/main.go",
+            "console": "integratedTerminal",
+            "args": [
+                "game",
+                "--path=../../config/demo-cluster.json",
+                "--node=10002"
+            ],
+            // "env": {
+            //     "GODEBUG": "gctrace=1"
+            // }
         },
         {
             "name": "actor_demo",
@@ -118,7 +150,25 @@
                 "gc-center",
                 "gc-web-1",
                 "gc-gate-1",
-                "gc-game-10001"
+                "gc-gate-2",
+                "gc-gate-3",
+                "gc-game-10001",
+                "gc-game-10002"
+            ],
+            "stopAll": true,
+            "presentation": {
+                "hidden": false,
+                "group": "cluster",
+                "order": 1
+            }
+        },
+        {
+            "name": "🚀 启动所有单节点 (Debug)",
+            "configurations": [
+                "gc-center",
+                "gc-web-1",
+                "gc-gate-1",
+                "gc-game-10001",
             ],
             "stopAll": true,
             "presentation": {

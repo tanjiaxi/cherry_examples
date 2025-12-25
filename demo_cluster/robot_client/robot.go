@@ -25,7 +25,7 @@ type (
 		PID        int32
 		UID        int64
 		OpenId     string
-		PlayerId   int64
+		UserId     int64
 		PlayerName string
 		StartTime  cherryTime.CherryTime
 	}
@@ -122,17 +122,17 @@ func (p *Robot) PlayerSelect() error {
 		return nil
 	}
 
-	p.PlayerId = rsp.List[0].UserId
+	p.UserId = rsp.List[0].UserId
 	p.PlayerName = rsp.List[0].PlayerName
 
-	p.Debugf("[%s] [PlayerSelect] response PlayerID = %d,PlayerName = %s", p.TagName, p.PlayerId, p.PlayerName)
+	p.Debugf("[%s] [PlayerSelect] response PlayerID = %d,PlayerName = %s", p.TagName, p.UserId, p.PlayerName)
 
 	return nil
 }
 
 // ActorCreate 创建角色
 func (p *Robot) ActorCreate() error {
-	if p.PlayerId > 0 {
+	if p.UserId > 0 {
 		p.Debugf("[%s] deny create actor", p.TagName)
 		return nil
 	}
@@ -156,10 +156,10 @@ func (p *Robot) ActorCreate() error {
 		return err
 	}
 
-	p.PlayerId = rsp.Player.UserId
+	p.UserId = rsp.Player.UserId
 	p.PlayerName = rsp.Player.PlayerName
 
-	p.Debugf("[%s] [ActorCreate] PlayerID = %d,ActorName = %s", p.TagName, p.PlayerId, p.PlayerName)
+	p.Debugf("[%s] [ActorCreate] PlayerID = %d,ActorName = %s", p.TagName, p.UserId, p.PlayerName)
 
 	return nil
 }
@@ -168,7 +168,7 @@ func (p *Robot) ActorCreate() error {
 func (p *Robot) ActorEnter() error {
 	route := "game.player.enter"
 	req := &pb.Int64{
-		Value: p.PlayerId,
+		Value: p.UserId,
 	}
 
 	msg, err := p.Request(route, req)
@@ -182,7 +182,7 @@ func (p *Robot) ActorEnter() error {
 		return err
 	}
 
-	p.Debugf("[%s] [ActorEnter] response PlayerID = %d,ActorName = %s", p.TagName, p.PlayerId, p.PlayerName)
+	p.Debugf("[%s] [ActorEnter] response PlayerID = %d,ActorName = %s", p.TagName, p.UserId, p.PlayerName)
 	return nil
 }
 

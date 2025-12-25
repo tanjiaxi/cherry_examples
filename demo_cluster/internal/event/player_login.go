@@ -2,7 +2,7 @@ package event
 
 type PlayerLogin struct {
 	ActorId         string // actor id
-	PlayerId        int64  // player id
+	UserId          int64  // player id
 	LoginDays       int    // 累计登录天数(每天+1)
 	ContinueDays    int    // 连续登录天数(超过一天则归零)
 	MaxContinueDays int    // 最大连续登录天数
@@ -10,8 +10,8 @@ type PlayerLogin struct {
 
 func NewPlayerLogin(actorId string, playerId int64) PlayerLogin {
 	event := PlayerLogin{
-		ActorId:  actorId,
-		PlayerId: playerId,
+		ActorId: actorId,
+		UserId:  playerId,
 	}
 	return event
 }
@@ -21,5 +21,5 @@ func (PlayerLogin) Name() string {
 }
 
 func (p PlayerLogin) UniqueID() int64 {
-	return p.PlayerId
+	return p.UserId
 }

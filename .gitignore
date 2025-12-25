@@ -4,7 +4,10 @@
 bin/
 logs/
 *.exe
-cherry/
+vendor/*
+!vendor/github.com/
+vendor/github.com/*
+!vendor/github.com/cherry-game/
 go.work
 go.work.sum
 __debug_bin*

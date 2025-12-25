@@ -17,6 +17,7 @@ import (
 	"github.com/cherry-game/examples/demo_cluster/internal/data"
 	"github.com/cherry-game/examples/demo_cluster/nodes/center/db"
 	"github.com/cherry-game/examples/demo_cluster/nodes/center/module/account"
+	"github.com/cherry-game/examples/demo_cluster/nodes/center/module/location"
 	"github.com/cherry-game/examples/demo_cluster/nodes/center/module/ops"
 )
 
@@ -40,6 +41,7 @@ func Run(profileFilePath, nodeID string) {
 	app.AddActors(
 		&account.ActorAccount{},
 		&ops.ActorOps{},
+		location.NewActorLocation(), // 玩家位置管理Actor
 	)
 
 	app.Startup()

@@ -68,9 +68,15 @@ func TestSpinIntegration_Room86(t *testing.T) {
 	roomId := int32(86001)
 	ruleId := roomId / 1000
 	curBet := 10000
-
+	// startTime := time.Now()
 	// 获取房间配置
 	roomConfig, err := configCacheSlots.GetInstance().GetRoomConfig(roomId)
+	// 3. 计算并打印执行时间
+	// elapsed := time.Since(startTime)
+	// fmt.Printf("代码执行耗时: %s\n", elapsed) // %s 格式化 time.Duration 打印例如 2s, 2.001s
+	// 也可以格式化为纳秒、毫秒等
+	// fmt.Printf("代码执行耗时 (纳秒): %d\n", elapsed.Nanoseconds())
+	// fmt.Printf("代码执行耗时 (毫秒): %.2fms\n", float64(elapsed.Nanoseconds())/1e6)
 	if err != nil {
 		t.Fatalf("获取房间配置失败: %v", err)
 	}
@@ -187,9 +193,7 @@ func TestSpinIntegration_MultipleSpins(t *testing.T) {
 // TestSpinIntegration_PrintRealData 打印真实数据结构（用于调试）
 func TestSpinIntegration_PrintRealData(t *testing.T) {
 	setupTest(t)
-
 	ruleId := int32(86)
-
 	// 获取符号配置
 	symbols, err := configCacheSlots.GetInstance().GetCardConfig(ruleId)
 	if err != nil {

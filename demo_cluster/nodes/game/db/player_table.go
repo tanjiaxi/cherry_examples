@@ -16,7 +16,7 @@ type PlayerTable struct {
 	UID            int64  `gorm:"column:uid;comment:'用户id'" json:"uid"`
 	ServerId       int32  `gorm:"column:server_id;comment:'创角时的游戏服id'" json:"serverId"`
 	MergedServerId int32  `gorm:"column:merged_server_id;comment:'合服后的游戏服id'" json:"mergedServerId"`
-	PlayerId       int64  `gorm:"column:player_id;primary_key;comment:'角色id'" json:"userId"`
+	UserId         int64  `gorm:"column:player_id;primary_key;comment:'角色id'" json:"userId"`
 	Name           string `gorm:"column:player_name;comment:'角色名称'" json:"name"`
 	Gender         int32  `gorm:"column:gender;comment:'角色性别'" json:"gender"`
 	Level          int32  `gorm:"column:level;comment:'角色等级'" json:"level"`
@@ -62,7 +62,7 @@ func CreatePlayer(session *cproto.Session, name string, serverId int32, playerIn
 		UID:            session.Uid,
 		ServerId:       serverId,
 		MergedServerId: serverId,
-		PlayerId:       userId,
+		UserId:         userId,
 		Name:           name,
 		Gender:         playerInit.Gender,
 		Level:          playerInit.Level,
@@ -72,7 +72,7 @@ func CreatePlayer(session *cproto.Session, name string, serverId int32, playerIn
 
 	// 先进缓存
 	playerTableCache.Put(userId, playerTable)
-	playerNameCache.Put(name, playerTable.PlayerId) // 缓存角色名
+	playerNameCache.Put(name, playerTable.UserId) // 缓存角色名
 	uidCache.Put(playerTable.UID, userId)
 
 	// TODO 保存db

@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-20 22:24:38
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-12-14 21:18:51
+ * @LastEditTime: 2025-12-23 15:00:21
  * @FilePath: /examples/demo_cluster/nodes/game/module/slots/room/level_room.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -45,6 +45,7 @@ func NewActorRoom() *ActorRoom {
 	return a
 }
 func (r *ActorRoom) OnInit() {
+	r.Remote().Register("sessionClose", r.sessionClose)
 	clog.Debugf("[actorRoom] path = %s init!", r.PathString())
 	//处理gate的节点actor消息
 	r.Local().Register("entermachine", r.enterMachine) // 进入关卡
@@ -52,6 +53,13 @@ func (r *ActorRoom) OnInit() {
 	r.Local().Register("spin", r.spin)                 // 关卡spin
 	r.Local().Register("bonus", r.bonus)               // 关卡bonus请求
 	r.Local().Register("collect", r.collect)           // 关卡collect 请求
+}
+func (r *ActorRoom) sessionClose() {
+	// online.UnBindPlayer(r.uid)
+	// r.isOnline = false
+	r.Exit()
+
+	clog.Debugf("[actorPlayer] exit! uis = %d", 10)
 }
 func (r *ActorRoom) enterMachine(session *cproto.Session, req *pb.EnterMachine) {
 	roomId := req.Id
@@ -155,7 +163,7 @@ func (r *ActorRoom) machineinfo(session *cproto.Session, req *pb.MachineInfo) {
 		// 其他字段...
 	}
 	clog.Infof("获取机器信息成功: userId=%d, roomId=%d, version=%d ,feature=%v",
-		userInfo.UserId, roomId, n2CfgRoomlist.Version, feature)
+		userInfo.UserId, roomId, n2CfgRoomlist.GetVersion(), feature)
 	r.Response(session, response)
 }
 
@@ -173,7 +181,7 @@ func (r *ActorRoom) spin(session *cproto.Session, req *pb.Spin) {
 		r.Response(session, response)
 		return
 	}
-	start := time.Now()
+	// start := time.Now()
 	roomDataInfo, err := r.roomDataManager.GetLevelSessionDataByRoomId(int32(userInfo.UserId), roomId)
 	if err != nil {
 		response := &pb.ErrorResponse{
@@ -185,9 +193,9 @@ func (r *ActorRoom) spin(session *cproto.Session, req *pb.Spin) {
 	}
 	roomDataInfo.SpinNum++
 	err = r.roomDataManager.UpdateLevelSessionData(roomDataInfo)
-	cost := time.Since(start)
+	// cost := time.Since(start)
 
-	clog.Infof("执行耗时: %v", cost)
+	// clog.Infof("执行耗时: %v", cost)
 	if err != nil {
 		response := &pb.ErrorResponse{
 			Code:    code.UpdateRoomPlayerDataFial,

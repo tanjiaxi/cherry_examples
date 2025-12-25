@@ -7,10 +7,11 @@ import (
 
 type (
 	AreaServerRow struct {
-		ServerId   int32  `json:"serverId"`   // 游戏服id
-		ServerName string `json:"serverName"` // 游戏服名称
-		AreaId     int32  `json:"areaId"`     // 游戏服所属的区id
-		Status     int32  `json:"status"`     // 游戏服状态
+		ServerId   int32    `json:"serverId"`   // 游戏服id
+		ServerName string   `json:"serverName"` // 游戏服名称
+		AreaId     int32    `json:"areaId"`     // 游戏服所属的区id
+		GameNodes  []string `json:"gameNodes"`  // 该服的Game节点ID列表
+		Status     int32    `json:"status"`     // 游戏服状态
 	}
 
 	// 游戏区分组

@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-26 14:19:10
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-12-02 16:51:33
+ * @LastEditTime: 2025-12-17 22:46:30
  * @FilePath: /examples/demo_cluster/nodes/game/server/slots/spin_engine/machine/machine_info_base.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -14,7 +14,6 @@ import (
 	cproto "github.com/cherry-game/cherry/net/proto"
 	"github.com/cherry-game/examples/demo_cluster/internal/code"
 	configCacheSlots "github.com/cherry-game/examples/demo_cluster/internal/config_cache/slots"
-	gameModel "github.com/cherry-game/examples/demo_cluster/internal/model"
 	logicGameModel "github.com/cherry-game/examples/demo_cluster/internal/model/logic_model"
 	"github.com/cherry-game/examples/demo_cluster/internal/pb"
 	gameDb "github.com/cherry-game/examples/demo_cluster/nodes/game/db"
@@ -25,7 +24,7 @@ type BaseMachine struct {
 	roomId       int32
 	session      *cproto.Session
 	roomDataInfo *slotsModel.RoomDataInfo
-	roomConfig   *gameModel.N2CfgRoomlist
+	roomConfig   configCacheSlots.IRoomListConfig
 	reelCofig    *logicGameModel.N2CfgReelRoom
 	userInfo     *pb.GetUserInfoResponse
 	isInit       bool
@@ -99,7 +98,7 @@ func (b *BaseMachine) GetBase() (*pb.BaseInfo, error) {
 
 	baseInfo.Id = b.roomId
 	baseInfo.BetArray = bets
-	baseInfo.BaseMoney = b.roomConfig.Betbaseamount
+	baseInfo.BaseMoney = b.roomConfig.GetBetbaseamount()
 	baseInfo.ReelSpeed = 0
 	baseInfo.HasPlayed = b.roomDataInfo.SpinNum > 0
 	baseInfo.DefaultBet = speBetNum

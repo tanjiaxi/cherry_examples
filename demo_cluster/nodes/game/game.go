@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-09-15 18:02:10
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-12-02 22:47:37
+ * @LastEditTime: 2025-12-22 17:36:27
  * @FilePath: /examples/demo_cluster/nodes/game/game.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -62,6 +62,8 @@ func Run(profileFilePath, nodeID string) {
 	app.Register(checkConfigVersion.New("/cherry/config/slots/levels/", configCacheSlots.GetInstance()))
 	//注册关卡相关逻辑
 	app.Register(slotsLeveCore.New())
+	// 注册心跳组件，定时向Center发送心跳
+	// app.Register(heartbeat.New("game"))
 	app.AddActors(
 		&player.ActorPlayers{},
 		&slotsRoom.ActorRooms{},

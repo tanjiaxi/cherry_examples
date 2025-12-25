@@ -61,7 +61,7 @@ func (p *ActorPlayers) onLoginEvent(e cfacade.IEventData) {
 	}
 
 	clog.Infof("[PlayerLoginEvent] [playerId = %d, onlineCount = %d]",
-		evt.PlayerId,
+		evt.UserId,
 		online.Count(),
 	)
 }
@@ -74,7 +74,7 @@ func (p *ActorPlayers) onLogoutEvent(e cfacade.IEventData) {
 	}
 
 	clog.Infof("[PlayerLogoutEvent] [playerId = %d, onlineCount = %d]",
-		evt.PlayerId,
+		evt.UserId,
 		online.Count(),
 	)
 }

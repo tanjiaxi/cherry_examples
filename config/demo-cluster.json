@@ -14,9 +14,10 @@
       "address": "nats://127.0.0.1:4222",
       "reconnect_delay": 1,
       "max_reconnects": 0,
-      "request_timeout": 2,
+      "request_timeout": 20,
       "user": "",
-      "password": ""
+      "password": "",
+      "pool_size": 10
     },
     "etcd": {
         "end_points": "dev.com:2379",
@@ -57,25 +58,41 @@
     "gate": [
       {
         "node_id": "gc-gate-1",
-        "address": ":10010",
+        "address": "127.0.0.1:10010",
         "__settings__": {
           "db_id_list" : {
-            "game_db_id": "game_db_1"
+            "center_db_id": "game_db_1"
           },
-          "tcp_address": ":20010",
-          "ref_logger": "gate_log"
+          "tcp_address": "127.0.0.1:20010",
+          "ref_logger": "gate_log",
+          "call_time_out":"10"
+
         },
         "enable": true
       },
       {
         "node_id": "gc-gate-2",
-        "address": ":10011",
+        "address": "127.0.0.1:10011",
         "__settings__": {
           "db_id_list" : {
             "game_db_id": "game_db_1"
           },
-          "tcp_address": ":20011",
-          "ref_logger": "gate_log"
+          "tcp_address": "127.0.0.1:20011",
+          "ref_logger": "gate_log",
+          "call_time_out":"10"
+        },
+        "enable": true
+      },
+      {
+        "node_id": "gc-gate-3",
+        "address": "127.0.0.1:10012",
+        "__settings__": {
+          "db_id_list" : {
+            "game_db_id": "game_db_1"
+          },
+          "tcp_address": "127.0.0.1:20012",
+          "ref_logger": "gate_log",
+          "call_time_out":"10"
         },
         "enable": true
       }
@@ -107,35 +124,35 @@
     "master_log": {
       "level": "debug",
       "enable_console": true,
-      "enable_write_file": false,
+      "enable_write_file": true,
       "file_link_path": "logs/master.log",
       "file_path_format": "logs/master_%Y%m%d%H%M.log"
     },
     "center_log": {
       "level": "debug",
       "enable_console": true,
-      "enable_write_file": false,
+      "enable_write_file": true,
       "file_link_path": "logs/center.log",
       "file_path_format": "logs/center_%Y%m%d%H%M.log"
     },
     "gate_log": {
       "level": "debug",
       "enable_console": true,
-      "enable_write_file": false,
+      "enable_write_file": true,
       "file_link_path": "logs/gate.log",
       "file_path_format": "logs/gate_%Y%m%d%H%M.log"
     },
     "game_log": {
       "level": "debug",
       "enable_console": true,
-      "enable_write_file": false,
+      "enable_write_file": true,
       "file_link_path": "logs/game.log",
       "file_path_format": "logs/game_%Y%m%d%H%M.log"
     },
     "cross_log": {
       "level": "debug",
       "enable_console": true,
-      "enable_write_file": false,
+      "enable_write_file": true,
       "file_link_path": "logs/cross.log",
       "file_path_format": "logs/cross_%Y%m%d%H%M.log"
     }
@@ -167,8 +184,8 @@
         "port": 5432,
         "user_name": "postgres",
         "password": "123456",
-        "max_idle_connect": 4,
-        "max_open_connect": 8,
+        "max_idle_connect": 20,
+        "max_open_connect": 200,
         "log_mode": true
       }
     ],
@@ -182,8 +199,8 @@
         "port": 5432,
         "user_name": "postgres",
         "password": "123456",
-        "max_idle_connect": 4,
-        "max_open_connect": 8,
+        "max_idle_connect": 20,
+        "max_open_connect": 200,
         "log_mode": true
       }
     ]

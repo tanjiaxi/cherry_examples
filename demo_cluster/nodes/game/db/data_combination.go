@@ -23,10 +23,10 @@ func FormatUserBetArr(levelConfig *dbData.FormatLevelConfig, roomId int32, costC
 	bets := getUserBaseBets(levelConfig, costCoinsM)
 	betArr2 := make([]int64, 0, len(bets))
 	for _, v := range bets {
-		betArr2 = append(betArr2, v*int64(n2CfgRoomlist.BetStakegear))
+		betArr2 = append(betArr2, v*int64(n2CfgRoomlist.GetBetStakegear()))
 	}
-	defaultBet := int64(float64(levelConfig.Recommendbet) * costCoinsM * float64(n2CfgRoomlist.BetStakegear))
-	baseAmount := n2CfgRoomlist.Betbaseamount
+	defaultBet := int64(float64(levelConfig.Recommendbet) * costCoinsM * float64(n2CfgRoomlist.GetBetStakegear()))
+	baseAmount := n2CfgRoomlist.GetBetbaseamount()
 	return betArr2, int(defaultBet), int(baseAmount), nil
 }
 

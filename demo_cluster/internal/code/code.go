@@ -11,6 +11,7 @@ package code
 var (
 	OK                       int32 = 0   // is ok
 	Error                    int32 = 1   // error
+	ParamError               int32 = 2   // 参数错误
 	PIDError                 int32 = 100 // pid错误
 	LoginError               int32 = 201 // 登录异常
 	AccountAuthFail          int32 = 202 // 帐号授权失败
@@ -32,6 +33,13 @@ var (
 	NoRoomPlayerData         int32 = 311 //无法获取房间玩家数据
 	UpdateRoomPlayerDataFial int32 = 312 //更新房间玩家数据失败
 	GetRulstInfoError        int32 = 313 //获取房间信息失败
+
+	// 节点分配相关错误码
+	NoAvailableGate        int32 = 401 // 无可用Gate节点
+	NoAvailableGame        int32 = 402 // 无可用Game节点
+	AllocateNodeFail       int32 = 403 // 分配节点失败
+	PlayerLocationNotFound int32 = 404 // 玩家位置未找到
+	RemoveLocationFail     int32 = 405 // 移除位置失败
 )
 
 // 临时变量

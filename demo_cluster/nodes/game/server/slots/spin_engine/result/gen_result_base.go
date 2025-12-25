@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-12-02 17:49:48
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-12-14 18:40:04
+ * @LastEditTime: 2025-12-19 16:02:25
  * @FilePath: /examples/demo_cluster/nodes/game/server/slots/spin_engine/result/gen_result1.go
  * @Description: 关卡基础类
  */
@@ -15,7 +15,6 @@ import (
 	clog "github.com/cherry-game/cherry/logger"
 	slotsConfigCache "github.com/cherry-game/examples/demo_cluster/internal/config_cache/slots"
 	dbData "github.com/cherry-game/examples/demo_cluster/internal/db" //具体数据
-	gameModel "github.com/cherry-game/examples/demo_cluster/internal/model"
 	logicGameModel "github.com/cherry-game/examples/demo_cluster/internal/model/logic_model"
 	"github.com/cherry-game/examples/demo_cluster/internal/pb"
 	slotsModel "github.com/cherry-game/examples/demo_cluster/nodes/game/model"
@@ -56,7 +55,7 @@ type ReelsConfigBase struct {
 type GenResultBase struct {
 	roomDataInfo      *slotsModel.RoomDataInfo
 	reelJsonObj       *SingeReelsConfig
-	roomConfig        *gameModel.N2CfgRoomlist
+	roomConfig        slotsConfigCache.IRoomListConfig
 	roomId            int32
 	ruleId            int32
 	bet               int
@@ -84,7 +83,7 @@ func (g *GenResultBase) OnInit(roomId, ruleId int32, bet int, roomDataInfo *slot
 func NewGenResultBase() *GenResultBase {
 	return &GenResultBase{}
 }
-func (g *GenResultBase) GenResult(roomId, ruleId int32, isInit bool, bet int, collectAddMoney []int, roomCongfig *gameModel.N2CfgRoomlist) (*pb.SpinResult, error) {
+func (g *GenResultBase) GenResult(roomId, ruleId int32, isInit bool, bet int, collectAddMoney []int, roomCongfig slotsConfigCache.IRoomListConfig) (*pb.SpinResult, error) {
 	return nil, nil
 }
 
@@ -186,38 +185,11 @@ func (g *GenResultBase) GetRoomSymbolCfg() (map[int32]*dbData.FormatCardConfig, 
 	if err != nil {
 		return nil, err
 	}
-	for _, v := range symbols {
-		temp := 0
-		if len(v.Conditionoddsseq) < g.y {
-			v.Conditionoddsseq = make([]int, g.y)
-		}
-		for i := 0; i < g.y; i++ {
-			if v.Conditionoddsseq[i] != 0 {
-				temp = v.Conditionoddsseq[i]
-			} else {
-				v.Conditionoddsseq[i] = temp
-			}
-		}
-
-		for _, oddItem := range v.MixedOdds {
-			tempOdd := 0
-			if len(oddItem) < g.y {
-				oddItem = make([]int, g.y)
-			}
-			for k := 0; k < g.y; k++ {
-				if oddItem[k] != 0 {
-					tempOdd = oddItem[k]
-				} else {
-					oddItem[k] = tempOdd
-				}
-			}
-		}
-	}
 	return symbols, nil
 }
-func (g *GenResultBase) GetWinMoneyType(roomConfig gameModel.N2CfgRoomlist) []int {
+func (g *GenResultBase) GetWinMoneyType(roomConfig slotsConfigCache.IRoomListConfig) []int {
 	return []int{
-		0, int(roomConfig.SfxMidwin), int(roomConfig.SfxBigwin), int(roomConfig.Bigthreshold), int(roomConfig.Megathreshold), int(roomConfig.Superthreshold),
+		0, int(roomConfig.GetSfxMidwin()), int(roomConfig.GetSfxBigwin()), int(roomConfig.GetBigthreshold()), int(roomConfig.GetMegathreshold()), int(roomConfig.GetSuperthreshold()),
 	}
 }
 func (g *GenResultBase) InitReelLevel(roomDataInfo *slotsModel.RoomDataInfo, redBlackFluctuationVal int) int {
@@ -323,7 +295,7 @@ func (g *GenResultBase) BeforeSpin(redBlackFluctuationVal int, roomId, ruleId in
 	g.setResultBaseInfo(reelJsonObj, n2CfgRoomlist, reelLevel)
 	return nil
 }
-func (g *GenResultBase) setResultBaseInfo(singeReelsConfig *SingeReelsConfig, n2CfgRoomlist *gameModel.N2CfgRoomlist, reelLevel int) {
+func (g *GenResultBase) setResultBaseInfo(singeReelsConfig *SingeReelsConfig, n2CfgRoomlist slotsConfigCache.IRoomListConfig, reelLevel int) {
 	g.reelJsonObj = singeReelsConfig
 	g.roomConfig = n2CfgRoomlist
 }
@@ -379,9 +351,9 @@ func (g *GenResultBase) GetRetData(allMap [][]int, posInSequence []int, allLines
 	response.stopInfo = g.getNormalStopInfo(allMap)
 	totalWin, allWinLines := g.formatLineResult(allMap, allLines, allSymbol, bet, getResultInfo)
 	response.win = totalWin
-	betCost := int(g.roomConfig.Betbaseamount)
+	betCost := int(g.roomConfig.GetBetbaseamount())
 	winOdds := float64(totalWin / (bet * betCost))
-	winType := g.covertWinType(winOdds, g.GetWinMoneyType(*g.roomConfig))
+	winType := g.covertWinType(winOdds, g.GetWinMoneyType(g.roomConfig))
 	response.winInfo = winsInfo{
 		win:      totalWin,
 		lines:    allWinLines,

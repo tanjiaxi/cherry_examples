@@ -15,6 +15,8 @@ import (
 
 	cdiscovery "github.com/cherry-game/cherry/net/discovery"
 	cherryETCD "github.com/cherry-game/components/etcd"
+	cherryGORM "github.com/cherry-game/examples/demo_cluster/internal/component/pg_gorm"
+	"github.com/cherry-game/examples/demo_cluster/nodes/center/db"
 )
 
 // Run 运行gate节点
@@ -40,6 +42,8 @@ func Run(profileFilePath, nodeID string) {
 	// 注册数据配表组件，具体详见data-config的使用方法和参数配置
 	app.Register(data.New())
 
+	app.Register(cherryGORM.NewComponent())
+	app.Register(db.New())
 	//启动cherry引擎
 	app.Startup()
 }
@@ -56,14 +60,14 @@ func buildPomeloParser(app *cherry.AppBuilder) cfacade.INetParser {
 	agentActor.SetOnNewAgent(func(newAgent *pomelo.Agent) {
 		childActor := &ActorAgent{}
 		newAgent.AddOnClose(childActor.onSessionClose)
-		agentActor.Child().Create(newAgent.SID(), childActor) // actorID == sid
+		agentActor.Child().Create(newAgent.SID(), childActor) // childId == sid
 	})
 
 	// 设置数据路由函数
 	// 订阅"数据路由"事件
 	// 3. 路由到 ActorAgent 这里通过 sid 路由到具体的 ActorAgent
 	agentActor.SetOnDataRoute(onPomeloDataRoute)
-
+	app.ActorSystem().SetCallTimeout(time.Duration(app.Settings().GetInt("call_time_out")) * time.Second)
 	return agentActor
 }
 

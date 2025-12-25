@@ -1,3 +1,11 @@
+/*
+ * @Author: t 921865806@qq.com
+ * @Date: 2025-09-15 18:02:10
+ * @LastEditors: t 921865806@qq.com
+ * @LastEditTime: 2025-12-21 21:42:28
+ * @FilePath: /examples/demo_cluster/internal/data/area_config.go
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ */
 package data
 
 import (
@@ -7,9 +15,11 @@ import (
 
 type (
 	AreaRow struct {
-		AreaId   int32  `json:"areaId"`   // 游戏区id
-		AreaName string `json:"areaName"` // 游戏区名称
-		Gate     string `json:"gate"`     // 游戏区对应的网关地址
+		AreaId      int32    `json:"areaId"`      // 游戏区id
+		AreaName    string   `json:"areaName"`    // 游戏区名称
+		GateNodes   []string `json:"gateNodes"`   // 该区的Gate节点ID列表
+		DefaultGate string   `json:"defaultGate"` // 默认Gate地址（后备）
+		Gate        string   `json:"gate"`        // 兼容旧配置
 	}
 
 	// 游戏区

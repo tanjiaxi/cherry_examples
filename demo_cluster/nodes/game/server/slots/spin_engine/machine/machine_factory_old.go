@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-12-01 14:33:32
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-12-08 14:12:35
+ * @LastEditTime: 2025-12-17 22:46:11
  * @FilePath: /examples/demo_cluster/nodes/game/server/slots/spin_engine/machine/machine_factory.go
  * @Description: Machine 使用简单的switch语句来创建不同的Machine实例，这里只是一个简单的示例，实际项目中可能需要更复杂的逻辑来决定使用哪个Machine实例。
  */
@@ -46,7 +46,7 @@ func (f *DefaultMachineFactoryOld) CreateMachine(
 
 	// 根据房间配置的字段来决定使用哪个 Machine
 	// 这里使用 Version 字段来区分（你可以根据实际需求修改）
-	version := roomConfig.Version
+	version := roomConfig.GetVersion()
 
 	var machine IMachine
 	baseMachine := *NewBaseMachine(roomId, session, roomDataInfo, nil, roomId%1000)

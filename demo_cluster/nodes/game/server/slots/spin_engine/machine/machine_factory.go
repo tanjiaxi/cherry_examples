@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-12-01 14:33:32
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-12-08 14:11:32
+ * @LastEditTime: 2025-12-15 17:35:58
  * @FilePath: /examples/demo_cluster/nodes/game/server/slots/spin_engine/machine/machine_factory.go
  * @Description: 使用映射的方式实现，工厂模式
  */
@@ -61,5 +61,10 @@ func RegisterMachineAll() {
 	RegisterMachineFactory(2, func(roomId int32, session *cproto.Session, roomDataInfo *slotsModel.RoomDataInfo, userInfo *pb.GetUserInfoResponse) IMachine {
 		baseMachine := NewBaseMachine(roomId, session, roomDataInfo, userInfo, roomId%1000)
 		return NewMachineInfo2(*baseMachine)
+	})
+	//ruel:86
+	RegisterMachineFactory(86, func(roomId int32, session *cproto.Session, roomDataInfo *slotsModel.RoomDataInfo, userInfo *pb.GetUserInfoResponse) IMachine {
+		baseMachine := NewBaseMachine(roomId, session, roomDataInfo, userInfo, roomId%1000)
+		return NewMachineInfo86(*baseMachine)
 	})
 }

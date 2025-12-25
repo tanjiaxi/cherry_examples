@@ -34,7 +34,7 @@ func RegisteGenResltFactory(ruleId int32, factoryFunc GenRusultFactoryFunc) {
 // 注册所有关卡逻辑
 func RegisteAllGenReslt() {
 	RegisteGenResltFactory(86, func() ResultInterface {
-		GenResultBase := NewGenResultBase()
-		return NewGenResult86(*GenResultBase)
+		return NewGenResult86()
+		// return NewGenResult86()
 	})
 }

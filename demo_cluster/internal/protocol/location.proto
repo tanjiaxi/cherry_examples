@@ -1,0 +1,51 @@
+syntax = "proto3";
+option go_package = "/pb";
+package pb;
+
+// AllocateNodesRequest 分配节点请求
+message AllocateNodesRequest {
+  // 对应 Go: UserId, tag: player_id
+  int64 user_id = 1 ;
+  
+  // 对应 Go: GateNodeId, tag: gate_node_id
+  string gate_node_id = 2 ;
+}
+
+// AllocateNodesResponse 分配节点响应
+message AllocateNodesResponse {
+  // 对应 Go: UserId, tag: player_id
+  int64 user_id = 1 ;
+  
+  // 对应 Go: GateNodeId, tag: gate_node_id
+  string gate_node_id = 2 ;
+  
+  // 对应 Go: GameNodeId, tag: game_node_id
+  string game_node_id = 3 ;
+  
+  // 对应 Go: LoginTime, tag: login_time
+  int64 login_time = 4 ;
+}
+
+// HeartbeatRequest 心跳请求
+message HeartbeatRequest {
+  // 对应 Go: NodeId, tag: node_id
+  string node_id = 1 ;
+  
+  // 对应 Go: NodeType, tag: node_type ("gate" or "game")
+  string node_type = 2 ;
+}
+
+// GetBestGateResponse 获取最优Gate响应
+message GetBestGateResponse {
+  // 对应 Go: GateNodeId, tag: gate_node_id
+  string gate_node_id = 1;
+  
+  // 对应 Go: GateAddr, tag: gate_addr
+  string gate_addr = 2 ;
+}
+
+// StringList 字符串列表
+message StringList {
+  // 对应 Go: Values []string
+  repeated string values = 1;
+}

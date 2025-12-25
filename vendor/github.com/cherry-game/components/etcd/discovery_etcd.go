@@ -151,7 +151,7 @@ func (p *ETCD) register() {
 	registerMember := &cproto.Member{
 		NodeID:   p.app.NodeID(),
 		NodeType: p.app.NodeType(),
-		Address:  p.app.RpcAddress(),
+		Address:  p.app.Address(),
 		Settings: make(map[string]string),
 	}
 

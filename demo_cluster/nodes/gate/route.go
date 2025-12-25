@@ -10,6 +10,7 @@ import (
 	cproto "github.com/cherry-game/cherry/net/proto"
 	"github.com/cherry-game/examples/demo_cluster/internal/code"
 	"github.com/cherry-game/examples/demo_cluster/internal/pb"
+	rpcCenter "github.com/cherry-game/examples/demo_cluster/internal/rpc/center"
 	sessionKey "github.com/cherry-game/examples/demo_cluster/internal/session_key"
 )
 
@@ -32,7 +33,7 @@ var (
 // onDataRoute 数据路由规则
 //
 // 登录逻辑:
-// 1.(建立连接)客户端建立连接，服务端对应创建一个agent用于处理玩家消息,actorID == sid
+// 1.(建立连接)客户端建立连接，服务端对应创建一个agent用于处理玩家消息,actorID == sid == childId
 // 2.(用户登录)客户端进行帐号登录验证，通过uid绑定当前sid
 // 3.(角色登录)客户端通过'beforeLoginRoutes'中的协议完成角色登录
 func onPomeloDataRoute(agent *pomelo.Agent, route *pmessage.Route, msg *pmessage.Message) {
@@ -58,7 +59,7 @@ func gameNodeRoute(agent *pomelo.Agent, session *cproto.Session, route *pmessage
 		return
 	}
 
-	// 1. 从session中获取玩家绑定的游戏服务器ID
+	// 1. 从session中获取玩家绑定的游戏服务器ID,这里的ServerID，是game节点的，nodeId
 	serverId := session.GetString(sessionKey.ServerID)
 	if serverId == "" {
 		// 没有可用的游戏服务器，踢掉玩家
@@ -91,35 +92,40 @@ func gameNodeRoute(agent *pomelo.Agent, session *cproto.Session, route *pmessage
 
 // 检测游戏节点是否在线
 func isGameNodeOnline(agent *pomelo.Agent, nodeID string) bool {
-	numberInfo, found := agent.Discovery().GetMember(nodeID)
-	clog.Info("game node", numberInfo)
+	_, found := agent.Discovery().GetMember(nodeID)
+	// clog.Info("game node", numberInfo)
 	return found
 }
 
-// 节点没有在线处理
+// handleGameNodeOffline 节点没有在线处理，调用Center重新分配节点
 func handleGameNodeOffline(agent *pomelo.Agent, session *cproto.Session) {
-	// 1. 选择新的游戏节点
-	newGameNode := selectGameNode(agent)
-	if newGameNode == "" {
-		// 没有可用的Game节点，踢掉玩家
-		agent.Kick(&pb.Int32{Value: code.ServerMaintenance}, true)
+	userId := session.Uid
+	gateNodeId := agent.NodeID()
+
+	// 1. 调用Center重新分配Game节点（负载均衡）
+	// agent 嵌入了 IApplication，可以直接作为 app 使用
+	allocResp, errCode := rpcCenter.AllocateNodes(agent, userId, gateNodeId)
+	if code.IsFail(errCode) || allocResp == nil {
+		clog.Warnf("[handleGameNodeOffline] 重新分配节点失败: userId=%d, errCode=%d", userId, errCode)
+		// 尝试本地选择
+		newGameNode := selectGameNode(agent)
+		if newGameNode == "" {
+			agent.Kick(&pb.Int32{Value: code.ServerMaintenance}, true)
+			return
+		}
+		session.Set(sessionKey.ServerID, newGameNode)
+		session.Set(sessionKey.GameNodeID, newGameNode)
+		clog.Infof("[handleGameNodeOffline] 本地选择新节点: userId=%d, gameNode=%s", userId, newGameNode)
 		return
 	}
 
 	// 2. 更新session中的serverID
-	session.Set(sessionKey.ServerID, newGameNode)
-	clog.Infof("Player %d reassigned from offline server to: %s", session.Uid, newGameNode)
-
-	// 3. 通知玩家服务器切换（可选）
-	// agent.Response(session, &pb.ReconnectResponse{
-	// 	NewServerID: newGameNode,
-	// 	Reason:      "服务器维护，已自动切换",
-	// })
-
-	// 4. 可选：保存玩家状态到数据库
-	// savePlayerStateToDatabase(session.Uid)
+	session.Set(sessionKey.ServerID, allocResp.GameNodeId)
+	session.Set(sessionKey.GameNodeID, allocResp.GameNodeId)
+	clog.Infof("[handleGameNodeOffline] 重新分配成功: userId=%d, gameNode=%s", userId, allocResp.GameNodeId)
 }
 
+// selectGameNode 本地选择Game节点（作为后备方案）
 func selectGameNode(agent *pomelo.Agent) string {
 	members := agent.Discovery().ListByType("game", "")
 	if len(members) == 0 {

@@ -107,7 +107,7 @@ func (p *Controller) login(c *cherryGin.Context) {
 	})
 }
 
-// severList 区服列表
+// severList 区服列表（带负载均衡）
 // http://127.0.0.1/server/list/2126001
 func (p *Controller) serverList(c *cherryGin.Context) {
 	pid := c.GetInt32("pid", 2126001)
@@ -125,22 +125,72 @@ func (p *Controller) serverList(c *cherryGin.Context) {
 	}
 
 	dataList := &struct {
-		Areas   []*data.AreaRow       `json:"areas"`
-		Servers []*data.AreaServerRow `json:"servers"`
-	}{}
+		Areas          []*AreaResponse   `json:"areas"`
+		Servers        []*ServerResponse `json:"servers"`
+		UseLoadBalance bool              `json:"useLoadBalance"`
+	}{
+		UseLoadBalance: true,
+	}
 
 	for _, areaId := range areaGroup.AreaIdList {
 		areaRow, found := data.AreaConfig.Get(areaId)
 		if found == false {
 			continue
 		}
-		dataList.Areas = append(dataList.Areas, areaRow)
 
+		// 根据区的Gate节点列表获取最优Gate
+		var bestGateAddr string
+		if len(areaRow.GateNodes) > 0 {
+			// 调用Center获取该区最优的Gate节点
+			addr, errCode := rpcCenter.GetBestGateFromNodes(p.App, areaRow.GateNodes)
+			if code.IsOK(errCode) && addr != "" {
+				bestGateAddr = addr
+			}
+		}
+
+		// 如果获取失败，使用默认地址
+		if bestGateAddr == "" {
+			if areaRow.DefaultGate != "" {
+				bestGateAddr = areaRow.DefaultGate
+			} else if areaRow.Gate != "" {
+				bestGateAddr = areaRow.Gate
+			}
+		}
+
+		areaResp := &AreaResponse{
+			AreaId:   areaRow.AreaId,
+			AreaName: areaRow.AreaName,
+			Gate:     bestGateAddr,
+		}
+		dataList.Areas = append(dataList.Areas, areaResp)
+
+		// 获取该区的服务器列表，转换为响应结构（不暴露gameNodes）
 		serverList := data.AreaServerConfig.ListWithAreaId(areaRow.AreaId)
-		if len(serverList) > 0 {
-			dataList.Servers = append(dataList.Servers, serverList...)
+		for _, server := range serverList {
+			serverResp := &ServerResponse{
+				ServerId:   server.ServerId,
+				ServerName: server.ServerName,
+				AreaId:     server.AreaId,
+				Status:     server.Status,
+			}
+			dataList.Servers = append(dataList.Servers, serverResp)
 		}
 	}
 
 	code.RenderResult(c, code.OK, dataList)
+}
+
+// AreaResponse 区响应结构（返回给客户端）
+type AreaResponse struct {
+	AreaId   int32  `json:"areaId"`
+	AreaName string `json:"areaName"`
+	Gate     string `json:"gate"`
+}
+
+// ServerResponse 服响应结构（返回给客户端，不包含内部节点信息）
+type ServerResponse struct {
+	ServerId   int32  `json:"serverId"`
+	ServerName string `json:"serverName"`
+	AreaId     int32  `json:"areaId"`
+	Status     int32  `json:"status"`
 }
