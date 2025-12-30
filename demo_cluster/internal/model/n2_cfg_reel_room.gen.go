@@ -4,7 +4,7 @@
 
 package model
 
-const TableNameN2CfgReelRoom = "n2_cfg_reel_room"
+const TableNameN2CfgReelRoom = "newsz_2024.n2_cfg_reel_room"
 
 // N2CfgReelRoom mapped from table <n2_cfg_reel_room>
 type N2CfgReelRoom struct {

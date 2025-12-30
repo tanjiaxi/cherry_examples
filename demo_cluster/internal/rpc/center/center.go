@@ -88,7 +88,7 @@ func GetDevAccount(app cfacade.IApplication, accountName, password string) strin
 }
 
 // GetUID 获取帐号UID
-func GetUID(app cfacade.IApplication, sdkId, pid int32, openId string) (cfacade.UID, int32) {
+func GetUID1(app cfacade.IApplication, sdkId, pid int32, openId string) (cfacade.UID, int32) {
 	startTime := time.Now()
 	accout, err := server.DevAccountWithName(openId)
 	if err != nil {
@@ -105,7 +105,7 @@ func GetUID(app cfacade.IApplication, sdkId, pid int32, openId string) (cfacade.
 }
 
 // GetUID 获取帐号UID
-func GetUID1(app cfacade.IApplication, sdkId, pid int32, openId string) (cfacade.UID, int32) {
+func GetUID(app cfacade.IApplication, sdkId, pid int32, openId string) (cfacade.UID, int32) {
 	req := &pb.User{
 		SdkId:  sdkId,
 		Pid:    pid,

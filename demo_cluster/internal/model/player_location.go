@@ -27,7 +27,7 @@ type PlayerLocation struct {
 
 // TableName 指定表名
 func (PlayerLocation) TableName() string {
-	return "player_location"
+	return "newsz_2024.player_location"
 }
 
 // PlayerLocationStatus 玩家位置状态

@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-09-29 17:09:34
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-12-24 09:55:47
+ * @LastEditTime: 2025-12-25 16:33:35
  * @FilePath: /examples/demo_cluster/nodes/center/module/account/actor_account.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -14,6 +14,7 @@ import (
 
 	clog "github.com/cherry-game/cherry/logger"
 	cactor "github.com/cherry-game/cherry/net/actor"
+	nats_cluster "github.com/cherry-game/cherry/net/cluster/nats_cluster"
 	"github.com/cherry-game/examples/demo_cluster/internal/code"
 	"github.com/cherry-game/examples/demo_cluster/internal/pb"
 	"github.com/cherry-game/examples/demo_cluster/nodes/center/server"
@@ -32,9 +33,13 @@ func (p *ActorAccount) AliasID() string {
 
 // OnInit center为后端节点，不直接与客户端通信，所以了一些remote函数，供RPC调用
 func (p *ActorAccount) OnInit() {
-	p.Remote().Register("registerDevAccount", p.registerDevAccount)
-	p.Remote().Register("getDevAccount", p.getDevAccount)
-	p.Remote().Register("getUID", p.getUID)
+	// p.Remote().Register("registerDevAccount", p.registerDevAccount)
+	// p.Remote().Register("getDevAccount", p.getDevAccount)
+	// p.Remote().Register("getUID", p.getUID)
+
+	nats_cluster.RegisterConcurrentHandler(p.AliasID(), "registerDevAccount", p.registerDevAccount)
+	nats_cluster.RegisterConcurrentHandler(p.AliasID(), "getDevAccount", p.getDevAccount)
+	nats_cluster.RegisterConcurrentHandler(p.AliasID(), "getUID", p.getUID)
 }
 
 // registerDevAccount 注册开发者帐号
@@ -43,15 +48,15 @@ func (p *ActorAccount) registerDevAccount(req *pb.DevRegister) int32 {
 	password := req.Password
 
 	if strings.TrimSpace(accountName) == "" || strings.TrimSpace(password) == "" {
-		return code.LoginError
+		return code.RegisterError
 	}
 
 	if len(accountName) < 3 || len(accountName) > 18 {
-		return code.LoginError
+		return code.RegisterError
 	}
 
 	if len(password) < 3 || len(password) > 18 {
-		return code.LoginError
+		return code.RegisterError
 	}
 	return server.DevAccountRegister(accountName, password, req.Ip)
 }

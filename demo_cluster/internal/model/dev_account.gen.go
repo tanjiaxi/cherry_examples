@@ -4,7 +4,7 @@
 
 package model
 
-const TableNameDevAccount = "dev_account"
+const TableNameDevAccount = "newsz_2024.dev_account"
 
 // DevAccount 开发模式的帐号信息表
 type DevAccount struct {

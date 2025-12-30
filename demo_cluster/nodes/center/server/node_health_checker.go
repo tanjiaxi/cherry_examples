@@ -1,7 +1,6 @@
 package server
 
 import (
-	"sync"
 	"time"
 
 	clog "github.com/cherry-game/cherry/logger"
@@ -11,8 +10,8 @@ import (
 // 通过心跳检测节点是否健康
 type NodeHealthChecker struct {
 	heartbeats map[string]int64 // nodeId -> lastHeartbeat (unix timestamp)
-	mu         sync.RWMutex
-	timeout    int64 // 心跳超时时间（秒）
+	// mu         sync.RWMutex
+	timeout int64 // 心跳超时时间（秒）
 }
 
 // NewNodeHealthChecker 创建节点健康检测器
@@ -32,16 +31,16 @@ func (c *NodeHealthChecker) UpdateHeartbeat(nodeId string) {
 		return
 	}
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	// c.mu.Lock()
+	// defer c.mu.Unlock()
 
 	c.heartbeats[nodeId] = time.Now().Unix()
 }
 
 // IsHealthy 检查节点是否健康
 func (c *NodeHealthChecker) IsHealthy(nodeId string) bool {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+	// c.mu.RLock()
+	// defer c.mu.RUnlock()
 
 	lastHeartbeat, exists := c.heartbeats[nodeId]
 	if !exists {
@@ -53,8 +52,8 @@ func (c *NodeHealthChecker) IsHealthy(nodeId string) bool {
 
 // GetUnhealthyNodes 获取所有不健康的节点
 func (c *NodeHealthChecker) GetUnhealthyNodes() []string {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+	// c.mu.RLock()
+	// defer c.mu.RUnlock()
 
 	now := time.Now().Unix()
 	var unhealthy []string
@@ -70,8 +69,8 @@ func (c *NodeHealthChecker) GetUnhealthyNodes() []string {
 
 // GetHealthyNodes 获取所有健康的节点
 func (c *NodeHealthChecker) GetHealthyNodes() []string {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+	// c.mu.RLock()
+	// defer c.mu.RUnlock()
 
 	now := time.Now().Unix()
 	var healthy []string
@@ -87,8 +86,8 @@ func (c *NodeHealthChecker) GetHealthyNodes() []string {
 
 // FilterHealthyNodes 从给定列表中过滤出健康的节点
 func (c *NodeHealthChecker) FilterHealthyNodes(nodes []string) []string {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+	// c.mu.RLock()
+	// defer c.mu.RUnlock()
 
 	now := time.Now().Unix()
 	var healthy []string
@@ -106,16 +105,16 @@ func (c *NodeHealthChecker) FilterHealthyNodes(nodes []string) []string {
 
 // RemoveNode 移除节点（节点下线时使用）
 func (c *NodeHealthChecker) RemoveNode(nodeId string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	// c.mu.Lock()
+	// defer c.mu.Unlock()
 
 	delete(c.heartbeats, nodeId)
 }
 
 // GetLastHeartbeat 获取节点最后心跳时间
 func (c *NodeHealthChecker) GetLastHeartbeat(nodeId string) (int64, bool) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+	// c.mu.RLock()
+	// defer c.mu.RUnlock()
 
 	lastHeartbeat, exists := c.heartbeats[nodeId]
 	return lastHeartbeat, exists
@@ -123,8 +122,8 @@ func (c *NodeHealthChecker) GetLastHeartbeat(nodeId string) (int64, bool) {
 
 // GetAllHeartbeats 获取所有节点的心跳信息
 func (c *NodeHealthChecker) GetAllHeartbeats() map[string]int64 {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+	// c.mu.RLock()
+	// defer c.mu.RUnlock()
 
 	result := make(map[string]int64, len(c.heartbeats))
 	for k, v := range c.heartbeats {
@@ -167,8 +166,8 @@ func (c *NodeHealthChecker) StartHealthCheck(
 
 // SetTimeout 设置超时时间
 func (c *NodeHealthChecker) SetTimeout(timeoutSeconds int64) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	// c.mu.Lock()
+	// defer c.mu.Unlock()
 
 	c.timeout = timeoutSeconds
 }

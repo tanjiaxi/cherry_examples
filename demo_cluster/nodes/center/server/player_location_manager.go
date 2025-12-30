@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"sync"
 	"time"
 
 	clog "github.com/cherry-game/cherry/logger"
@@ -13,7 +12,7 @@ import (
 // 管理玩家与Gate/Game节点的绑定关系
 type PlayerLocationManager struct {
 	cache map[int64]*model.PlayerLocation // 内存缓存 userId -> location
-	mu    sync.RWMutex
+	// mu    sync.RWMutex
 
 	// 依赖的组件
 	nodeCounter   *NodeOnlineCounter
@@ -33,8 +32,8 @@ func NewPlayerLocationManager(counter *NodeOnlineCounter, checker *NodeHealthChe
 // 如果玩家已有位置（断线重连），返回已有位置
 // 否则使用负载均衡分配新节点
 func (m *PlayerLocationManager) AllocateNodes(userId int64, gateNodeId string, gameNodes []string) (*model.PlayerLocation, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	// m.mu.Lock()
+	// defer m.mu.Unlock()
 
 	// 检查是否已有位置（断线重连场景）
 	if loc, exists := m.cache[userId]; exists && loc.IsOnline() {
@@ -65,8 +64,8 @@ func (m *PlayerLocationManager) AllocateNodes(userId int64, gateNodeId string, g
 
 // GetLocation 获取玩家位置
 func (m *PlayerLocationManager) GetLocation(userId int64) (*model.PlayerLocation, bool) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	// m.mu.RLock()
+	// defer m.mu.RUnlock()
 
 	loc, exists := m.cache[userId]
 	if !exists {
@@ -81,8 +80,8 @@ func (m *PlayerLocationManager) UpdateLocation(loc *model.PlayerLocation) error 
 		return fmt.Errorf("invalid player location")
 	}
 
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	// m.mu.Lock()
+	// defer m.mu.Unlock()
 
 	m.cache[loc.UserId] = loc
 	return nil
@@ -90,9 +89,9 @@ func (m *PlayerLocationManager) UpdateLocation(loc *model.PlayerLocation) error 
 
 // RemoveLocation 移除玩家位置（玩家登出）
 func (m *PlayerLocationManager) RemoveLocation(userId int64) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
+	// m.mu.Lock()
+	// defer m.mu.Unlock()
+	startTime := time.Now()
 	loc, exists := m.cache[userId]
 	if !exists {
 		return nil
@@ -105,16 +104,17 @@ func (m *PlayerLocationManager) RemoveLocation(userId int64) error {
 	// 从缓存中删除
 	delete(m.cache, userId)
 
-	clog.Infof("[PlayerLocationManager] 移除玩家 %d 位置: gate=%s, game=%s",
-		userId, loc.GateNodeId, loc.GameNodeId)
+	elapsed := time.Since(startTime)
+	clog.Infof("[PlayerLocationManager] 移除玩家 %d 位置: gate=%s, game=%s time=%s",
+		userId, loc.GateNodeId, loc.GameNodeId, elapsed)
 
 	return nil
 }
 
 // SetOffline 设置玩家离线（但保留位置，用于断线重连）
 func (m *PlayerLocationManager) SetOffline(userId int64) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	// m.mu.Lock()
+	// defer m.mu.Unlock()
 
 	if loc, exists := m.cache[userId]; exists {
 		loc.SetOffline()
@@ -123,8 +123,8 @@ func (m *PlayerLocationManager) SetOffline(userId int64) {
 
 // GetPlayersByGameNode 获取指定Game节点上的所有玩家
 func (m *PlayerLocationManager) GetPlayersByGameNode(gameNodeId string) []int64 {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	// m.mu.RLock()
+	// defer m.mu.RUnlock()
 
 	var players []int64
 	for userId, loc := range m.cache {
@@ -141,8 +141,8 @@ func (m *PlayerLocationManager) MigratePlayersFromNode(failedNodeId string, heal
 		return 0, fmt.Errorf("no healthy nodes available for migration")
 	}
 
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	// m.mu.Lock()
+	// defer m.mu.Unlock()
 
 	migratedCount := 0
 	for userId, loc := range m.cache {
@@ -172,8 +172,8 @@ func (m *PlayerLocationManager) MigratePlayersFromNode(failedNodeId string, heal
 
 // GetOnlineCount 获取在线玩家数量
 func (m *PlayerLocationManager) GetOnlineCount() int {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	// m.mu.RLock()
+	// defer m.mu.RUnlock()
 
 	count := 0
 	for _, loc := range m.cache {
@@ -186,8 +186,8 @@ func (m *PlayerLocationManager) GetOnlineCount() int {
 
 // CleanupExpiredLocations 清理过期的离线位置
 func (m *PlayerLocationManager) CleanupExpiredLocations(expireSeconds int64) int {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	// m.mu.Lock()
+	// defer m.mu.Unlock()
 
 	now := time.Now().Unix()
 	cleanedCount := 0

@@ -189,3 +189,63 @@ func (s *mySqlConfig) GetDSN() string {
 
 	return fmt.Sprintf(s.DSN, s.Host, s.UserName, s.Password, s.DbName, s.Port)
 }
+
+// PrintPoolStats 打印指定数据库的连接池统计信息
+func (s *Component) PrintPoolStats(dbID string) {
+	db := s.GetDb(dbID)
+	if db == nil {
+		clog.Warnf("[PrintPoolStats] db not found: %s", dbID)
+		return
+	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		clog.Warnf("[PrintPoolStats] get sql.DB failed: %v", err)
+		return
+	}
+
+	stats := sqlDB.Stats()
+	clog.Infof("====== DB Pool Stats [%s] ======", dbID)
+	clog.Infof("最大允许打开连接数 (MaxOpenConnections): %d", stats.MaxOpenConnections)
+	clog.Infof("当前已打开连接数 (OpenConnections): %d", stats.OpenConnections)
+	clog.Infof("正在使用中 (InUse): %d", stats.InUse)
+	clog.Infof("空闲中 (Idle): %d", stats.Idle)
+	clog.Infof("累计等待连接总耗时 (WaitDuration): %v", stats.WaitDuration)
+	clog.Infof("累计等待连接总次数 (WaitCount): %d", stats.WaitCount)
+	clog.Infof("===========================")
+}
+
+// PrintAllPoolStats 打印所有数据库的连接池统计信息
+func (s *Component) PrintAllPoolStats() {
+	for groupID, group := range s.ormMap {
+		for dbID, db := range group {
+			sqlDB, err := db.DB()
+			if err != nil {
+				clog.Warnf("[PrintAllPoolStats] get sql.DB failed for %s/%s: %v", groupID, dbID, err)
+				continue
+			}
+
+			stats := sqlDB.Stats()
+			clog.Infof("====== DB Pool Stats [%s/%s] ======", groupID, dbID)
+			clog.Infof("最大允许打开连接数 (MaxOpenConnections): %d", stats.MaxOpenConnections)
+			clog.Infof("当前已打开连接数 (OpenConnections): %d", stats.OpenConnections)
+			clog.Infof("正在使用中 (InUse): %d", stats.InUse)
+			clog.Infof("空闲中 (Idle): %d", stats.Idle)
+			clog.Infof("累计等待连接总耗时 (WaitDuration): %v", stats.WaitDuration)
+			clog.Infof("累计等待连接总次数 (WaitCount): %d", stats.WaitCount)
+			clog.Infof("===========================")
+		}
+	}
+}
+
+// OnAfterInit 组件初始化完成后，启动定时打印连接池状态
+func (s *Component) OnAfterInit() {
+	// 每30秒打印一次连接池状态（可根据需要调整间隔）
+	go func() {
+		ticker := time.NewTicker(1 * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			s.PrintAllPoolStats()
+		}
+	}()
+}

@@ -4,7 +4,7 @@
 
 package model
 
-const TableNameLinesID = "lines_ids"
+const TableNameLinesID = "newsz_2024.lines_ids"
 
 // LinesID mapped from table <lines_ids>
 type LinesID struct {

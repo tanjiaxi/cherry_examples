@@ -4,7 +4,7 @@
 
 package model
 
-const TableNameLines4x3 = "lines4x3"
+const TableNameLines4x3 = "newsz_2024.lines4x3"
 
 // Lines4x3 mapped from table <lines4x3>
 type Lines4x3 struct {

@@ -8,7 +8,7 @@
   {
     "areaId": 2,
     "areaName": "2区",
-    "gateNodes": ["gc-gate-2"],
+    "gateNodes": ["gc-gate-1"],
     "defaultGate": "127.0.0.1:20011"
   }
 ]

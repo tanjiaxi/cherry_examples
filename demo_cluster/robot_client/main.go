@@ -22,7 +22,7 @@ import (
 // ==================== 配置变量 ====================
 var (
 	maxRobotNum           = 1000                    // 最大机器人数
-	batchSize             = 500                     // 每批启动数量
+	batchSize             = 150                     // 每批启动数量
 	batchInterval         = 2 * time.Second         // 批次间隔
 	errorThreshold        = 0.1                     // 错误率阈值 (10%)
 	printInterval         = 5 * time.Second         // 状态打印间隔
@@ -67,18 +67,129 @@ var (
 	serverListMu     sync.RWMutex
 )
 
+// ==================== 每个接口独立的 QPS 统计器 ====================
 type APIMetrics struct {
-	TotalLatencyMs, Count, MaxLatencyMs, ErrorCount int64
+	// 累计统计
+	TotalLatencyMs int64 // 总延迟(毫秒)
+	Count          int64 // 总调用次数
+	MaxLatencyMs   int64 // 最大延迟
+	ErrorCount     int64 // 错误次数
+
+	// 滑动窗口 QPS 统计 (每个接口独立)
+	windowMu      sync.Mutex
+	windowCounts  []int64     // 每秒的请求数
+	windowTimes   []time.Time // 对应的时间戳
+	windowSize    int         // 窗口大小(秒)
+	lastSecond    time.Time   // 上一秒的时间
+	currentSecCnt int64       // 当前秒的计数
+}
+
+// NewAPIMetrics 创建新的 API 指标
+func NewAPIMetrics(windowSize int) *APIMetrics {
+	return &APIMetrics{
+		windowCounts: make([]int64, 0, windowSize),
+		windowTimes:  make([]time.Time, 0, windowSize),
+		windowSize:   windowSize,
+		lastSecond:   time.Now().Truncate(time.Second),
+	}
+}
+
+// Record 记录一次 API 调用
+func (m *APIMetrics) Record(latencyMs int64, isError bool) {
+	// 累计统计
+	atomic.AddInt64(&m.TotalLatencyMs, latencyMs)
+	atomic.AddInt64(&m.Count, 1)
+	if isError {
+		atomic.AddInt64(&m.ErrorCount, 1)
+	}
+	// 更新最大延迟
+	for {
+		cur := atomic.LoadInt64(&m.MaxLatencyMs)
+		if latencyMs <= cur || atomic.CompareAndSwapInt64(&m.MaxLatencyMs, cur, latencyMs) {
+			break
+		}
+	}
+
+	// 滑动窗口统计
+	m.windowMu.Lock()
+	defer m.windowMu.Unlock()
+
+	now := time.Now().Truncate(time.Second)
+	if now.After(m.lastSecond) {
+		// 新的一秒，保存上一秒的数据
+		if m.currentSecCnt > 0 || !m.lastSecond.IsZero() {
+			m.windowCounts = append(m.windowCounts, m.currentSecCnt)
+			m.windowTimes = append(m.windowTimes, m.lastSecond)
+			// 保持窗口大小
+			if len(m.windowCounts) > m.windowSize {
+				m.windowCounts = m.windowCounts[1:]
+				m.windowTimes = m.windowTimes[1:]
+			}
+		}
+		m.lastSecond = now
+		m.currentSecCnt = 1
+	} else {
+		m.currentSecCnt++
+	}
+}
+
+// GetRealtimeQPS 获取实时 QPS (最近 N 秒的平均)
+func (m *APIMetrics) GetRealtimeQPS() float64 {
+	m.windowMu.Lock()
+	defer m.windowMu.Unlock()
+
+	if len(m.windowCounts) == 0 {
+		return float64(m.currentSecCnt) // 只有当前秒的数据
+	}
+
+	// 计算窗口内的总请求数
+	var total int64
+	for _, cnt := range m.windowCounts {
+		total += cnt
+	}
+	// 加上当前秒的数据
+	total += m.currentSecCnt
+
+	// 计算时间跨度
+	seconds := float64(len(m.windowCounts) + 1)
+	if seconds > 0 {
+		return float64(total) / seconds
+	}
+	return 0
+}
+
+// GetLastSecondQPS 获取上一秒的 QPS
+func (m *APIMetrics) GetLastSecondQPS() float64 {
+	m.windowMu.Lock()
+	defer m.windowMu.Unlock()
+
+	if len(m.windowCounts) == 0 {
+		return 0
+	}
+	return float64(m.windowCounts[len(m.windowCounts)-1])
+}
+
+// GetStats 获取统计数据
+func (m *APIMetrics) GetStats() (count, totalLatency, maxLatency, errors int64) {
+	return atomic.LoadInt64(&m.Count),
+		atomic.LoadInt64(&m.TotalLatencyMs),
+		atomic.LoadInt64(&m.MaxLatencyMs),
+		atomic.LoadInt64(&m.ErrorCount)
 }
 
 var (
-	apiMetrics = map[string]*APIMetrics{
-		"GetToken": {}, "ConnectTCP": {}, "ConnectWS": {}, "UserLogin": {}, "PlayerSelect": {},
-		"ActorCreate": {}, "ActorEnter": {}, "ActorEnterMachine": {},
-		"ActorMachine": {}, "ActorSpin": {},
-	}
+	apiMetrics   map[string]*APIMetrics
 	apiMetricsMu sync.RWMutex
+	apiOrder     = []string{"GetToken", "ConnectTCP", "ConnectWS", "UserLogin", "PlayerSelect",
+		"ActorCreate", "ActorEnter", "ActorEnterMachine", "ActorMachine", "ActorSpin"}
 )
+
+func initAPIMetrics() {
+	apiMetrics = make(map[string]*APIMetrics)
+	for _, name := range apiOrder {
+		apiMetrics[name] = NewAPIMetrics(10) // 10秒滑动窗口
+	}
+}
 
 type SystemMetrics struct {
 	CPUPercent            float64
@@ -147,28 +258,18 @@ func getAllServerMetrics() []ServerNodeMetrics {
 
 func recordAPIMetrics(apiName string, startTime time.Time, isError bool) {
 	latencyMs := time.Since(startTime).Milliseconds()
-	apiMetricsMu.Lock()
-	defer apiMetricsMu.Unlock()
+	apiMetricsMu.RLock()
 	m := apiMetrics[apiName]
-	if m == nil {
-		m = &APIMetrics{}
-		apiMetrics[apiName] = m
-	}
-	atomic.AddInt64(&m.TotalLatencyMs, latencyMs)
-	atomic.AddInt64(&m.Count, 1)
-	if isError {
-		atomic.AddInt64(&m.ErrorCount, 1)
-	}
-	for {
-		currentMax := atomic.LoadInt64(&m.MaxLatencyMs)
-		if latencyMs <= currentMax || atomic.CompareAndSwapInt64(&m.MaxLatencyMs, currentMax, latencyMs) {
-			break
-		}
+	apiMetricsMu.RUnlock()
+	if m != nil {
+		m.Record(latencyMs, isError)
 	}
 }
 
 func main() {
 	testStartTime = time.Now()
+	initAPIMetrics() // 初始化 API 指标
+
 	clog.Info("========== Load Test Starting ==========")
 	clog.Infof("Config: maxRobots=%d, batchSize=%d, holdDuration=%v, spinInterval=%v",
 		maxRobotNum, batchSize, holdDuration, spinInterval)
@@ -522,15 +623,19 @@ func PrintStatus() {
 		errRate = float64(errors) / float64(total) * 100
 	}
 
-	clog.Infof("[%.0fs] Online:%d | Errors:%d(%.1f%%) | Spins:%d(Err:%d) | CPU:%.1f%% | Mem:%dMB | GR:%d",
-		elapsed, online, errors, errRate, spins, spinErrs, sm.CPUPercent, sm.MemUsedMB, sm.GoRoutines)
+	clog.Infof("[%.0fs] Online:%d | Total:%d | Errors:%d(%.1f%%) | Spins:%d(Err:%d) | CPU:%.1f%% | Mem:%dMB | GR:%d",
+		elapsed, online, total, errors, errRate, spins, spinErrs, sm.CPUPercent, sm.MemUsedMB, sm.GoRoutines)
 
 	// Server pprof
+	clog.Info("  Server Nodes:")
 	for _, m := range getAllServerMetrics() {
 		if m.Online {
-			clog.Infof("  %s: Goroutines=%d", m.Name, m.Goroutines)
+			clog.Infof("    %s: Goroutines=%d", m.Name, m.Goroutines)
 		}
 	}
+
+	// 打印各接口实时 QPS
+	PrintAPIMetricsRealtime()
 }
 
 func PrintSummary() {
@@ -582,16 +687,17 @@ func PrintSummary() {
 func PrintAPIMetrics() {
 	apiMetricsMu.RLock()
 	defer apiMetricsMu.RUnlock()
-	order := []string{"GetToken", "ConnectTCP", "ConnectWS", "UserLogin", "PlayerSelect", "ActorCreate", "ActorEnter", "ActorEnterMachine", "ActorMachine", "ActorSpin"}
-	for _, name := range order {
+
+	for _, name := range apiOrder {
 		m := apiMetrics[name]
-		if m == nil || atomic.LoadInt64(&m.Count) == 0 {
+		if m == nil {
 			continue
 		}
-		cnt := atomic.LoadInt64(&m.Count)
-		tot := atomic.LoadInt64(&m.TotalLatencyMs)
-		max := atomic.LoadInt64(&m.MaxLatencyMs)
-		errs := atomic.LoadInt64(&m.ErrorCount)
+		cnt, tot, max, errs := m.GetStats()
+		if cnt == 0 {
+			continue
+		}
+
 		var avg int64
 		if cnt > 0 {
 			avg = tot / cnt
@@ -600,7 +706,43 @@ func PrintAPIMetrics() {
 		if cnt > 0 {
 			errRate = float64(errs) / float64(cnt) * 100
 		}
-		clog.Infof("  %-18s: Avg=%4dms Max=%4dms Cnt=%6d Err=%4d(%.1f%%)", name, avg, max, cnt, errs, errRate)
+
+		// 计算总体平均 QPS
+		elapsed := time.Since(testStartTime).Seconds()
+		var avgQPS float64
+		if elapsed > 0 {
+			avgQPS = float64(cnt) / elapsed
+		}
+
+		// 获取实时 QPS (滑动窗口)
+		realtimeQPS := m.GetRealtimeQPS()
+
+		clog.Infof("  %-18s: Avg=%4dms Max=%4dms Cnt=%6d Err=%4d(%.1f%%) AvgQPS=%.1f RealtimeQPS=%.1f",
+			name, avg, max, cnt, errs, errRate, avgQPS, realtimeQPS)
+	}
+}
+
+// PrintAPIMetricsRealtime 打印实时 QPS 统计 (用于定时状态输出)
+func PrintAPIMetricsRealtime() {
+	apiMetricsMu.RLock()
+	defer apiMetricsMu.RUnlock()
+
+	clog.Info("  API Realtime QPS (10s window):")
+	for _, name := range apiOrder {
+		m := apiMetrics[name]
+		if m == nil {
+			continue
+		}
+		cnt, _, _, errs := m.GetStats()
+		if cnt == 0 {
+			continue
+		}
+
+		realtimeQPS := m.GetRealtimeQPS()
+		lastSecQPS := m.GetLastSecondQPS()
+
+		clog.Infof("    %-18s: LastSec=%6.0f/s Avg10s=%6.1f/s Total=%6d Err=%4d",
+			name, lastSecQPS, realtimeQPS, cnt, errs)
 	}
 }
 

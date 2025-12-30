@@ -1,16 +1,14 @@
 package server
 
-import (
-	"sync"
-
-	clog "github.com/cherry-game/cherry/logger"
-)
+// import (
+// 	"sync"
+// )
 
 // NodeOnlineCounter 节点在线人数统计
 // 用于负载均衡，选择在线人数最少的节点
 type NodeOnlineCounter struct {
 	counts map[string]int32 // nodeId -> onlineCount
-	mu     sync.RWMutex
+	// mu     sync.RWMutex
 }
 
 // NewNodeOnlineCounter 创建节点在线人数统计器
@@ -26,8 +24,8 @@ func (c *NodeOnlineCounter) Increment(nodeId string) {
 		return
 	}
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	// c.mu.Lock()
+	// defer c.mu.Unlock()
 
 	c.counts[nodeId]++
 }
@@ -38,8 +36,8 @@ func (c *NodeOnlineCounter) Decrement(nodeId string) {
 		return
 	}
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	// c.mu.Lock()
+	// defer c.mu.Unlock()
 
 	if count, exists := c.counts[nodeId]; exists && count > 0 {
 		c.counts[nodeId]--
@@ -48,8 +46,8 @@ func (c *NodeOnlineCounter) Decrement(nodeId string) {
 
 // GetCount 获取节点在线人数
 func (c *NodeOnlineCounter) GetCount(nodeId string) int32 {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+	// c.mu.RLock()
+	// defer c.mu.RUnlock()
 
 	return c.counts[nodeId]
 }
@@ -62,8 +60,8 @@ func (c *NodeOnlineCounter) GetLeastLoadedNode(nodeType string, nodes []string) 
 		return ""
 	}
 
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+	// c.mu.RLock()
+	// defer c.mu.RUnlock()
 
 	var bestNode string
 	var minCount int32 = -1
@@ -76,24 +74,24 @@ func (c *NodeOnlineCounter) GetLeastLoadedNode(nodeType string, nodes []string) 
 		}
 	}
 
-	clog.Debugf("[NodeOnlineCounter] 选择最优%s节点: %s (在线人数: %d)",
-		nodeType, bestNode, minCount)
+	// clog.Debugf("[NodeOnlineCounter] 选择最优%s节点: %s (在线人数: %d)",
+	// 	nodeType, bestNode, minCount)
 
 	return bestNode
 }
 
 // SetCount 设置节点在线人数（用于初始化或同步）
 func (c *NodeOnlineCounter) SetCount(nodeId string, count int32) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	// c.mu.Lock()
+	// defer c.mu.Unlock()
 
 	c.counts[nodeId] = count
 }
 
 // GetAllCounts 获取所有节点的在线人数
 func (c *NodeOnlineCounter) GetAllCounts() map[string]int32 {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+	// c.mu.RLock()
+	// defer c.mu.RUnlock()
 
 	result := make(map[string]int32, len(c.counts))
 	for k, v := range c.counts {
@@ -104,24 +102,24 @@ func (c *NodeOnlineCounter) GetAllCounts() map[string]int32 {
 
 // Reset 重置指定节点的计数（节点重启时使用）
 func (c *NodeOnlineCounter) Reset(nodeId string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	// c.mu.Lock()
+	// defer c.mu.Unlock()
 
 	c.counts[nodeId] = 0
 }
 
 // Remove 移除节点（节点下线时使用）
 func (c *NodeOnlineCounter) Remove(nodeId string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	// c.mu.Lock()
+	// defer c.mu.Unlock()
 
 	delete(c.counts, nodeId)
 }
 
 // GetTotalOnline 获取总在线人数
 func (c *NodeOnlineCounter) GetTotalOnline() int32 {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+	// c.mu.RLock()
+	// defer c.mu.RUnlock()
 
 	var total int32
 	for _, count := range c.counts {

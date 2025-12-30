@@ -4,7 +4,7 @@
 
 package model
 
-const TableNameN2CfgRoomlist = "n2_cfg_roomlist"
+const TableNameN2CfgRoomlist = "newsz_2024.n2_cfg_roomlist"
 
 // N2CfgRoomlist mapped from table <n2_cfg_roomlist>
 type N2CfgRoomlist struct {

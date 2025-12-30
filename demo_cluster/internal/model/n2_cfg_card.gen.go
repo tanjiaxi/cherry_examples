@@ -4,7 +4,7 @@
 
 package model
 
-const TableNameN2CfgCard = "n2_cfg_card"
+const TableNameN2CfgCard = "newsz_2024.n2_cfg_card"
 
 // N2CfgCard mapped from table <n2_cfg_card>
 type N2CfgCard struct {

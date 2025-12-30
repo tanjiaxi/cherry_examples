@@ -4,7 +4,7 @@
 
 package model
 
-const TableNameN2CfgLevel = "n2_cfg_level"
+const TableNameN2CfgLevel = "newsz_2024.n2_cfg_level"
 
 // N2CfgLevel mapped from table <n2_cfg_level>
 type N2CfgLevel struct {
