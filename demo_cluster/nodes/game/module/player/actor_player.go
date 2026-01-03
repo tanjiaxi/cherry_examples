@@ -3,6 +3,7 @@ package player
 import (
 	"fmt"
 	"strconv"
+	"time"
 
 	cstring "github.com/cherry-game/cherry/extend/string"
 	clog "github.com/cherry-game/cherry/logger"
@@ -132,6 +133,7 @@ func (p *actorPlayer) playerCreate(session *cproto.Session, req *pb.PlayerCreate
 
 // playerEnter 玩家进入游戏
 func (p *actorPlayer) playerEnter(session *cproto.Session, req *pb.Int64) {
+	startTime := time.Now()
 	userId := req.Value
 	if userId < 1 {
 		p.ResponseCode(session, code.PlayerIDError)
@@ -188,7 +190,8 @@ func (p *actorPlayer) playerEnter(session *cproto.Session, req *pb.Int64) {
 	response.GuideMaps = map[int32]int32{}
 
 	p.Response(session, response)
-
+	elapsed := time.Since(startTime)
+	clog.Debugf("[playerEnter] 代码执行耗时: %s ", elapsed)
 	// 角色登录事件
 	loginEvent := event.NewPlayerLogin(p.ActorID(), userId)
 	p.PostEvent(&loginEvent)

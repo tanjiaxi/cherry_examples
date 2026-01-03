@@ -22,7 +22,7 @@ import (
 // ==================== 配置变量 ====================
 var (
 	maxRobotNum           = 1000                    // 最大机器人数
-	batchSize             = 150                     // 每批启动数量
+	batchSize             = 50                      // 每批启动数量
 	batchInterval         = 2 * time.Second         // 批次间隔
 	errorThreshold        = 0.1                     // 错误率阈值 (10%)
 	printInterval         = 5 * time.Second         // 状态打印间隔
@@ -277,10 +277,9 @@ func main() {
 
 	accounts := make(map[string]string)
 	for i := 1; i <= maxRobotNum; i++ {
-		accounts[fmt.Sprintf("loadtest%d", i)] = fmt.Sprintf("loadtest%d", i)
+		accounts[fmt.Sprintf("loadtest%d", i+10000)] = fmt.Sprintf("loadtest%d", i)
 	}
 	// RegisterDevAccount(url, accounts)
-
 	stopPrinting := make(chan struct{})
 	go PrintStatusLoop(stopPrinting)
 
@@ -748,12 +747,21 @@ func PrintAPIMetricsRealtime() {
 
 func RegisterDevAccount(url string, accounts map[string]string) {
 	reqURL := fmt.Sprintf("%s/register", url)
+	accountChan := make(chan struct{}, batchSize)
+	var registWait sync.WaitGroup
 	for k, v := range accounts {
-		jsonBytes, _, err := chttp.GET(reqURL, map[string]string{"account": k, "password": v})
-		if err != nil {
-			continue
-		}
-		rsp := &code.Result{}
-		_ = jsoniter.Unmarshal(jsonBytes, rsp)
+		registWait.Add(1)
+		accountChan <- struct{}{}
+		go func(k string) {
+			defer registWait.Done()
+			defer func() { <-accountChan }()
+			jsonBytes, _, err := chttp.GET(reqURL, map[string]string{"account": k, "password": v})
+			if err != nil {
+				return
+			}
+			rsp := &code.Result{}
+			_ = jsoniter.Unmarshal(jsonBytes, rsp)
+		}(k)
 	}
+	registWait.Wait()
 }

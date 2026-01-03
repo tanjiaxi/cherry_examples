@@ -157,6 +157,7 @@ func (p *ActorLocation) getLocation(req *pb.Int64) (*pb.AllocateNodesResponse, i
 
 // removeLocation 移除玩家位置
 func (p *ActorLocation) removeLocation(req *pb.Int64) int32 {
+	clog.Infof("[removeLocation] 队列中消息: RemoteCount=%d, LocalCount=%d", int(p.Remote().Count()), int(p.Local().Count()))
 	err := p.locationMgr.RemoveLocation(req.Value)
 	if err != nil {
 		return code.RemoveLocationFail

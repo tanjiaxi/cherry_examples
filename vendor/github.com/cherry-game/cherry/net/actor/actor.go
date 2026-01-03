@@ -180,10 +180,10 @@ func (p *Actor) invokeFunc(mb *mailbox, app cfacade.IApplication, fn cfacade.Inv
 		)
 		return
 	}
-
+	//这里是检测消息在队列中等待的时间超时
 	p.arrivalElapsed = m.PostTime - m.BuildTime
 	if p.arrivalElapsed > p.system.arrivalTimeOut {
-		clog.Warnf("[%s] Invoke timeout.[path = %s -> %s -> %s, postTime = %d, buildTime = %d, arrival = %dms]",
+		clog.Warnf("[%s] Arrival timeout.[path = %s -> %s -> %s, postTime = %d, buildTime = %d, arrival = %dms]",
 			mb.name,
 			m.Source,
 			m.Target,
@@ -197,6 +197,7 @@ func (p *Actor) invokeFunc(mb *mailbox, app cfacade.IApplication, fn cfacade.Inv
 	now := ctime.Now().ToMillisecond()
 
 	defer func() {
+		//这是消息执行超时的
 		p.executionElapsed = ctime.Now().ToMillisecond() - now
 		if p.executionElapsed > p.system.executionTimeout {
 			clog.Warnf("[%s] Invoke timeout.[source = %s, target = %s->%s, execution = %dms]",

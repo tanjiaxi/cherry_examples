@@ -1,9 +1,18 @@
+/*
+ * @Author: t 921865806@qq.com
+ * @Date: 2025-09-15 18:02:10
+ * @LastEditors: t 921865806@qq.com
+ * @LastEditTime: 2025-12-30 21:49:13
+ * @FilePath: /examples/demo_cluster/nodes/game/module/online/online.go
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ */
 package online
 
 import (
+	"sync"
+
 	cherryFacade "github.com/cherry-game/cherry/facade"
 	clog "github.com/cherry-game/cherry/logger"
-	"sync"
 )
 
 var (

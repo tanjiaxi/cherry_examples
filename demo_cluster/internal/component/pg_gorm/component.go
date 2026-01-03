@@ -241,11 +241,11 @@ func (s *Component) PrintAllPoolStats() {
 // OnAfterInit 组件初始化完成后，启动定时打印连接池状态
 func (s *Component) OnAfterInit() {
 	// 每30秒打印一次连接池状态（可根据需要调整间隔）
-	go func() {
-		ticker := time.NewTicker(1 * time.Second)
-		defer ticker.Stop()
-		for range ticker.C {
-			s.PrintAllPoolStats()
-		}
-	}()
+	// go func() {
+	// 	ticker := time.NewTicker(1 * time.Second)
+	// 	defer ticker.Stop()
+	// 	for range ticker.C {
+	// 		s.PrintAllPoolStats()
+	// 	}
+	// }()
 }
