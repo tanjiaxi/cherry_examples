@@ -88,6 +88,8 @@ func (p *Actor) Connectors() []cfacade.IConnector {
 
 // defaultOnConnectFunc 创建新连接时，通过当前agentActor创建child agent actor
 func (p *Actor) defaultOnConnectFunc(conn net.Conn) {
+	start := time.Now()
+
 	session := &cproto.Session{
 		Sid:       nuid.Next(),
 		AgentPath: p.Path().String(),
@@ -102,6 +104,15 @@ func (p *Actor) defaultOnConnectFunc(conn net.Conn) {
 
 	BindSID(&agent)
 	agent.Run()
+
+	elapsed := time.Since(start)
+	if elapsed > 10*time.Millisecond {
+		clog.Warnf("[sid = %s] OnConnect slow: %v [address = %s]",
+			agent.SID(),
+			elapsed,
+			agent.RemoteAddr(),
+		)
+	}
 }
 
 func (*Actor) SetDictionary(dict map[string]uint16) {

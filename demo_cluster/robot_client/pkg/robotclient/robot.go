@@ -163,7 +163,14 @@ func (p *Robot) ConnectToWebSocket(addr string) error {
 
 	p.Debugf("[%s] [ConnectToWebSocket] connecting to ws://%s%s", p.TagName, host, path)
 
+	// start := time.Now()
 	err := p.Client.ConnectToWS(host, path)
+	// elapsed := time.Since(start)
+
+	// if elapsed > 50*time.Millisecond {
+	// 	cherryLogger.Warnf("[%s] ConnectToWS slow: %v (host=%s)", p.TagName, elapsed, host)
+	// }
+
 	if err != nil {
 		return cherryError.Errorf("connect to websocket fail: %v", err)
 	}

@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"time"
+
 	cherryString "github.com/cherry-game/cherry/extend/string"
 	cherryLogger "github.com/cherry-game/cherry/logger"
 	cherryGin "github.com/cherry-game/components/gin"
@@ -110,6 +112,7 @@ func (p *Controller) login(c *cherryGin.Context) {
 // severList 区服列表（带负载均衡）
 // http://127.0.0.1/server/list/2126001
 func (p *Controller) serverList(c *cherryGin.Context) {
+	startTime := time.Now()
 	pid := c.GetInt32("pid", 2126001)
 
 	if pid < 1 {
@@ -176,7 +179,10 @@ func (p *Controller) serverList(c *cherryGin.Context) {
 			dataList.Servers = append(dataList.Servers, serverResp)
 		}
 	}
-
+	elapsed := time.Since(startTime)
+	if elapsed.Milliseconds() > 10 {
+		cherryLogger.Warnf("[serverList] time=%d ms", elapsed.Milliseconds())
+	}
 	code.RenderResult(c, code.OK, dataList)
 }
 

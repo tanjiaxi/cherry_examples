@@ -124,7 +124,7 @@ func masterCommand() *cli.Command {
 		Action: func(c *cli.Context) error {
 			path, node := getParameters(c)
 			setupGCLog("master", node)
-			startPprofServer("master")
+			// startPprofServer("master")
 			master.Run(path, node)
 			return nil
 		},
@@ -140,7 +140,7 @@ func centerCommand() *cli.Command {
 		Action: func(c *cli.Context) error {
 			path, node := getParameters(c)
 			setupGCLog("center", node)
-			startPprofServer("center")
+			// startPprofServer("center")
 			center.Run(path, node)
 			return nil
 		},
@@ -156,7 +156,7 @@ func webCommand() *cli.Command {
 		Action: func(c *cli.Context) error {
 			path, node := getParameters(c)
 			setupGCLog("web", node)
-			startPprofServer("web")
+			// startPprofServer("web")
 			web.Run(path, node)
 			return nil
 		},
@@ -172,7 +172,7 @@ func gateCommand() *cli.Command {
 		Action: func(c *cli.Context) error {
 			path, node := getParameters(c)
 			setupGCLog("gate", node)
-			startPprofServer("gate")
+			// startPprofServer("gate")
 			gate.Run(path, node)
 			return nil
 		},
@@ -188,7 +188,7 @@ func gameCommand() *cli.Command {
 		Action: func(c *cli.Context) error {
 			path, node := getParameters(c)
 			setupGCLog("game", node)
-			startPprofServer("game")
+			// startPprofServer("game")
 			game.Run(path, node)
 			return nil
 		},

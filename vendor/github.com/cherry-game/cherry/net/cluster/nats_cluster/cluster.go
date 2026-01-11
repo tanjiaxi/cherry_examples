@@ -218,7 +218,7 @@ func (p *Cluster) handleConcurrent(natsMsg *nats.Msg, packet *cproto.ClusterPack
 
 	elapsed := time.Since(startTime)
 	if elapsed > 100*time.Millisecond {
-		clog.Warnf("[handleConcurrent] slow request: %s.%s took %v",
+		clog.Warnf("[handleConcurrent] timeout request: %s.%s took %v",
 			packet.TargetPath, packet.FuncName, elapsed)
 	}
 

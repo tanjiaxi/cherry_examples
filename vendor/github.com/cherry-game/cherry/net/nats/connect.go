@@ -181,17 +181,17 @@ func (p *Connect) RequestSync(subject string, data []byte, tod ...time.Duration)
 		close(ch)
 		return nil, err
 	}
-	clog.Warnf("send id = %d, reqID = %s", p.id, reqID)
+	clog.Info("NatsPublis id = %d, reqID = %s", p.id, reqID)
 	select {
 	case resp, ok := <-ch:
 		if !ok || resp == nil {
 			return nil, cerror.ClusterRequestTimeout
 		}
-		clog.Warnf("rec id = %d, reqID = %s", p.id, reqID)
+		clog.Info("NatsRec id = %d, reqID = %s", p.id, reqID)
 		return resp.Data, nil
 	case <-time.After(timeout):
 		p.waiters.Delete(reqID)
-		clog.Warnf("timeout id = %d, reqID = %s", p.id, reqID)
+		clog.Warnf("NatsResSync timeout id = %d, reqID = %s", p.id, reqID)
 		close(ch)
 		return nil, cerror.ClusterRequestTimeout
 	}

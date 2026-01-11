@@ -30,28 +30,28 @@ services:
       retries: 3
 
   # NATS 服务
-  nats:
-    image: nats:2.10-alpine
-    container_name: cherry-nats
-    ports:
-      - "4222:4222"   # 客户端连接端口
-      - "8222:8222"   # HTTP 监控端口
-      - "6222:6222"   # 集群路由端口
-    command: ["-js", "-m", "8222"]  # 启用 JetStream 和监控
-    volumes:
-      - nats-data:/data
-    networks:
-      - cherry-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8222/healthz"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
+  # nats:
+  #   image: nats:2.10-alpine
+  #   container_name: cherry-nats
+  #   ports:
+  #     - "4222:4222"   # 客户端连接端口
+  #     - "8222:8222"   # HTTP 监控端口
+  #     - "6222:6222"   # 集群路由端口
+  #   command: ["-js", "-m", "8222"]  # 启用 JetStream 和监控
+  #   volumes:
+  #     - nats-data:/data
+  #   networks:
+  #     - cherry-network
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD", "wget", "-q", "--spider", "http://localhost:8222/healthz"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 3
 
 volumes:
   etcd-data:
-  nats-data:
+  # nats-data:
 
 networks:
   cherry-network:

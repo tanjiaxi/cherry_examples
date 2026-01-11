@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-20 22:24:38
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-12-23 15:00:21
+ * @LastEditTime: 2026-01-04 11:50:47
  * @FilePath: /examples/demo_cluster/nodes/game/module/slots/room/level_room.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -71,6 +71,7 @@ func (r *ActorRoom) enterMachine(session *cproto.Session, req *pb.EnterMachine) 
 	if error != nil || n2CfgRoomlist == nil {
 		response.Succeed = false
 		r.Response(session, response)
+		return
 	}
 	r.Response(session, response)
 }

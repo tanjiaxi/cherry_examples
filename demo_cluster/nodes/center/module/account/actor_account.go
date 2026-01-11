@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-09-29 17:09:34
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-12-25 16:33:35
+ * @LastEditTime: 2026-01-06 20:25:47
  * @FilePath: /examples/demo_cluster/nodes/center/module/account/actor_account.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -68,6 +68,7 @@ func (p *ActorAccount) getDevAccount(req *pb.DevRegister) (*pb.String, int32) {
 
 	devAccount, _ := server.DevAccountWithName(accountName)
 	if devAccount == nil || passWord != devAccount.Password {
+		clog.Warnf("[getDevAccount] AccountAuthFail accountName = %s, passWord = %s, findAccountName = %s, findPassWord = %s", accountName, passWord, devAccount.DeviceName, devAccount.Password)
 		return nil, code.AccountAuthFail
 	}
 

@@ -110,8 +110,18 @@ func (p *Command) setOnPacketFunc() {
 }
 
 func handshakeCommand(agent *Agent, _ *ppacket.Packet) {
+	start := time.Now()
 	agent.SetState(AgentWaitAck)
 	agent.SendRaw(cmd.handshakeBytes)
+
+	elapsed := time.Since(start)
+	if elapsed > 10*time.Millisecond {
+		clog.Warnf("[sid = %s] Handshake slow: %v [address = %s]",
+			agent.SID(),
+			elapsed,
+			agent.RemoteAddr(),
+		)
+	}
 
 	if clog.PrintLevel(zapcore.DebugLevel) {
 		clog.Debugf("[sid = %s,uid = %d] Request handshake. [address = %s]",

@@ -191,7 +191,7 @@ func (p *actorPlayer) playerEnter(session *cproto.Session, req *pb.Int64) {
 
 	p.Response(session, response)
 	elapsed := time.Since(startTime)
-	clog.Debugf("[playerEnter] 代码执行耗时: %s ", elapsed)
+	clog.Warnf("[playerEnter] 代码执行耗时: %s ", elapsed)
 	// 角色登录事件
 	loginEvent := event.NewPlayerLogin(p.ActorID(), userId)
 	p.PostEvent(&loginEvent)

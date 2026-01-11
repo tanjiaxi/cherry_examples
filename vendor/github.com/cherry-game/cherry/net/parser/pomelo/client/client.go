@@ -351,7 +351,7 @@ func (p *Client) processMessage(msg *pomeloMessage.Message) {
 func (p *Client) getPackets() ([]*pomeloPacket.Packet, error) {
 	packets, isBreak, err := pomeloPacket.Read(p.conn)
 	if err != nil {
-		clog.Errorf("[%s] error decoding packet from server: %s", p.TagName, err.Error())
+		clog.Infof("[%s] error decoding packet from server: %s", p.TagName, err.Error())
 	}
 
 	if isBreak {

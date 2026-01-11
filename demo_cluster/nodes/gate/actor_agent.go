@@ -177,12 +177,12 @@ func (p *ActorAgent) onSessionClose(agent *pomelo.Agent) {
 	session := agent.Session()
 	serverId := session.GetString(sessionKey.ServerID)
 	userId := session.Uid
-	clog.Warnf("[onSessionClose] 移除玩家位置: userId=%d ", userId)
+	clog.Infof("[onSessionClose] 移除玩家位置: userId=%d ", userId)
 	// 通知Center移除玩家位置
 	if userId > 0 {
 		errCode := rpcCenter.RemoveLocation(p.App(), userId)
 		if code.IsFail(errCode) {
-			clog.Warnf("[onSessionClose] 移除玩家位置失败: userId=%d, errCode=%d", userId, errCode)
+			clog.Infof("[onSessionClose] 移除玩家位置失败: userId=%d, errCode=%d", userId, errCode)
 		}
 	}
 

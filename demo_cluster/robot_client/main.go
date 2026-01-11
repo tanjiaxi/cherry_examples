@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -11,32 +12,35 @@ import (
 
 	chttp "github.com/cherry-game/cherry/extend/http"
 	clog "github.com/cherry-game/cherry/logger"
+	"github.com/cherry-game/cherry/logger/rotatelogs"
 	pomeloClient "github.com/cherry-game/cherry/net/parser/pomelo/client"
 	"github.com/cherry-game/examples/demo_cluster/internal/code"
 	"github.com/cherry-game/examples/demo_cluster/robot_client/pkg/robotclient"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 // ==================== 配置变量 ====================
 var (
-	maxRobotNum           = 1000                    // 最大机器人数
-	batchSize             = 50                      // 每批启动数量
-	batchInterval         = 2 * time.Second         // 批次间隔
-	errorThreshold        = 0.1                     // 错误率阈值 (10%)
-	printInterval         = 5 * time.Second         // 状态打印间隔
-	holdDuration          = 60 * time.Second        // 保持连接时间
-	spinInterval          = 500 * time.Millisecond  // Spin 请求间隔
-	url                   = "http://127.0.0.1:8081" // web node
-	pid                   = "2126001"               // sdk包id
+	maxRobotNum           = 10000                      // 最大机器人数
+	batchSize             = 200                        // 每批启动数量
+	batchInterval         = 100 * time.Millisecond     // 批次间隔
+	errorThreshold        = 0.1                        // 错误率阈值 (10%)
+	printInterval         = 5 * time.Second            // 状态打印间隔
+	holdDuration          = 60 * time.Second           // 保持连接时间
+	spinInterval          = 500 * time.Millisecond     // Spin 请求间隔
+	url                   = "http://10.10.10.251:8081" // web node
+	pid                   = "2126001"                  // sdk包id
 	printLog              = false
 	useServerList         = true  // 是否使用 serverList 接口获取地址
 	defaultAreaId   int32 = 1     // 默认区ID
 	defaultServerId int32 = 10001 // 默认服ID（0表示自动选择）
 	useWebSocket          = true  // 使用 WebSocket 连接（serverList返回的是ws地址）
 	// 备用配置（当 useServerList=false 时使用）
-	fallbackAddr = "127.0.0.1:10010" // 备用网关地址（TCP）
+	fallbackAddr = "10.10.10.251:10010" // 备用网关地址（TCP）
 )
 
 // 服务器节点 pprof 地址
@@ -75,22 +79,21 @@ type APIMetrics struct {
 	MaxLatencyMs   int64 // 最大延迟
 	ErrorCount     int64 // 错误次数
 
-	// 滑动窗口 QPS 统计 (每个接口独立)
-	windowMu      sync.Mutex
-	windowCounts  []int64     // 每秒的请求数
-	windowTimes   []time.Time // 对应的时间戳
-	windowSize    int         // 窗口大小(秒)
-	lastSecond    time.Time   // 上一秒的时间
-	currentSecCnt int64       // 当前秒的计数
+	// 滑动窗口 QPS 统计 (固定大小环形缓冲区)
+	windowMu     sync.Mutex
+	windowCounts [60]int64 // 固定 60 秒的环形缓冲区
+	windowSize   int       // 实际使用的窗口大小
+	startSecond  int64     // 起始秒 (Unix 秒)
 }
 
 // NewAPIMetrics 创建新的 API 指标
 func NewAPIMetrics(windowSize int) *APIMetrics {
+	if windowSize > 60 {
+		windowSize = 60
+	}
 	return &APIMetrics{
-		windowCounts: make([]int64, 0, windowSize),
-		windowTimes:  make([]time.Time, 0, windowSize),
-		windowSize:   windowSize,
-		lastSecond:   time.Now().Truncate(time.Second),
+		windowSize:  windowSize,
+		startSecond: time.Now().Unix(),
 	}
 }
 
@@ -110,50 +113,48 @@ func (m *APIMetrics) Record(latencyMs int64, isError bool) {
 		}
 	}
 
-	// 滑动窗口统计
+	// 滑动窗口统计 - 使用环形缓冲区
 	m.windowMu.Lock()
 	defer m.windowMu.Unlock()
 
-	now := time.Now().Truncate(time.Second)
-	if now.After(m.lastSecond) {
-		// 新的一秒，保存上一秒的数据
-		if m.currentSecCnt > 0 || !m.lastSecond.IsZero() {
-			m.windowCounts = append(m.windowCounts, m.currentSecCnt)
-			m.windowTimes = append(m.windowTimes, m.lastSecond)
-			// 保持窗口大小
-			if len(m.windowCounts) > m.windowSize {
-				m.windowCounts = m.windowCounts[1:]
-				m.windowTimes = m.windowTimes[1:]
-			}
+	nowSec := time.Now().Unix()
+	idx := int(nowSec % 60)
+
+	// 如果跨秒了，清理旧数据
+	if nowSec > m.startSecond {
+		// 清理从 startSecond+1 到 nowSec 之间的所有槽位
+		for sec := m.startSecond + 1; sec <= nowSec; sec++ {
+			clearIdx := int(sec % 60)
+			m.windowCounts[clearIdx] = 0
 		}
-		m.lastSecond = now
-		m.currentSecCnt = 1
-	} else {
-		m.currentSecCnt++
+		m.startSecond = nowSec
 	}
+
+	m.windowCounts[idx]++
 }
 
-// GetRealtimeQPS 获取实时 QPS (最近 N 秒的平均)
+// GetRealtimeQPS 获取实时 QPS (最近 N 秒的平均，不包含当前秒)
 func (m *APIMetrics) GetRealtimeQPS() float64 {
 	m.windowMu.Lock()
 	defer m.windowMu.Unlock()
 
-	if len(m.windowCounts) == 0 {
-		return float64(m.currentSecCnt) // 只有当前秒的数据
-	}
-
-	// 计算窗口内的总请求数
+	nowSec := time.Now().Unix()
 	var total int64
-	for _, cnt := range m.windowCounts {
-		total += cnt
-	}
-	// 加上当前秒的数据
-	total += m.currentSecCnt
+	validSeconds := 0
 
-	// 计算时间跨度
-	seconds := float64(len(m.windowCounts) + 1)
-	if seconds > 0 {
-		return float64(total) / seconds
+	// 统计最近 windowSize 秒的数据 (不包含当前秒，因为当前秒不完整)
+	for i := 1; i <= m.windowSize; i++ {
+		sec := nowSec - int64(i)
+		idx := int(sec % 60)
+		// 检查数据是否有效 (不超过 60 秒)
+		if nowSec-sec <= 60 {
+			total += m.windowCounts[idx]
+			validSeconds++
+		}
+	}
+
+	if validSeconds > 0 {
+		return float64(total) / float64(validSeconds)
 	}
 	return 0
 }
@@ -163,10 +164,19 @@ func (m *APIMetrics) GetLastSecondQPS() float64 {
 	m.windowMu.Lock()
 	defer m.windowMu.Unlock()
 
-	if len(m.windowCounts) == 0 {
-		return 0
-	}
-	return float64(m.windowCounts[len(m.windowCounts)-1])
+	lastSec := time.Now().Unix() - 1
+	idx := int(lastSec % 60)
+	return float64(m.windowCounts[idx])
+}
+
+// GetCurrentSecondQPS 获取当前秒的 QPS (不完整)
+func (m *APIMetrics) GetCurrentSecondQPS() float64 {
+	m.windowMu.Lock()
+	defer m.windowMu.Unlock()
+
+	nowSec := time.Now().Unix()
+	idx := int(nowSec % 60)
+	return float64(m.windowCounts[idx])
 }
 
 // GetStats 获取统计数据
@@ -258,15 +268,77 @@ func getAllServerMetrics() []ServerNodeMetrics {
 
 func recordAPIMetrics(apiName string, startTime time.Time, isError bool) {
 	latencyMs := time.Since(startTime).Milliseconds()
+	// if latencyMs > 100 {
+	// 	clog.Warnf("[recordAPIMetrics] %s : timeout: %d ms", apiName, latencyMs)
+	// }
 	apiMetricsMu.RLock()
 	m := apiMetrics[apiName]
 	apiMetricsMu.RUnlock()
+	// clog.Infof("[recordAPIMetrics] %s : time: %d ms", apiName, latencyMs)
 	if m != nil {
 		m.Record(latencyMs, isError)
 	}
 }
 
+// initLogger 初始化日志，同时输出到控制台和文件
+func initLogger() {
+	// 创建 logs 目录
+	if err := os.MkdirAll("logs", 0755); err != nil {
+		fmt.Printf("Failed to create logs directory: %v\n", err)
+		return
+	}
+
+	// 配置日志轮转
+	logFile := "logs/robot_client.log"
+	logFileFormat := "logs/robot_client_%Y%m%d%H%M.log"
+
+	hook, err := rotatelogs.New(
+		logFileFormat,
+		rotatelogs.WithLinkName(logFile),
+		rotatelogs.WithMaxAge(time.Hour*24*7),     // 保留7天
+		rotatelogs.WithRotationTime(time.Hour*24), // 每天轮转
+	)
+	if err != nil {
+		fmt.Printf("Failed to create rotatelogs: %v\n", err)
+		return
+	}
+
+	// 配置 encoder
+	encoderConfig := zapcore.EncoderConfig{
+		TimeKey:        "ts",
+		LevelKey:       "level",
+		CallerKey:      "caller",
+		MessageKey:     "msg",
+		StacktraceKey:  "stack",
+		LineEnding:     zapcore.DefaultLineEnding,
+		EncodeLevel:    zapcore.CapitalLevelEncoder,
+		EncodeTime:     zapcore.TimeEncoderOfLayout("15:04:05.000"),
+		EncodeDuration: zapcore.StringDurationEncoder,
+		EncodeCaller:   zapcore.ShortCallerEncoder,
+	}
+
+	// 同时输出到控制台和文件
+	writers := []zapcore.WriteSyncer{
+		zapcore.AddSync(os.Stderr), // 控制台
+		zapcore.AddSync(hook),      // 文件
+	}
+
+	core := zapcore.NewCore(
+		zapcore.NewConsoleEncoder(encoderConfig),
+		zapcore.NewMultiWriteSyncer(writers...),
+		zap.NewAtomicLevelAt(zapcore.DebugLevel),
+	)
+
+	logger := zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1))
+	clog.DefaultLogger = &clog.CherryLogger{SugaredLogger: logger.Sugar()}
+
+	clog.Info("Logger initialized: console + file (logs/robot_client.log)")
+}
+
 func main() {
+	// 初始化日志：同时输出到控制台和文件
+	initLogger()
+
 	testStartTime = time.Now()
 	initAPIMetrics() // 初始化 API 指标
 
@@ -277,7 +349,7 @@ func main() {
 
 	accounts := make(map[string]string)
 	for i := 1; i <= maxRobotNum; i++ {
-		accounts[fmt.Sprintf("loadtest%d", i+10000)] = fmt.Sprintf("loadtest%d", i)
+		accounts[fmt.Sprintf("loadtest%d", i)] = fmt.Sprintf("loadtest%d", i)
 	}
 	// RegisterDevAccount(url, accounts)
 	stopPrinting := make(chan struct{})
@@ -285,12 +357,11 @@ func main() {
 
 	RunLoadTest(accounts)
 	clog.Infof("Starting continuous Spin for %v...", holdDuration)
-	RunContinuousSpin()
-
-	close(stopPrinting)
-	time.Sleep(100 * time.Millisecond)
-	DisconnectAllRobots()
+	// RunContinuousSpin()
 	PrintSummary()
+	close(stopPrinting)
+	time.Sleep(10000 * time.Millisecond)
+	DisconnectAllRobots()
 }
 
 // fetchServerList 获取区服列表
@@ -301,9 +372,9 @@ func fetchServerList(cli *robotclient.Robot) error {
 		return err
 	}
 
-	serverListMu.Lock()
+	// serverListMu.Lock()
 	cachedServerList = serverList
-	serverListMu.Unlock()
+	// serverListMu.Unlock()
 
 	return nil
 }
@@ -332,7 +403,7 @@ func printServerList() {
 func getGateAddrAndServerId() (gateAddr string, serverId int32) {
 	serverListMu.RLock()
 	defer serverListMu.RUnlock()
-
+	return fallbackAddr, defaultServerId
 	if cachedServerList == nil || len(cachedServerList.Areas) == 0 {
 		// 使用备用配置
 		return fallbackAddr, defaultServerId

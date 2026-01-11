@@ -37,6 +37,9 @@ type (
 		Port           int
 		LogMode        bool
 		DSN            string
+		SlowThreshold  time.Duration
+		MaxLifetime    time.Duration
+		MaxIdleTime    time.Duration
 	}
 
 	// HashDb hash by group id
@@ -67,7 +70,11 @@ func parseMysqlConfig(groupID string, item cfacade.ProfileJSON) *mySqlConfig {
 		LogMode:        item.GetBool("log_mode", true),
 		Enable:         item.GetBool("enable", true),
 		Port:           item.GetInt("port", 5432),
+		SlowThreshold:  item.GetDuration("slow_threshold_ms", 20) * time.Millisecond,
+		MaxLifetime:    item.GetDuration("max_life_time_minute", 30) * time.Minute,
+		MaxIdleTime:    item.GetDuration("max_idle_time_minute", 10) * time.Minute,
 	}
+
 }
 
 func (s *Component) Init() {
@@ -114,7 +121,7 @@ func (s *Component) Init() {
 
 func (s *Component) createORM(cfg *mySqlConfig) (*gorm.DB, error) {
 	db, err := gorm.Open(postgres.Open(cfg.GetDSN()), &gorm.Config{
-		Logger: getLogger(),
+		Logger: getLogger(cfg),
 	})
 
 	if err != nil {
@@ -134,7 +141,8 @@ func (s *Component) createORM(cfg *mySqlConfig) (*gorm.DB, error) {
 	sqlDB.SetMaxOpenConns(cfg.MaxOpenConnect)
 	// SetConnMaxIdleTime 用于设置连接在被关闭前可以处于空闲状态的最长时间。
 	// 如果一个连接空闲时间超过这个值，它将被关闭。这比 SetMaxIdleConns 更灵活。
-	sqlDB.SetConnMaxLifetime(time.Minute)
+	sqlDB.SetConnMaxLifetime(30 * time.Minute)
+	sqlDB.SetConnMaxIdleTime(10 * time.Minute)
 
 	if cfg.LogMode {
 		return db.Debug(), nil
@@ -143,12 +151,12 @@ func (s *Component) createORM(cfg *mySqlConfig) (*gorm.DB, error) {
 	return db, nil
 }
 
-func getLogger() logger.Interface {
+func getLogger(cfg *mySqlConfig) logger.Interface {
 	return logger.New(
 		gormLogger{log: clog.DefaultLogger},
 		logger.Config{
-			SlowThreshold: time.Second,
-			LogLevel:      logger.Silent,
+			SlowThreshold: cfg.SlowThreshold,
+			LogLevel:      logger.Warn,
 			Colorful:      true,
 		},
 	)
@@ -226,14 +234,14 @@ func (s *Component) PrintAllPoolStats() {
 			}
 
 			stats := sqlDB.Stats()
-			clog.Infof("====== DB Pool Stats [%s/%s] ======", groupID, dbID)
-			clog.Infof("最大允许打开连接数 (MaxOpenConnections): %d", stats.MaxOpenConnections)
-			clog.Infof("当前已打开连接数 (OpenConnections): %d", stats.OpenConnections)
-			clog.Infof("正在使用中 (InUse): %d", stats.InUse)
-			clog.Infof("空闲中 (Idle): %d", stats.Idle)
-			clog.Infof("累计等待连接总耗时 (WaitDuration): %v", stats.WaitDuration)
-			clog.Infof("累计等待连接总次数 (WaitCount): %d", stats.WaitCount)
-			clog.Infof("===========================")
+			clog.Warnf("====== DB Pool Stats [%s/%s] ======", groupID, dbID)
+			clog.Warnf("最大允许打开连接数 (MaxOpenConnections): %d", stats.MaxOpenConnections)
+			clog.Warnf("当前已打开连接数 (OpenConnections): %d", stats.OpenConnections)
+			clog.Warnf("正在使用中 (InUse): %d", stats.InUse)
+			clog.Warnf("空闲中 (Idle): %d", stats.Idle)
+			clog.Warnf("累计等待连接总耗时 (WaitDuration): %v", stats.WaitDuration)
+			clog.Warnf("累计等待连接总次数 (WaitCount): %d", stats.WaitCount)
+			clog.Warnf("===========================")
 		}
 	}
 }
@@ -241,11 +249,11 @@ func (s *Component) PrintAllPoolStats() {
 // OnAfterInit 组件初始化完成后，启动定时打印连接池状态
 func (s *Component) OnAfterInit() {
 	// 每30秒打印一次连接池状态（可根据需要调整间隔）
-	// go func() {
-	// 	ticker := time.NewTicker(1 * time.Second)
-	// 	defer ticker.Stop()
-	// 	for range ticker.C {
-	// 		s.PrintAllPoolStats()
-	// 	}
-	// }()
+	go func() {
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			s.PrintAllPoolStats()
+		}
+	}()
 }
