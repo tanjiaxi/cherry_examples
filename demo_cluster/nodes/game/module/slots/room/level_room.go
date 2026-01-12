@@ -16,6 +16,7 @@ import (
 	"github.com/cherry-game/cherry/net/parser/pomelo"
 	cproto "github.com/cherry-game/cherry/net/proto"
 	"github.com/cherry-game/examples/demo_cluster/internal/code"
+	"github.com/cherry-game/examples/demo_cluster/internal/component/metrics"
 	configCacheSlots "github.com/cherry-game/examples/demo_cluster/internal/config_cache/slots"
 	"github.com/cherry-game/examples/demo_cluster/internal/pb"
 	rpcGame "github.com/cherry-game/examples/demo_cluster/internal/rpc/game"
@@ -62,6 +63,9 @@ func (r *ActorRoom) sessionClose() {
 	clog.Debugf("[actorPlayer] exit! uis = %d", 10)
 }
 func (r *ActorRoom) enterMachine(session *cproto.Session, req *pb.EnterMachine) {
+	done := metrics.TrackRequest("game.slots.entermachine")
+	defer done(false)
+
 	roomId := req.Id
 	n2CfgRoomlist, error := configCacheSlots.GetInstance().GetRoomConfig(roomId)
 	response := &pb.EnterMachineResponse{
@@ -76,11 +80,16 @@ func (r *ActorRoom) enterMachine(session *cproto.Session, req *pb.EnterMachine) 
 	r.Response(session, response)
 }
 func (r *ActorRoom) machineinfo(session *cproto.Session, req *pb.MachineInfo) {
+	done := metrics.TrackRequest("game.slots.machineinfo")
+	hasError := false
+	defer func() { done(hasError) }()
+
 	roomId := req.Id
 
 	// 1. 验证房间配置
 	n2CfgRoomlist, error := configCacheSlots.GetInstance().GetRoomConfig(roomId)
 	if error != nil || n2CfgRoomlist == nil {
+		hasError = true
 		response := &pb.ErrorResponse{
 			Code:    code.NoRoomConfig,
 			Message: "no room config",
@@ -92,6 +101,7 @@ func (r *ActorRoom) machineinfo(session *cproto.Session, req *pb.MachineInfo) {
 	// 2. 获取用户信息
 	userInfo := rpcGame.GetUserInfo(r.Actor, session)
 	if userInfo == nil || userInfo.UserId == 0 {
+		hasError = true
 		response := &pb.ErrorResponse{
 			Code:    code.PlayerNoUserInfo,
 			Message: "no user info",
@@ -103,6 +113,7 @@ func (r *ActorRoom) machineinfo(session *cproto.Session, req *pb.MachineInfo) {
 	// 3. 获取或初始化房间数据
 	roomDataInfo, err := r.roomDataManager.GetLevelSessionDataByRoomId(int32(userInfo.UserId), roomId)
 	if err != nil {
+		hasError = true
 		response := &pb.ErrorResponse{
 			Code:    code.NoRoomPlayerData,
 			Message: "no room data info",
@@ -169,12 +180,17 @@ func (r *ActorRoom) machineinfo(session *cproto.Session, req *pb.MachineInfo) {
 }
 
 func (r *ActorRoom) spin(session *cproto.Session, req *pb.Spin) {
+	done := metrics.TrackRequest("game.slots.spin")
+	hasError := false
+	defer func() { done(hasError) }()
+
 	roomId := req.Id
 	ruleId := roomId / 1000
 	curBet := 10000 //req.CurBet
 	// 2. 获取用户信息
 	userInfo := rpcGame.GetUserInfo(r.Actor, session)
 	if userInfo == nil || userInfo.UserId == 0 {
+		hasError = true
 		response := &pb.ErrorResponse{
 			Code:    code.PlayerNoUserInfo,
 			Message: "no user info",
@@ -185,6 +201,7 @@ func (r *ActorRoom) spin(session *cproto.Session, req *pb.Spin) {
 	// start := time.Now()
 	roomDataInfo, err := r.roomDataManager.GetLevelSessionDataByRoomId(int32(userInfo.UserId), roomId)
 	if err != nil {
+		hasError = true
 		response := &pb.ErrorResponse{
 			Code:    code.NoRoomPlayerData,
 			Message: "no room data info",
@@ -198,6 +215,7 @@ func (r *ActorRoom) spin(session *cproto.Session, req *pb.Spin) {
 
 	// clog.Infof("执行耗时: %v", cost)
 	if err != nil {
+		hasError = true
 		response := &pb.ErrorResponse{
 			Code:    code.UpdateRoomPlayerDataFial,
 			Message: "no room data info",
@@ -208,6 +226,7 @@ func (r *ActorRoom) spin(session *cproto.Session, req *pb.Spin) {
 	// 1. 验证房间配置
 	n2CfgRoomlist, error := configCacheSlots.GetInstance().GetRoomConfig(roomId)
 	if error != nil || n2CfgRoomlist == nil {
+		hasError = true
 		response := &pb.ErrorResponse{
 			Code:    code.NoRoomConfig,
 			Message: "no room config",
@@ -217,6 +236,7 @@ func (r *ActorRoom) spin(session *cproto.Session, req *pb.Spin) {
 	}
 	SpinResult, err := spinManager.ReadySPin(roomId, ruleId, false, int(curBet), n2CfgRoomlist, roomDataInfo)
 	if err != nil {
+		hasError = true
 		response := &pb.ErrorResponse{
 			Code:    code.GetRulstInfoError,
 			Message: "spin rrsults error",

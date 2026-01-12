@@ -149,6 +149,9 @@ func heartbeatCommand(agent *Agent, _ *ppacket.Packet) {
 }
 
 func dataCommand(agent *Agent, pkg *ppacket.Packet) {
+	// 记录请求开始时间
+	startTime := time.Now()
+
 	if agent.State() != AgentWorking {
 		if clog.PrintLevel(zapcore.DebugLevel) {
 			clog.Warnf("[sid = %s,uid = %d] Data State is not working. [state = %d]",
@@ -185,6 +188,9 @@ func dataCommand(agent *Agent, pkg *ppacket.Packet) {
 		}
 		return
 	}
+
+	// 将开始时间存入 msg，供后续统计使用
+	msg.StartTime = startTime
 
 	cmd.onDataRouteFunc(agent, route, &msg)
 }

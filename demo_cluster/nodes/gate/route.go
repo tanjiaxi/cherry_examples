@@ -1,6 +1,8 @@
 package gate
 
 import (
+	"time"
+
 	cslice "github.com/cherry-game/cherry/extend/slice"
 	cstring "github.com/cherry-game/cherry/extend/string"
 	cfacade "github.com/cherry-game/cherry/facade"
@@ -9,6 +11,7 @@ import (
 	pmessage "github.com/cherry-game/cherry/net/parser/pomelo/message"
 	cproto "github.com/cherry-game/cherry/net/proto"
 	"github.com/cherry-game/examples/demo_cluster/internal/code"
+	"github.com/cherry-game/examples/demo_cluster/internal/component/metrics"
 	"github.com/cherry-game/examples/demo_cluster/internal/pb"
 	rpcCenter "github.com/cherry-game/examples/demo_cluster/internal/rpc/center"
 	sessionKey "github.com/cherry-game/examples/demo_cluster/internal/session_key"
@@ -37,10 +40,28 @@ var (
 // 2.(用户登录)客户端进行帐号登录验证，通过uid绑定当前sid
 // 3.(角色登录)客户端通过'beforeLoginRoutes'中的协议完成角色登录
 func onPomeloDataRoute(agent *pomelo.Agent, route *pmessage.Route, msg *pmessage.Message) {
+	// 使用 msg.StartTime 统计从收到消息到处理完成的时间
+	// 如果 StartTime 为零值，使用当前时间
+	startTime := msg.StartTime
+	if startTime.IsZero() {
+		startTime = time.Now()
+	}
+
+	// 记录请求开始
+	routeName := msg.Route
+	metrics.RecordRequest(routeName)
+
+	// 使用 defer 确保统计被记录
+	hasError := false
+	defer func() {
+		metrics.RecordResponse(routeName, startTime, hasError)
+	}()
+
 	session := pomelo.BuildSession(agent, msg)
 
 	// agent没有"用户登录",且请求不是第一条协议，则踢掉agent，断开连接
 	if !session.IsBind() && msg.Route != firstRouteName {
+		hasError = true
 		agent.Kick(notLoginRsp, true)
 		return
 	}

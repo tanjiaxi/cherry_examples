@@ -11,6 +11,7 @@ import (
 	"github.com/cherry-game/cherry/net/parser/simple"
 	cherryGops "github.com/cherry-game/components/gops"
 	checkCenter "github.com/cherry-game/examples/demo_cluster/internal/component/check_center"
+	"github.com/cherry-game/examples/demo_cluster/internal/component/metrics"
 	"github.com/cherry-game/examples/demo_cluster/internal/data"
 
 	cdiscovery "github.com/cherry-game/cherry/net/discovery"
@@ -42,6 +43,11 @@ func Run(profileFilePath, nodeID string) {
 	// 注册数据配表组件，具体详见data-config的使用方法和参数配置
 	app.Register(data.New())
 
+	// 注册服务端 QPS 统计组件
+	metricsComponent := metrics.New()
+	app.Register(metricsComponent)
+	metrics.SetGlobal(metricsComponent)
+
 	app.Register(cherryGORM.NewComponent())
 	app.Register(db.New())
 	//启动cherry引擎
@@ -61,6 +67,17 @@ func buildPomeloParser(app *cherry.AppBuilder) cfacade.INetParser {
 		childActor := &ActorAgent{}
 		newAgent.AddOnClose(childActor.onSessionClose)
 		agentActor.Child().Create(newAgent.SID(), childActor) // childId == sid
+	})
+
+	// 设置连接建立的metrics回调，统计连接QPS和耗时
+	agentActor.SetOnConnectMetrics(func(startTime time.Time, isComplete bool) {
+		if !isComplete {
+			// 连接开始
+			metrics.RecordRequest("gate.connection.accept")
+		} else {
+			// 连接完成
+			metrics.RecordResponse("gate.connection.accept", startTime, false)
+		}
 	})
 
 	// 设置数据路由函数

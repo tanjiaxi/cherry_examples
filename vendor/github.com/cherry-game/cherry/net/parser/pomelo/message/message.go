@@ -3,6 +3,7 @@ package pomeloMessage
 import (
 	"encoding/binary"
 	"fmt"
+	"time"
 
 	cerr "github.com/cherry-game/cherry/error"
 	ccompress "github.com/cherry-game/cherry/extend/compress"
@@ -45,12 +46,13 @@ var (
 // flag最后一位为0是，后面route则由一个uInt8的byte，用来表示route的字节长度。
 // 之后是通过utf8编码后的route字 符串，其长度就是前面一位byte的uInt8的值，因此route的长度最大支持256B。
 type Message struct {
-	Type            Type   // message type 4中消息类型
-	ID              uint   // unique id, zero while notify mode 消息id（request response）
-	Route           string // route for locating service 消息路由
-	Data            []byte // payload  消息体的原始数据
-	routeCompressed bool   // is route Compressed 是否启用路由压缩
-	Error           bool   // response error
+	Type            Type      // message type 4中消息类型
+	ID              uint      // unique id, zero while notify mode 消息id（request response）
+	Route           string    // route for locating service 消息路由
+	Data            []byte    // payload  消息体的原始数据
+	routeCompressed bool      // is route Compressed 是否启用路由压缩
+	Error           bool      // response error
+	StartTime       time.Time // 请求开始时间 (用于服务端统计)
 }
 
 func New() Message {

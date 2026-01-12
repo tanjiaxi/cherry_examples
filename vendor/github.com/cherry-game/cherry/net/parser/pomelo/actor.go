@@ -15,13 +15,19 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+// OnConnectMetricsFunc 连接建立时的metrics回调函数类型
+// startTime: 连接开始时间
+// isComplete: true表示连接建立完成，false表示连接开始
+type OnConnectMetricsFunc func(startTime time.Time, isComplete bool)
+
 type (
 	Actor struct {
 		cactor.Base
-		agentActorID   string
-		connectors     []cfacade.IConnector
-		onNewAgentFunc OnNewAgentFunc
-		onInitFunc     func()
+		agentActorID         string
+		connectors           []cfacade.IConnector
+		onNewAgentFunc       OnNewAgentFunc
+		onInitFunc           func()
+		onConnectMetricsFunc OnConnectMetricsFunc // 连接metrics回调
 	}
 
 	OnNewAgentFunc func(newAgent *Agent)
@@ -57,6 +63,11 @@ func (p *Actor) SetOnInitFunc(fn func()) {
 	p.onInitFunc = fn
 }
 
+// SetOnConnectMetrics 设置连接建立时的metrics回调
+func (p *Actor) SetOnConnectMetrics(fn OnConnectMetricsFunc) {
+	p.onConnectMetricsFunc = fn
+}
+
 // 这里的Load函数是在vendor/github.com/cherry-game/cherry/application.go 中执行的，
 func (p *Actor) Load(app cfacade.IApplication) {
 	if len(p.connectors) < 1 {
@@ -90,6 +101,11 @@ func (p *Actor) Connectors() []cfacade.IConnector {
 func (p *Actor) defaultOnConnectFunc(conn net.Conn) {
 	start := time.Now()
 
+	// 通过回调记录连接开始
+	if p.onConnectMetricsFunc != nil {
+		p.onConnectMetricsFunc(start, false)
+	}
+
 	session := &cproto.Session{
 		Sid:       nuid.Next(),
 		AgentPath: p.Path().String(),
@@ -106,6 +122,12 @@ func (p *Actor) defaultOnConnectFunc(conn net.Conn) {
 	agent.Run()
 
 	elapsed := time.Since(start)
+
+	// 通过回调记录连接完成
+	if p.onConnectMetricsFunc != nil {
+		p.onConnectMetricsFunc(start, true)
+	}
+
 	if elapsed > 10*time.Millisecond {
 		clog.Warnf("[sid = %s] OnConnect slow: %v [address = %s]",
 			agent.SID(),

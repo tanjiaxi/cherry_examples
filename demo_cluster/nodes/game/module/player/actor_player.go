@@ -10,6 +10,7 @@ import (
 	"github.com/cherry-game/cherry/net/parser/pomelo"
 	cproto "github.com/cherry-game/cherry/net/proto"
 	"github.com/cherry-game/examples/demo_cluster/internal/code"
+	"github.com/cherry-game/examples/demo_cluster/internal/component/metrics"
 	"github.com/cherry-game/examples/demo_cluster/internal/data"
 	commonDb "github.com/cherry-game/examples/demo_cluster/internal/db"
 	"github.com/cherry-game/examples/demo_cluster/internal/event"
@@ -68,6 +69,9 @@ func (p *actorPlayer) sessionClose() {
 
 // playerSelect 玩家查询角色列表
 func (p *actorPlayer) playerSelect(session *cproto.Session, _ *pb.None) {
+	done := metrics.TrackRequest("game.player.select")
+	defer done(false)
+
 	response := &pb.PlayerSelectResponse{}
 	//这里改为userId
 	userId := session.Uid
@@ -85,7 +89,12 @@ func (p *actorPlayer) playerSelect(session *cproto.Session, _ *pb.None) {
 
 // playerCreate 玩家创角
 func (p *actorPlayer) playerCreate(session *cproto.Session, req *pb.PlayerCreateRequest) {
+	done := metrics.TrackRequest("game.player.create")
+	hasError := false
+	defer func() { done(hasError) }()
+
 	if req.Gender > 1 {
+		hasError = true
 		p.ResponseCode(session, code.PlayerCreateFail)
 		return
 	}
@@ -133,9 +142,14 @@ func (p *actorPlayer) playerCreate(session *cproto.Session, req *pb.PlayerCreate
 
 // playerEnter 玩家进入游戏
 func (p *actorPlayer) playerEnter(session *cproto.Session, req *pb.Int64) {
+	done := metrics.TrackRequest("game.player.enter")
+	hasError := false
+	defer func() { done(hasError) }()
+
 	startTime := time.Now()
 	userId := req.Value
 	if userId < 1 {
+		hasError = true
 		p.ResponseCode(session, code.PlayerIDError)
 		return
 	}
@@ -181,6 +195,7 @@ func (p *actorPlayer) playerEnter(session *cproto.Session, req *pb.Int64) {
 	err := p.loadPlayerData(int32(userId))
 	if err != nil {
 		clog.Errorf("user info is nil")
+		hasError = true
 		p.ResponseCode(session, code.PlayerIDError)
 		return
 	}
