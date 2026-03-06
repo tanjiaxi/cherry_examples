@@ -10,6 +10,7 @@ import (
 	"github.com/cherry-game/cherry/net/parser/pomelo"
 	cproto "github.com/cherry-game/cherry/net/proto"
 	"github.com/cherry-game/examples/demo_cluster/internal/code"
+	"github.com/cherry-game/examples/demo_cluster/internal/component/metrics"
 	"github.com/cherry-game/examples/demo_cluster/internal/data"
 	"github.com/cherry-game/examples/demo_cluster/internal/pb"
 	rpcCenter "github.com/cherry-game/examples/demo_cluster/internal/rpc/center"
@@ -67,6 +68,8 @@ func GetUID(app cfacade.IApplication, sdkId, pid int32, openId string) (cfacade.
 
 // login 用户登录，验证帐号 (*pb.LoginResponse, int32)
 func (p *ActorAgent) login(session *cproto.Session, req *pb.LoginRequest) {
+	done := metrics.TrackRequest("gate.actor.login")
+	defer done(false)
 	agent, found := pomelo.GetAgent(p.ActorID(), session.Uid)
 	if !found {
 		return

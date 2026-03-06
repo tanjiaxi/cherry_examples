@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-09-29 17:09:34
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2026-01-06 20:25:47
+ * @LastEditTime: 2026-01-12 21:55:50
  * @FilePath: /examples/demo_cluster/nodes/center/module/account/actor_account.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -16,6 +16,7 @@ import (
 	cactor "github.com/cherry-game/cherry/net/actor"
 	nats_cluster "github.com/cherry-game/cherry/net/cluster/nats_cluster"
 	"github.com/cherry-game/examples/demo_cluster/internal/code"
+	"github.com/cherry-game/examples/demo_cluster/internal/component/metrics"
 	"github.com/cherry-game/examples/demo_cluster/internal/pb"
 	"github.com/cherry-game/examples/demo_cluster/nodes/center/server"
 )
@@ -44,6 +45,8 @@ func (p *ActorAccount) OnInit() {
 
 // registerDevAccount 注册开发者帐号
 func (p *ActorAccount) registerDevAccount(req *pb.DevRegister) int32 {
+	done := metrics.TrackRequest("center.account.registerDevAccount")
+	defer done(false)
 	accountName := req.AccountName
 	password := req.Password
 

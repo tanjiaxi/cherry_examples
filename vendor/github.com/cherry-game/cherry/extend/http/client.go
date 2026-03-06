@@ -18,7 +18,36 @@ var (
 
 	DefaultTimeout = 5 * time.Second
 )
+var globalClient = &http.Client{
+	Transport: &http.Transport{
+		MaxIdleConns:        1000,
+		MaxIdleConnsPerHost: 1000,
+		IdleConnTimeout:     90 * time.Second,
+	},
+	Timeout: 5 * time.Second,
+}
 
+func GlobalClientGet(httpURL string, values ...map[string]string) ([]byte, *http.Response, error) {
+
+	rsp, err := globalClient.Get(httpURL)
+	if err != nil {
+		return nil, rsp, err
+	}
+
+	defer func(body io.ReadCloser) {
+		e := body.Close()
+		if e != nil {
+			clog.Warnf("HTTP GET [url = %s], error = %s", httpURL, e)
+		}
+	}(rsp.Body)
+
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	if err != nil {
+		return nil, rsp, err
+	}
+
+	return bodyBytes, rsp, nil
+}
 func GET(httpURL string, values ...map[string]string) ([]byte, *http.Response, error) {
 	client := http.Client{Timeout: DefaultTimeout}
 

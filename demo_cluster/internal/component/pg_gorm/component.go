@@ -121,7 +121,9 @@ func (s *Component) Init() {
 
 func (s *Component) createORM(cfg *mySqlConfig) (*gorm.DB, error) {
 	db, err := gorm.Open(postgres.Open(cfg.GetDSN()), &gorm.Config{
-		Logger: getLogger(cfg),
+		Logger:                 getLogger(cfg),
+		SkipDefaultTransaction: true, // 关闭默认事务
+		PrepareStmt:            true, // 开启预编译缓存，提升速度
 	})
 
 	if err != nil {
@@ -155,9 +157,10 @@ func getLogger(cfg *mySqlConfig) logger.Interface {
 	return logger.New(
 		gormLogger{log: clog.DefaultLogger},
 		logger.Config{
-			SlowThreshold: cfg.SlowThreshold,
-			LogLevel:      logger.Warn,
-			Colorful:      true,
+			SlowThreshold:             cfg.SlowThreshold,
+			LogLevel:                  logger.Warn,
+			Colorful:                  true,
+			IgnoreRecordNotFoundError: true,
 		},
 	)
 }
@@ -249,11 +252,11 @@ func (s *Component) PrintAllPoolStats() {
 // OnAfterInit 组件初始化完成后，启动定时打印连接池状态
 func (s *Component) OnAfterInit() {
 	// 每30秒打印一次连接池状态（可根据需要调整间隔）
-	go func() {
-		ticker := time.NewTicker(5 * time.Second)
-		defer ticker.Stop()
-		for range ticker.C {
-			s.PrintAllPoolStats()
-		}
-	}()
+	// go func() {
+	// 	ticker := time.NewTicker(5 * time.Second)
+	// 	defer ticker.Stop()
+	// 	for range ticker.C {
+	// 		s.PrintAllPoolStats()
+	// 	}
+	// }()
 }

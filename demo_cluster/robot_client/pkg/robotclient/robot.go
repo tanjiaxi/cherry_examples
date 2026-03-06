@@ -68,7 +68,7 @@ func New(client *cherryClient.Client) *Robot {
 // GET /server/list/:pid
 func (p *Robot) GetServerList(url string, pid string) (*ServerListResponse, error) {
 	requestURL := fmt.Sprintf("%s/server/list/%s", url, pid)
-	jsonBytes, _, err := cherryHttp.GET(requestURL, nil)
+	jsonBytes, _, err := cherryHttp.GlobalClientGet(requestURL, nil)
 	if err != nil {
 		return nil, cherryError.Errorf("get server list fail: %v", err)
 	}

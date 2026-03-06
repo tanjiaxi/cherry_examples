@@ -4,7 +4,7 @@
   "print_level": "info",
   "cluster": {
     "discovery": {
-      "mode": "etcd",
+      "mode": "nats",
       "@mode1": "mode=default,从profile-{x}.json读取node节点的配置数据",
       "@mode2": "mode=nats,通过nats->master_node_id获取已注册的节点",
       "@mode3": "mode=etcd,通过etcd同步已注册节点"
@@ -102,7 +102,8 @@
         "node_id": "gc-web-1",
         "address": "0.0.0.0:8081",
         "__settings__": {
-          "ref_logger": "master_log"
+          "ref_logger": "master_log",
+          "call_time_out": "10" 
         },
         "enable": true
       }
@@ -129,7 +130,7 @@
       "file_path_format": "logs/master_%Y%m%d%H%M.log"
     },
     "center_log": {
-      "level": "info",
+      "level": "warn",
       "enable_console": false,
       "enable_write_file": true,
       "file_link_path": "logs/center.log",
@@ -184,8 +185,8 @@
         "port": 5432,
         "user_name": "postgres",
         "password": "postgres",
-        "max_idle_connect": 100,
-        "max_open_connect": 300,
+        "max_idle_connect": 200,
+        "max_open_connect": 200,
         "slow_threshold_ms": 20,
         "max_life_time_minute": 30,
         "max_Idle_time_minute": 10,
@@ -202,8 +203,8 @@
         "port": 5432,
         "user_name": "postgres",
         "password": "postgres",
-        "max_idle_connect": 100,
-        "max_open_connect": 300,
+        "max_idle_connect": 200,
+        "max_open_connect": 200,
         "slow_threshold_ms": 20,
         "max_life_time_minute": 30,
         "max_Idle_time_minute": 10,

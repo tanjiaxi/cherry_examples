@@ -1,0 +1,83 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nats-config
+  namespace: demo-cluster
+data:
+  nats.conf: |
+    server_name: demo-nats
+    port: 4222
+    http_port: 8222
+    cluster {
+      name: demo-cluster
+      listen: 0.0.0.0:6222
+      routes: []
+    }
+    debug: false
+    trace: false
+    logtime: true
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nats
+  namespace: demo-cluster
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nats
+  template:
+    metadata:
+      labels:
+        app: nats
+    spec:
+      containers:
+      - name: nats
+        image: nats:2.10-alpine
+        ports:
+        - containerPort: 4222
+          name: client
+        - containerPort: 6222
+          name: cluster
+        - containerPort: 8222
+          name: monitor
+        volumeMounts:
+        - name: nats-config
+          mountPath: /etc/nats
+        livenessProbe:
+          tcpSocket:
+            port: 4222
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: 4222
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: nats-config
+        configMap:
+          name: nats-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nats
+  namespace: demo-cluster
+spec:
+  selector:
+    app: nats
+  ports:
+  - port: 4222
+    targetPort: 4222
+    name: client
+  - port: 6222
+    targetPort: 6222
+    name: cluster
+  - port: 8222
+    targetPort: 8222
+    name: monitor
+  type: ClusterIP

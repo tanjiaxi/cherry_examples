@@ -26,8 +26,8 @@ import (
 // ==================== 配置变量 ====================
 var (
 	maxRobotNum           = 10000                      // 最大机器人数
-	batchSize             = 200                        // 每批启动数量
-	batchInterval         = 100 * time.Millisecond     // 批次间隔
+	batchSize             = 700                        // 每批启动数量
+	batchInterval         = 10 * time.Millisecond      // 批次间隔
 	errorThreshold        = 0.1                        // 错误率阈值 (10%)
 	printInterval         = 5 * time.Second            // 状态打印间隔
 	holdDuration          = 60 * time.Second           // 保持连接时间
@@ -352,6 +352,7 @@ func main() {
 		accounts[fmt.Sprintf("loadtest%d", i)] = fmt.Sprintf("loadtest%d", i)
 	}
 	// RegisterDevAccount(url, accounts)
+	// return
 	stopPrinting := make(chan struct{})
 	go PrintStatusLoop(stopPrinting)
 
@@ -360,7 +361,7 @@ func main() {
 	// RunContinuousSpin()
 	PrintSummary()
 	close(stopPrinting)
-	time.Sleep(10000 * time.Millisecond)
+	time.Sleep(100000 * time.Millisecond)
 	DisconnectAllRobots()
 }
 
@@ -560,14 +561,14 @@ func RunRobotWithMetrics(url, pid, userName, password string, printLog bool) *ro
 	))
 	cli.PrintLog = printLog
 	// 如果使用 serverList，先获取区服列表
-	if useServerList {
-		if err := fetchServerList(cli); err != nil {
-			clog.Errorf("Failed to fetch server list: %v", err)
-			clog.Info("Falling back to default address")
-		} else {
-			//  printServerList()
-		}
-	}
+	// if useServerList {
+	// 	if err := fetchServerList(cli); err != nil {
+	// 		clog.Errorf("Failed to fetch server list: %v", err)
+	// 		clog.Info("Falling back to default address")
+	// 	} else {
+	// 		//  printServerList()
+	// 	}
+	// }
 	// 获取Gate地址和ServerId
 	gateAddr, serverId := getGateAddrAndServerId()
 
@@ -823,16 +824,17 @@ func RegisterDevAccount(url string, accounts map[string]string) {
 	for k, v := range accounts {
 		registWait.Add(1)
 		accountChan <- struct{}{}
-		go func(k string) {
+		go func(account, password string) {
 			defer registWait.Done()
 			defer func() { <-accountChan }()
-			jsonBytes, _, err := chttp.GET(reqURL, map[string]string{"account": k, "password": v})
+			jsonBytes, _, err := chttp.GlobalClientGet(reqURL, map[string]string{"account": account, "password": password})
 			if err != nil {
 				return
 			}
 			rsp := &code.Result{}
 			_ = jsoniter.Unmarshal(jsonBytes, rsp)
-		}(k)
+		}(k, v) // 同时传递 k 和 v
 	}
 	registWait.Wait()
+	close(accountChan)
 }

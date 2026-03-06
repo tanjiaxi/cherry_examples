@@ -1,0 +1,131 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:15
+    container_name: demo-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: demo_cluster
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ETCD 服务发现
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.9
+    container_name: demo-etcd
+    environment:
+      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+      ETCD_ADVERTISE_CLIENT_URLS: http://etcd:2379
+    ports:
+      - "2379:2379"
+    volumes:
+      - etcd_data:/etcd-data
+
+  # NATS 消息队列
+  nats:
+    image: nats:2.10
+    container_name: demo-nats
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    command: -c /etc/nats/nats.conf
+    volumes:
+      - ./nats.conf:/etc/nats/nats.conf
+
+  # Center 节点
+  center:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: demo-center
+    environment:
+      NODE_NAME: gc-center-1
+      DB_HOST: postgres
+      DB_PORT: 5432
+      ETCD_ENDPOINTS: http://etcd:2379
+      NATS_URL: nats://nats:4222
+    ports:
+      - "3010:3010"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      etcd:
+        condition: service_started
+      nats:
+        condition: service_started
+    command: center --path=./config/demo-cluster.json --node=gc-center-1
+
+  # Gate 节点
+  gate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: demo-gate
+    environment:
+      NODE_NAME: gc-gate-1
+      ETCD_ENDPOINTS: http://etcd:2379
+      NATS_URL: nats://nats:4222
+    ports:
+      - "3011:3011"
+    depends_on:
+      - etcd
+      - nats
+    command: gate --path=./config/demo-cluster.json --node=gc-gate-1
+
+  # Game 节点
+  game:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: demo-game
+    environment:
+      NODE_NAME: gc-game-1
+      DB_HOST: postgres
+      DB_PORT: 5432
+      ETCD_ENDPOINTS: http://etcd:2379
+      NATS_URL: nats://nats:4222
+    ports:
+      - "3012:3012"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      etcd:
+        condition: service_started
+      nats:
+        condition: service_started
+    command: game --path=./config/demo-cluster.json --node=gc-game-1
+
+  # Web 节点
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: demo-web
+    environment:
+      NODE_NAME: gc-web-1
+      ETCD_ENDPOINTS: http://etcd:2379
+      NATS_URL: nats://nats:4222
+    ports:
+      - "3013:3013"
+    depends_on:
+      - etcd
+      - nats
+    command: web --path=./config/demo-cluster.json --node=gc-web-1
+
+volumes:
+  postgres_data:
+  etcd_data:
+
+networks:
+  default:
+    name: demo-cluster-network

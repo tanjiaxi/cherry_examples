@@ -7,6 +7,7 @@ import (
 	cherryLogger "github.com/cherry-game/cherry/logger"
 	cherryGin "github.com/cherry-game/components/gin"
 	"github.com/cherry-game/examples/demo_cluster/internal/code"
+	"github.com/cherry-game/examples/demo_cluster/internal/component/metrics"
 	"github.com/cherry-game/examples/demo_cluster/internal/data"
 	rpcCenter "github.com/cherry-game/examples/demo_cluster/internal/rpc/center"
 	"github.com/cherry-game/examples/demo_cluster/internal/token"
@@ -43,6 +44,8 @@ func (p *Controller) hello(c *cherryGin.Context) {
 // register 开发模式帐号注册
 // http://127.0.0.1/register?account=test11&password=test11
 func (p *Controller) register(c *cherryGin.Context) {
+	done := metrics.TrackRequest("/register")
+	defer done(false)
 	accountName := c.GetString("account", "", true)
 	password := c.GetString("password", "", true)
 
@@ -53,6 +56,7 @@ func (p *Controller) register(c *cherryGin.Context) {
 // login 根据pid获取sdkConfig，与第三方进行帐号登陆效验
 // http://127.0.0.1/login?pid=2126001&account=test1&password=test1
 func (p *Controller) login(c *cherryGin.Context) {
+	done := metrics.TrackRequest("/login")
 	//平台id，产品 ID、项目 ID 或 包 ID
 	pid := c.GetInt32("pid", 0, true)
 
@@ -106,6 +110,7 @@ func (p *Controller) login(c *cherryGin.Context) {
 
 		base64Token := token.New(pid, openId, config.Salt).ToBase64()
 		code.RenderResult(c, code.OK, base64Token)
+		done(false)
 	})
 }
 

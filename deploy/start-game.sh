@@ -15,7 +15,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 CONFIG_PATH="$PROJECT_ROOT/config/demo-cluster.json"
-BINARY="$PROJECT_ROOT/demo_cluster/nodes/game-server"
+BINARY="$PROJECT_ROOT/demo_cluster/nodes/io_sql"
 LOG_DIR="$PROJECT_ROOT/logs"
 
 # 创建日志目录
@@ -67,6 +67,6 @@ start_node "game" "10001"
 echo ""
 echo "✅ 所有节点已启动！"
 echo ""
-echo "查看进程: ps aux | grep game-server"
+echo "查看进程: ps aux | grep io_sql"
 echo "查看日志: tail -f $LOG_DIR/*.log"
 echo "停止服务: ./stop-game.sh"

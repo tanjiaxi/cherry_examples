@@ -42,7 +42,7 @@ func New(client *cherryClient.Client) *Robot {
 func (p *Robot) GetToken(url string, pid, userName, password string) error {
 	// http登陆获取token json对象
 	requestURL := fmt.Sprintf("%s/login", url)
-	jsonBytes, _, err := cherryHttp.GET(requestURL, map[string]string{
+	jsonBytes, _, err := cherryHttp.GlobalClientGet(requestURL, map[string]string{
 		"pid":      pid,      //sdk包id
 		"account":  userName, //帐号名
 		"password": password, //密码

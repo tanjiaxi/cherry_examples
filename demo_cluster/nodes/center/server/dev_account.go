@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-09-29 16:42:25
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-12-02 14:01:03
+ * @LastEditTime: 2026-01-16 18:55:32
  * @FilePath: /examples/demo_cluster/nodes/center/server/dev_account.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -38,7 +38,24 @@ func DevAccountRegister(accountName, password, ip string) int32 {
 	}
 	return code.OK
 }
+func DevAccountRegister1(accountName, password, ip string) int32 {
+	// 先检查 device 是否已存在
+	existingDevice, _ := db.GetAccountByName(accountName)
+	if existingDevice != nil {
+		// 账号已存在，直接返回成功（幂等）
+		return code.OK
+	}
 
+	// 使用事务确保 user 和 device 一起创建
+	userInfo, deviceInfo, err := db.CreateUserAndDevice(accountName, ip, password)
+	if err != nil {
+		cherryLogger.Warnf("create account failed, err: %v", err)
+		return code.AccountRegisterError
+	}
+	_ = userInfo
+	_ = deviceInfo
+	return code.OK
+}
 func DevAccountWithName(accountName string) (*model.SlotsDevice, error) {
 	val, err := db.GetAccountByName(accountName)
 	if err != nil {
@@ -81,7 +98,7 @@ func createUser() (*model.SlotsUser, error) {
 		LoginStamp:    cherryTime.Now().Time,
 		Birthday:      "1970-01-01",
 	}
-	userInfo, err := db.CreateUserInfo(userInfo)
+	userInfo, err := db.SelectAndCreateUserInfo(userInfo)
 	if err != nil {
 		cherryLogger.Panic("create account failed, err: %v", err)
 		return nil, err
@@ -100,7 +117,7 @@ func createDevice(userId int32, accountName string, ip string, password string) 
 		ClientDeviceInfo:  nil,
 		IPInfo:            nil,
 	}
-	account, err := db.CreateAccount(account)
+	account, err := db.SelectAndCreateAccount(account)
 	if err != nil {
 		cherryLogger.Panic("create account failed, err: %v", err)
 		return nil, err
