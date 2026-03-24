@@ -1,7 +1,7 @@
 {
   "env": "gc",
   "debug": true,
-  "print_level": "info",
+  "print_level": "Debug",
   "cluster": {
     "discovery": {
       "mode": "etcd",
@@ -11,7 +11,7 @@
     },
     "nats": {
       "master_node_id": "gc-master",
-      "address": "nats://127.0.0.1:4222",
+      "address": "nats://10.10.10.251:4222",
       "reconnect_delay": 1,
       "max_reconnects": 0,
       "request_timeout": 20,
@@ -20,8 +20,8 @@
       "pool_size": 10
     },
     "etcd": {
-        "end_points": "127.0.0.1:2379",
-        "@end_points": "127.0.0.1:2379,dev1.com:2379",
+        "end_points": "10.10.10.251:2379",
+        "@end_points": "10.10.10.251:2379,dev1.com:2379",
         "prefix" : "cherry",
         "ttl": 1000,
         "dial_timeout": 3,
@@ -123,43 +123,43 @@
   },
   "logger": {
     "master_log": {
-      "level": "warn",
-      "enable_console": false,
+      "level": "Debug",
+      "enable_console": true,
       "enable_write_file": true,
       "file_link_path": "logs/master.log",
       "file_path_format": "logs/master_%Y%m%d%H%M.log"
     },
     "web_log": {
-      "level": "warn",
-      "enable_console": false,
+      "level": "Debug",
+      "enable_console": true,
       "enable_write_file": true,
       "file_link_path": "logs/web.log",
       "file_path_format": "logs/web_%Y%m%d%H%M.log"
     },
     "center_log": {
-      "level": "warn",
-      "enable_console": false,
+      "level": "Debug",
+      "enable_console": true,
       "enable_write_file": true,
       "file_link_path": "logs/center.log",
       "file_path_format": "logs/center_%Y%m%d%H%M.log"
     },
     "gate_log": {
-      "level": "warn",
-      "enable_console": false,
+      "level": "Debug",
+      "enable_console": true,
       "enable_write_file": true,
       "file_link_path": "logs/gate.log",
       "file_path_format": "logs/gate_%Y%m%d%H%M.log"
     },
     "game_log": {
-      "level": "warn",
-      "enable_console": false,
+      "level": "Debug",
+      "enable_console": true,
       "enable_write_file": true,
       "file_link_path": "logs/game.log",
       "file_path_format": "logs/game_%Y%m%d%H%M.log"
     },
     "cross_log": {
-      "level": "warn",
-      "enable_console": false,
+      "level": "Debug",
+      "enable_console": true,
       "enable_write_file": true,
       "file_link_path": "logs/cross.log",
       "file_path_format": "logs/cross_%Y%m%d%H%M.log"
@@ -176,7 +176,7 @@
     "redis": {
       "prefix_key": "data_config",
       "subscribe_key": "data_config_change",
-      "address": "127.0.0.1:6379",
+      "address": "10.10.10.251:6379",
       "password": "",
       "db": 7
     }

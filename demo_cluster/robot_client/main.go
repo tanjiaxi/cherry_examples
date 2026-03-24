@@ -26,7 +26,7 @@ import (
 // ==================== 配置变量 ====================
 var (
 	maxRobotNum           = 10000                      // 最大机器人数
-	batchSize             = 700                        // 每批启动数量
+	batchSize             = 1500                       // 每批启动数量
 	batchInterval         = 10 * time.Millisecond      // 批次间隔
 	errorThreshold        = 0.1                        // 错误率阈值 (10%)
 	printInterval         = 5 * time.Second            // 状态打印间隔

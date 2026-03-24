@@ -58,7 +58,12 @@ func onPomeloDataRoute(agent *pomelo.Agent, route *pmessage.Route, msg *pmessage
 	}()
 
 	session := pomelo.BuildSession(agent, msg)
-
+	clog.Infof("[GATE-IN] route=%s, uid=%d, sid=%s, mid=%d, size=%d bytes",
+		msg.Route,
+		session.Uid,
+		session.Sid,
+		msg.ID,
+		len(msg.Data))
 	// agent没有"用户登录",且请求不是第一条协议，则踢掉agent，断开连接
 	if !session.IsBind() && msg.Route != firstRouteName {
 		hasError = true

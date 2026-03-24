@@ -352,6 +352,18 @@ func (a *Agent) sendPending(typ pomeloMessage.Type, route string, mid uint32, v 
 }
 
 func (a *Agent) Response(session *cproto.Session, v interface{}, isError ...bool) {
+	// 统一打印响应消息（Info 级别）
+	clog.Infof("[GATE-OUT] uid=%d, sid=%s, mid=%d",
+		session.Uid, session.Sid, session.GetMID())
+
+	// 详细日志（Debug 级别）
+	if clog.PrintLevel(zapcore.DebugLevel) {
+		if payload, err := a.Serializer().Marshal(v); err == nil {
+			clog.Debugf("[GATE-OUT-DETAIL] uid=%d, sid=%s, mid=%d, resp=%s",
+				session.Uid, session.Sid, session.GetMID(), string(payload))
+		}
+	}
+
 	a.ResponseMID(session.GetMID(), v, isError...)
 }
 
@@ -380,6 +392,18 @@ func (a *Agent) ResponseMID(mid uint32, v interface{}, isError ...bool) {
 }
 
 func (a *Agent) Push(route string, val interface{}) {
+	// 统一打印推送消息（Info 级别）
+	clog.Infof("[GATE-PUSH] uid=%d, sid=%s, route=%s",
+		a.UID(), a.SID(), route)
+
+	// 详细日志（Debug 级别）
+	if clog.PrintLevel(zapcore.DebugLevel) {
+		if payload, err := a.Serializer().Marshal(val); err == nil {
+			clog.Debugf("[GATE-PUSH-DETAIL] uid=%d, sid=%s, route=%s, data=%s",
+				a.UID(), a.SID(), route, string(payload))
+		}
+	}
+
 	a.sendPending(pomeloMessage.Push, route, 0, val, false)
 
 	if clog.PrintLevel(zapcore.DebugLevel) {
@@ -392,6 +416,12 @@ func (a *Agent) Push(route string, val interface{}) {
 }
 
 func (a *Agent) Kick(reason interface{}, closed bool) {
+	// 统一打印踢人消息（Info 级别）
+	if payload, err := a.Serializer().Marshal(reason); err == nil {
+		clog.Infof("[GATE-KICK] uid=%d, sid=%s, reason=%s, closed=%v",
+			a.UID(), a.SID(), string(payload), closed)
+	}
+
 	bytes, err := a.Serializer().Marshal(reason)
 	if err != nil {
 		clog.Warnf("[sid = %s,uid = %d] Kick marshal fail. [reason = {%+v}, err = %s]",

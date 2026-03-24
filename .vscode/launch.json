@@ -32,7 +32,7 @@
             "console" :"integratedTerminal",
             "args": [
                 "master",
-                "--path=../../config/demo-cluster.json",
+                "--path=../../config/demo-cluster-local.json",
                 "--node=gc-master"
             ]
         },
@@ -45,7 +45,7 @@
             "console" :"integratedTerminal",
             "args": [
                 "center",
-                "--path=../../config/demo-cluster.json",
+                "--path=../../config/demo-cluster-local.json",
                 "--node=gc-center"
             ]
         },
@@ -58,7 +58,7 @@
             "console" :"integratedTerminal",
             "args": [
                 "web",
-                "--path=../../config/demo-cluster.json",
+                "--path=../../config/demo-cluster-local.json",
                 "--node=gc-web-1"
             ]
         },
@@ -71,7 +71,7 @@
             "console" :"integratedTerminal",
             "args": [
                 "gate",
-                "--path=../../config/demo-cluster.json",
+                "--path=../../config/demo-cluster-local.json",
                 "--node=gc-gate-1"
             ]
         },
@@ -84,7 +84,7 @@
             "console" :"integratedTerminal",
             "args": [
                 "gate",
-                "--path=../../config/demo-cluster.json",
+                "--path=../../config/demo-cluster-local.json",
                 "--node=gc-gate-2"
             ]
         },
@@ -97,7 +97,7 @@
             "console" :"integratedTerminal",
             "args": [
                 "gate",
-                "--path=../../config/demo-cluster.json",
+                "--path=../../config/demo-cluster-local.json",
                 "--node=gc-gate-3"
             ]
         },
@@ -110,7 +110,7 @@
             "console": "integratedTerminal",
             "args": [
                 "game",
-                "--path=../../config/demo-cluster.json",
+                "--path=../../config/demo-cluster-local.json",
                 "--node=10001"
             ],
             // "env": {
@@ -126,7 +126,7 @@
             "console": "integratedTerminal",
             "args": [
                 "game",
-                "--path=../../config/demo-cluster.json",
+                "--path=../../config/demo-cluster-local.json",
                 "--node=10002"
             ],
             // "env": {

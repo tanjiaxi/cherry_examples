@@ -2,19 +2,20 @@ package runtime_monitor_test
 
 import (
 	"fmt"
+	"testing"
 	"time"
 
 	"github.com/cherry-game/examples/demo_cluster/internal/component/runtime_monitor"
 )
 
 // Example_basic 基础使用示例
-func Example_basic() {
+func Test_Example(t *testing.T) {
 	// 创建组件
-	monitor := runtime_monitor.New()
+	monitor := runtime_monitor.New("center")
 	runtime_monitor.SetGlobal(monitor)
 
 	// 模拟组件启动 (实际使用中由 Cherry 框架管理)
-	monitor.OnAfterInit()
+	// monitor.OnAfterInit()
 
 	// 等待采集数据
 	time.Sleep(6 * time.Second)
@@ -57,7 +58,7 @@ func Example_customConfig() {
 
 // Example_customAlert 自定义告警规则示例
 func Example_customAlert() {
-	monitor := runtime_monitor.New()
+	monitor := runtime_monitor.New("center")
 	runtime_monitor.SetGlobal(monitor)
 
 	// 获取告警引擎

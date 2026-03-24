@@ -6,5 +6,7 @@
         
         // 也可以添加当前目录（这是一个好习惯，但有时不够）
         "--proto_path=."
-    ]
+    ],
+    "commentTranslate.browse.mode": "inplace",
+    "commentTranslate.source": "Google"
 }

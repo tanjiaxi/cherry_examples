@@ -8,6 +8,7 @@ import (
 
 	cherryFacade "github.com/cherry-game/cherry/facade"
 	cherryLogger "github.com/cherry-game/cherry/logger"
+	cprofile "github.com/cherry-game/cherry/profile"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -31,9 +32,23 @@ func DefaultConfig() *Config {
 		PrintInterval:   60 * time.Second,
 		HistorySize:     120, // 10 分钟历史 (5秒间隔)
 		MetricsPath:     "/metrics",
-		MetricsPort:     0, // 默认不启用独立端口
+		MetricsPort:     30010, // 默认不启用独立端口
 		EnableAlert:     true,
 	}
+}
+func GetConfig(nodeName string) *Config {
+	config := DefaultConfig()
+	runtimeMonitorConfig := cprofile.GetConfig("runtime_monitor")
+	nodeRuntimeMonitor := runtimeMonitorConfig.GetConfig(nodeName)
+
+	config.CollectInterval = time.Duration(nodeRuntimeMonitor.GetInt("collect_interval")) * time.Second
+	config.PrintInterval = time.Duration(nodeRuntimeMonitor.GetInt("print_interval")) * time.Second
+	config.HistorySize = nodeRuntimeMonitor.GetInt("history_size")
+	config.MetricsPath = nodeRuntimeMonitor.GetString("metrics_path")
+	config.MetricsPort = nodeRuntimeMonitor.GetInt("metrics_port")
+	config.EnableAlert = nodeRuntimeMonitor.GetBool("enable_alert")
+	config.Enabled = nodeRuntimeMonitor.GetBool("enabled")
+	return config
 }
 
 // Component Runtime 监控组件
@@ -51,8 +66,8 @@ type Component struct {
 }
 
 // New 创建 Runtime 监控组件
-func New() *Component {
-	return NewWithConfig(DefaultConfig())
+func New(nodeName string) *Component {
+	return NewWithConfig(GetConfig(nodeName))
 }
 
 // NewWithConfig 使用自定义配置创建组件
@@ -68,12 +83,14 @@ func (c *Component) Name() string {
 }
 
 func (c *Component) OnAfterInit() {
-	if !c.config.Enabled {
-		cherryLogger.Infof("[RuntimeMonitor] Component disabled")
-		return
-	}
+	cherryLogger.Warnf("[RuntimeMonitor] OnAfterInit")
 
 	c.nodeName = c.App().NodeID()
+
+	if !c.config.Enabled {
+		cherryLogger.Warnf("[RuntimeMonitor] Component disabled")
+		return
+	}
 
 	// 初始化采集器
 	c.collector = NewCollector(c.config.HistorySize)
@@ -243,7 +260,7 @@ func (c *Component) startHTTPServer() {
 
 	cherryLogger.Infof("[RuntimeMonitor] HTTP server started on %s", addr)
 	if err := c.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		cherryLogger.Errorf("[RuntimeMonitor] HTTP server error: %v", err)
+		cherryLogger.Errorf("[RuntimeMonitor] /: %v", err)
 	}
 }
 

@@ -91,10 +91,10 @@ func (p *ActorAgent) login(session *cproto.Session, req *pb.LoginRequest) {
 
 	// 根据token带来的sdk参数，从中心节点获取userId
 	// 3. 计算并打印执行时间
-	startTime := time.Now()
+	// startTime := time.Now()
 	userId, errCode := rpcCenter.GetUID(p.App(), sdkRow.SdkId, userToken.PID, userToken.OpenID)
-	elapsed := time.Since(startTime)
-	clog.Debugf("ReadySPin代码执行耗时: %s %s", elapsed, userToken.OpenID)
+	// elapsed := time.Since(startTime)
+	// clog.Debugf("ReadySPin代码执行耗时: %s %s", elapsed, userToken.OpenID)
 	if userId == 0 || code.IsFail(errCode) {
 		agent.ResponseCode(session, code.AccountBindFail, true)
 		return
@@ -138,6 +138,7 @@ func (p *ActorAgent) login(session *cproto.Session, req *pb.LoginRequest) {
 		OpenId: userToken.OpenID,
 	}
 
+	// 直接使用 agent.Response，底层会自动打印日志
 	agent.Response(session, response)
 }
 

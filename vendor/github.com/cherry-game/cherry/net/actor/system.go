@@ -271,7 +271,7 @@ func (p *System) CallWait(source, target, funcName string, arg, reply any) int32
 		message.ChanResult = make(chan interface{})
 
 		var result interface{}
-
+		//相同节点的相同actor
 		if sourcePath.ActorID == targetPath.ActorID {
 			if sourcePath.ChildID == targetPath.ChildID {
 				return ccode.ActorSourceEqualTarget
@@ -284,6 +284,7 @@ func (p *System) CallWait(source, target, funcName string, arg, reply any) int32
 
 			childActor.PostRemote(&message)
 		} else {
+			//相同节点的不同actor
 			if !p.PostRemote(&message) {
 				clog.Warnf("[CallWait] Post remote fail. [source = %s, target = %s, funcName = %s]", source, target, funcName)
 				return ccode.ActorCallFail
