@@ -352,10 +352,6 @@ func (a *Agent) sendPending(typ pomeloMessage.Type, route string, mid uint32, v 
 }
 
 func (a *Agent) Response(session *cproto.Session, v interface{}, isError ...bool) {
-	// 统一打印响应消息（Info 级别）
-	clog.Infof("[GATE-OUT] uid=%d, sid=%s, mid=%d",
-		session.Uid, session.Sid, session.GetMID())
-
 	// 详细日志（Debug 级别）
 	if clog.PrintLevel(zapcore.DebugLevel) {
 		if payload, err := a.Serializer().Marshal(v); err == nil {
@@ -379,16 +375,21 @@ func (a *Agent) ResponseMID(mid uint32, v interface{}, isError ...bool) {
 	if len(isError) > 0 {
 		isErr = isError[0]
 	}
-
-	a.sendPending(pomeloMessage.Response, "", mid, v, isErr)
 	if clog.PrintLevel(zapcore.DebugLevel) {
-		clog.Debugf("[sid = %s,uid = %d] Response ok. [mid = %d, isError = %v]",
-			a.SID(),
-			a.UID(),
-			mid,
-			isErr,
-		)
+		if payload, err := a.Serializer().Marshal(v); err == nil {
+			clog.Debugf("[GATE-%d-%s-%d-OUT],route=%s, uid=%d, sid=%s, reqID=%d, payload=%s",
+				a.UID(),
+				a.SID(),
+				mid,
+				a.session.GetAgentPath(),
+				a.UID(),
+				a.SID(),
+				mid,
+				payload,
+			)
+		}
 	}
+	a.sendPending(pomeloMessage.Response, "", mid, v, isErr)
 }
 
 func (a *Agent) Push(route string, val interface{}) {

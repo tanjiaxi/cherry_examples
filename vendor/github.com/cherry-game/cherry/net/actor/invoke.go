@@ -3,6 +3,7 @@ package cherryActor
 import (
 	"reflect"
 
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
 	ccode "github.com/cherry-game/cherry/code"
@@ -15,6 +16,24 @@ import (
 	cproto "github.com/cherry-game/cherry/net/proto"
 )
 
+// protoToJSON 将 Proto 消息转为 JSON 字符串
+func protoToJSON(msg interface{}) string {
+	if msg == nil {
+		return "{}"
+	}
+
+	// 尝试转换为 proto.Message
+	if protoMsg, ok := msg.(proto.Message); ok {
+		jsonBytes, err := protojson.Marshal(protoMsg)
+		if err != nil {
+			return "{}"
+		}
+		return string(jsonBytes)
+	}
+
+	return "{}"
+}
+
 func InvokeLocalFunc(app cfacade.IApplication, fi *creflect.FuncInfo, m *cfacade.Message) {
 	if app == nil {
 		clog.Errorf("[InvokeLocalFunc] app is nil. [message = %+v]", m)
@@ -23,10 +42,20 @@ func InvokeLocalFunc(app cfacade.IApplication, fi *creflect.FuncInfo, m *cfacade
 
 	EncodeLocalArgs(app, fi, m)
 
+	// 记录请求日志（业务层）
+	if m.Session != nil {
+		clog.Infof("[BIZ-IN] uid=%d, sid=%s, route=%s->%s",
+			m.Session.Uid, m.Session.Sid, m.Target, m.FuncName)
+		clog.Debugf("[BIZ-IN-DETAIL] uid=%d, sid=%s, route=%s->%s, args=%s",
+			m.Session.Uid, m.Session.Sid, m.Target, m.FuncName, protoToJSON(m.Args))
+	}
+
 	values := make([]reflect.Value, 2)
 	values[0] = reflect.ValueOf(m.Session) // session
 	values[1] = reflect.ValueOf(m.Args)    // args
 	fi.Value.Call(values)
+
+	// Local 调用没有返回值，不记录响应日志
 }
 
 func InvokeRemoteFunc(app cfacade.IApplication, fi *creflect.FuncInfo, m *cfacade.Message) {
@@ -36,6 +65,12 @@ func InvokeRemoteFunc(app cfacade.IApplication, fi *creflect.FuncInfo, m *cfacad
 	}
 
 	EncodeRemoteArgs(app, fi, m)
+
+	// 记录 Remote 请求日志（业务层 RPC 调用）
+	clog.Infof("[BIZ-RPC-IN] source=%s, target=%s->%s",
+		m.Source, m.Target, m.FuncName)
+	clog.Debugf("[BIZ-RPC-IN-DETAIL] source=%s, target=%s->%s, args=%s",
+		m.Source, m.Target, m.FuncName, protoToJSON(m.Args))
 
 	values := make([]reflect.Value, fi.InArgsLen)
 	if fi.InArgsLen > 0 {
@@ -51,6 +86,13 @@ func InvokeRemoteFunc(app cfacade.IApplication, fi *creflect.FuncInfo, m *cfacad
 
 		cutils.Try(func() {
 			rsp := retValue(app.Serializer(), rets)
+
+			// 记录 Remote 响应日志（业务层 RPC 响应）
+			clog.Infof("[BIZ-RPC-OUT] source=%s, target=%s->%s, code=%d",
+				m.Source, m.Target, m.FuncName, rsp.Code)
+			clog.Debugf("[BIZ-RPC-OUT-DETAIL] source=%s, target=%s->%s, code=%d, data=%s",
+				m.Source, m.Target, m.FuncName, rsp.Code, protoToJSON(rsp))
+
 			retResponse(m, rsp)
 		}, func(errString string) {
 			retResponse(m, &cproto.Response{
@@ -65,6 +107,13 @@ func InvokeRemoteFunc(app cfacade.IApplication, fi *creflect.FuncInfo, m *cfacad
 			} else {
 				rets := fi.Value.Call(values)
 				rsp := retValue(app.Serializer(), rets)
+
+				// 记录 Remote 响应日志（非集群调用）
+				clog.Infof("[BIZ-RPC-OUT] source=%s, target=%s->%s, code=%d",
+					m.Source, m.Target, m.FuncName, rsp.Code)
+				clog.Debugf("[BIZ-RPC-OUT-DETAIL] source=%s, target=%s->%s, code=%d, data=%s",
+					m.Source, m.Target, m.FuncName, rsp.Code, protoToJSON(rsp))
+
 				m.ChanResult <- rsp
 			}
 		}, func(errString string) {
