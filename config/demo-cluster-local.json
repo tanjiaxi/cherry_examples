@@ -124,45 +124,45 @@
   "logger": {
     "master_log": {
       "level": "Debug",
-      "enable_console": true,
+      "enable_console": false,
       "enable_write_file": true,
-      "file_link_path": "logs/master.log",
-      "file_path_format": "logs/master_%Y%m%d%H%M.log"
+      "file_link_path": "logs/debug.log",
+      "file_path_format": "logs/debug_%Y%m%d%H%M.log"
     },
     "web_log": {
       "level": "Debug",
-      "enable_console": true,
+      "enable_console": false,
       "enable_write_file": true,
-      "file_link_path": "logs/web.log",
-      "file_path_format": "logs/web_%Y%m%d%H%M.log"
+      "file_link_path": "logs/debug.log",
+      "file_path_format": "logs/debug_%Y%m%d%H%M.log"
     },
     "center_log": {
       "level": "Debug",
-      "enable_console": true,
+      "enable_console": false,
       "enable_write_file": true,
-      "file_link_path": "logs/center.log",
-      "file_path_format": "logs/center_%Y%m%d%H%M.log"
+      "file_link_path": "logs/debug.log",
+      "file_path_format": "logs/debug_%Y%m%d%H%M.log"
     },
     "gate_log": {
       "level": "Debug",
-      "enable_console": true,
+      "enable_console": false,
       "enable_write_file": true,
-      "file_link_path": "logs/gate.log",
-      "file_path_format": "logs/gate_%Y%m%d%H%M.log"
+      "file_link_path": "logs/debug.log",
+      "file_path_format": "logs/debug_%Y%m%d%H%M.log"
     },
     "game_log": {
       "level": "Debug",
-      "enable_console": true,
+      "enable_console": false,
       "enable_write_file": true,
-      "file_link_path": "logs/game.log",
-      "file_path_format": "logs/game_%Y%m%d%H%M.log"
+      "file_link_path": "logs/debug.log",
+      "file_path_format": "logs/debug_%Y%m%d%H%M.log"
     },
     "cross_log": {
       "level": "Debug",
-      "enable_console": true,
+      "enable_console": false,
       "enable_write_file": true,
-      "file_link_path": "logs/cross.log",
-      "file_path_format": "logs/cross_%Y%m%d%H%M.log"
+      "file_link_path": "logs/debug.log",
+      "file_path_format": "logs/debug_%Y%m%d%H%M.log"
     }
   },
   "data_config": {
@@ -221,7 +221,7 @@
   },
   "runtime_monitor": {
     "master": {
-      "enabled": true,
+      "enabled": false,
       "collect_interval": 5,
       "print_interval": 60,
       "history_size": 120,
@@ -230,7 +230,7 @@
       "enable_alert": true
     },
     "center": {
-      "enabled": true,
+      "enabled": false,
       "collect_interval": 5,
       "print_interval": 60,
       "history_size": 120,
@@ -239,7 +239,7 @@
       "enable_alert": true
     },
     "gate": {
-      "enabled": true,
+      "enabled": false,
       "collect_interval": 5,
       "print_interval": 60,
       "history_size": 120,
@@ -248,7 +248,7 @@
       "enable_alert": true
     },
     "game": {
-      "enabled": true,
+      "enabled": false,
       "collect_interval": 5,
       "print_interval": 60,
       "history_size": 120,
@@ -257,7 +257,7 @@
       "enable_alert": true
     },
     "web": {
-      "enabled": true,
+      "enabled": false,
       "collect_interval": 5,
       "print_interval": 60,
       "history_size": 120,

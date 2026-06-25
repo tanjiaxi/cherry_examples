@@ -2,16 +2,18 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-20 22:24:38
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2026-01-04 11:50:47
+ * @LastEditTime: 2026-06-24 17:04:22
  * @FilePath: /examples/demo_cluster/nodes/game/module/slots/room/level_room.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
 package room
 
 import (
+	"context"
 	"sync"
 	"time"
 
+	ccontext "github.com/cherry-game/cherry/extend/context"
 	clog "github.com/cherry-game/cherry/logger"
 	"github.com/cherry-game/cherry/net/parser/pomelo"
 	cproto "github.com/cherry-game/cherry/net/proto"
@@ -24,7 +26,7 @@ import (
 	spinManager "github.com/cherry-game/examples/demo_cluster/nodes/game/server/slots/spin_manager"
 )
 
-// 关卡房间 actor
+// 关卡房间 cactor
 // 一个玩家对应一个房间，
 type (
 	ActorRoom struct {
@@ -55,14 +57,14 @@ func (r *ActorRoom) OnInit() {
 	r.Local().Register("bonus", r.bonus)               // 关卡bonus请求
 	r.Local().Register("collect", r.collect)           // 关卡collect 请求
 }
-func (r *ActorRoom) sessionClose() {
+func (r *ActorRoom) sessionClose(ctx context.Context) {
 	// online.UnBindPlayer(r.uid)
 	// r.isOnline = false
 	r.Exit()
 
 	clog.Debugf("[actorPlayer] exit! uis = %d", 10)
 }
-func (r *ActorRoom) enterMachine(session *cproto.Session, req *pb.EnterMachine) {
+func (r *ActorRoom) enterMachine(ctx context.Context, session *cproto.Session, req *pb.EnterMachine) {
 	done := metrics.TrackRequest("game.slots.entermachine")
 	defer done(false)
 
@@ -79,7 +81,7 @@ func (r *ActorRoom) enterMachine(session *cproto.Session, req *pb.EnterMachine) 
 	}
 	r.Response(session, response)
 }
-func (r *ActorRoom) machineinfo(session *cproto.Session, req *pb.MachineInfo) {
+func (r *ActorRoom) machineinfo(ctx context.Context, session *cproto.Session, req *pb.MachineInfo) {
 	done := metrics.TrackRequest("game.slots.machineinfo")
 	hasError := false
 	defer func() { done(hasError) }()
@@ -97,9 +99,9 @@ func (r *ActorRoom) machineinfo(session *cproto.Session, req *pb.MachineInfo) {
 		r.Response(session, response)
 		return
 	}
-
+	traceId := ccontext.GetTraceId(ctx)
 	// 2. 获取用户信息
-	userInfo := rpcGame.GetUserInfo(r.Actor, session)
+	userInfo := rpcGame.GetUserInfo(r.Actor, session, traceId)
 	if userInfo == nil || userInfo.UserId == 0 {
 		hasError = true
 		response := &pb.ErrorResponse{
@@ -179,7 +181,7 @@ func (r *ActorRoom) machineinfo(session *cproto.Session, req *pb.MachineInfo) {
 	r.Response(session, response)
 }
 
-func (r *ActorRoom) spin(session *cproto.Session, req *pb.Spin) {
+func (r *ActorRoom) spin(ctx context.Context, session *cproto.Session, req *pb.Spin) {
 	done := metrics.TrackRequest("game.slots.spin")
 	hasError := false
 	defer func() { done(hasError) }()
@@ -187,8 +189,9 @@ func (r *ActorRoom) spin(session *cproto.Session, req *pb.Spin) {
 	roomId := req.Id
 	ruleId := roomId / 1000
 	curBet := 10000 //req.CurBet
+	traceId := ccontext.GetTraceId(ctx)
 	// 2. 获取用户信息
-	userInfo := rpcGame.GetUserInfo(r.Actor, session)
+	userInfo := rpcGame.GetUserInfo(r.Actor, session, traceId)
 	if userInfo == nil || userInfo.UserId == 0 {
 		hasError = true
 		response := &pb.ErrorResponse{
@@ -257,9 +260,9 @@ func (r *ActorRoom) spin(session *cproto.Session, req *pb.Spin) {
 	}
 	r.Response(session, SpinResponse)
 }
-func (r *ActorRoom) bonus(session *cproto.Session, _ *pb.Bonus) {
+func (r *ActorRoom) bonus(ctx context.Context, session *cproto.Session, _ *pb.Bonus) {
 
 }
-func (r *ActorRoom) collect(session *cproto.Session, _ *pb.CollectDone) {
+func (r *ActorRoom) collect(ctx context.Context, session *cproto.Session, _ *pb.CollectDone) {
 
 }

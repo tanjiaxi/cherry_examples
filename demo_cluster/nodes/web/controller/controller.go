@@ -139,7 +139,8 @@ func (p *Controller) serverList(c *cherryGin.Context) {
 	}{
 		UseLoadBalance: true,
 	}
-
+	//先得到游戏渠道AreaIdList,再得到区,AreaConfig,
+	//再根据GateNodes获取最优Gate地址
 	for _, areaId := range areaGroup.AreaIdList {
 		areaRow, found := data.AreaConfig.Get(areaId)
 		if found == false {
@@ -150,7 +151,7 @@ func (p *Controller) serverList(c *cherryGin.Context) {
 		var bestGateAddr string
 		if len(areaRow.GateNodes) > 0 {
 			// 调用Center获取该区最优的Gate节点
-			addr, errCode := rpcCenter.GetBestGateFromNodes(p.App, areaRow.GateNodes)
+			addr, errCode := rpcCenter.GetBestGateFromNodes(p.App, areaRow.GateNodes, "")
 			if code.IsOK(errCode) && addr != "" {
 				bestGateAddr = addr
 			}

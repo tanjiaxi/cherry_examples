@@ -41,7 +41,7 @@ func Ping(app cfacade.IApplication) bool {
 
 	rsp := &pb.Bool{}
 	targetPath := nodeID + opsActor
-	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, ping, nil, rsp)
+	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, ping, "", nil, rsp)
 	if code.IsFail(errCode) {
 		return false
 	}
@@ -60,7 +60,7 @@ func RegisterDevAccount(app cfacade.IApplication, accountName, password, ip stri
 	targetPath := GetTargetPath(app, accountActor)
 	rsp := &pb.Int32{}
 	// 通过Actor系统发送消息到Center节点的Actor
-	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, registerDevAccount, req, rsp)
+	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, registerDevAccount, "", req, rsp)
 	if code.IsFail(errCode) {
 		clog.Warnf("[RegisterDevAccount] accountName = %s, errCode = %v", accountName, errCode)
 		return errCode
@@ -78,7 +78,7 @@ func GetDevAccount(app cfacade.IApplication, accountName, password string) strin
 
 	targetPath := GetTargetPath(app, accountActor)
 	rsp := &pb.String{}
-	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, getDevAccount, req, rsp)
+	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, getDevAccount, "", req, rsp)
 	if code.IsFail(errCode) {
 		clog.Warnf("[GetDevAccount] accountName = %s, errCode = %v", accountName, errCode)
 		return ""
@@ -105,7 +105,7 @@ func GetUID1(app cfacade.IApplication, sdkId, pid int32, openId string) (cfacade
 }
 
 // GetUID 获取帐号UID
-func GetUID(app cfacade.IApplication, sdkId, pid int32, openId string) (cfacade.UID, int32) {
+func GetUID(app cfacade.IApplication, sdkId, pid int32, openId, traceId string) (cfacade.UID, int32) {
 	req := &pb.User{
 		SdkId:  sdkId,
 		Pid:    pid,
@@ -114,7 +114,7 @@ func GetUID(app cfacade.IApplication, sdkId, pid int32, openId string) (cfacade.
 
 	targetPath := GetTargetPath(app, accountActor)
 	rsp := &pb.Int64{}
-	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, getUID, req, rsp)
+	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, getUID, traceId, req, rsp)
 	if code.IsFail(errCode) {
 		clog.Warnf("[GetUID] errCode = %v", errCode)
 		return 0, errCode

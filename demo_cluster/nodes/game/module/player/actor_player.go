@@ -1,6 +1,7 @@
 package player
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"time"
@@ -59,7 +60,7 @@ func (p *actorPlayer) OnInit() {
 }
 
 // sessionClose 接收角色session关闭处理
-func (p *actorPlayer) sessionClose() {
+func (p *actorPlayer) sessionClose(ctx context.Context) {
 	online.UnBindPlayer(p.uid)
 	p.isOnline = false
 	p.Exit()
@@ -68,7 +69,7 @@ func (p *actorPlayer) sessionClose() {
 }
 
 // playerSelect 玩家查询角色列表
-func (p *actorPlayer) playerSelect(session *cproto.Session, _ *pb.None) {
+func (p *actorPlayer) playerSelect(ctx context.Context, session *cproto.Session, _ *pb.None) {
 	done := metrics.TrackRequest("game.player.select")
 	defer done(false)
 
@@ -88,7 +89,7 @@ func (p *actorPlayer) playerSelect(session *cproto.Session, _ *pb.None) {
 }
 
 // playerCreate 玩家创角
-func (p *actorPlayer) playerCreate(session *cproto.Session, req *pb.PlayerCreateRequest) {
+func (p *actorPlayer) playerCreate(ctx context.Context, session *cproto.Session, req *pb.PlayerCreateRequest) {
 	done := metrics.TrackRequest("game.player.create")
 	hasError := false
 	defer func() { done(hasError) }()
@@ -141,7 +142,7 @@ func (p *actorPlayer) playerCreate(session *cproto.Session, req *pb.PlayerCreate
 }
 
 // playerEnter 玩家进入游戏
-func (p *actorPlayer) playerEnter(session *cproto.Session, req *pb.Int64) {
+func (p *actorPlayer) playerEnter(ctx context.Context, session *cproto.Session, req *pb.Int64) {
 	done := metrics.TrackRequest("game.player.enter")
 	hasError := false
 	defer func() { done(hasError) }()
@@ -166,7 +167,7 @@ func (p *actorPlayer) playerEnter(session *cproto.Session, req *pb.Int64) {
 
 	// 设置网关节点session的PlayerID属性
 	if session.ActorPath() != "" {
-		p.Call(session.ActorPath(), "setSession", &pb.StringKeyValue{
+		p.Call(session.ActorPath(), "setSession", "", &pb.StringKeyValue{
 			Key:   sessionKey.PlayerID,
 			Value: cstring.ToString(userId),
 		})
@@ -242,7 +243,7 @@ func (p *actorPlayer) loadPlayerData(userId int32) error {
 }
 
 // GetPlayerData 获取玩家数据（Remote方法，供其他Actor调用）
-func (p *actorPlayer) getPlayerData(msg *pb.Int32) (*pb.GetUserInfoResponse, int32) {
+func (p *actorPlayer) getPlayerData(ctx context.Context, msg *pb.Int32) (*pb.GetUserInfoResponse, int32) {
 	if p.playerData == nil || p.playerData.UserID == 0 {
 		err := p.loadPlayerData(msg.Value)
 		if err != nil {

@@ -45,7 +45,7 @@ func main() {
 				Value: session.Uid,
 			}
 
-			agentActor.Call(".room", "exit", req)
+			agentActor.Call(".room", "exit", "", req)
 			clog.Debugf("[sid = %s,uid = %d] session disconnected.",
 				session.Sid,
 				session.Uid,

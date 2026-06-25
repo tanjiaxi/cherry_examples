@@ -24,7 +24,7 @@ const (
 )
 
 // AllocateNodes 为玩家分配Gate和Game节点
-func AllocateNodes(app cfacade.IApplication, playerId int64, gateNodeId string) (*pb.AllocateNodesResponse, int32) {
+func AllocateNodes(app cfacade.IApplication, playerId int64, gateNodeId, traceId string) (*pb.AllocateNodesResponse, int32) {
 	req := &pb.AllocateNodesRequest{
 		UserId:     playerId,
 		GateNodeId: gateNodeId,
@@ -32,7 +32,7 @@ func AllocateNodes(app cfacade.IApplication, playerId int64, gateNodeId string) 
 
 	targetPath := GetTargetPath(app, locationActor)
 	rsp := &pb.AllocateNodesResponse{}
-	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, allocateNodes, req, rsp)
+	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, allocateNodes, traceId, req, rsp)
 	if code.IsFail(errCode) {
 		clog.Warnf("[AllocateNodes] playerId = %d, errCode = %v", playerId, errCode)
 		return nil, errCode
@@ -42,12 +42,12 @@ func AllocateNodes(app cfacade.IApplication, playerId int64, gateNodeId string) 
 }
 
 // GetLocation 获取玩家位置
-func GetLocation(app cfacade.IApplication, playerId int64) (*pb.AllocateNodesResponse, int32) {
+func GetLocation(app cfacade.IApplication, playerId int64, traceId string) (*pb.AllocateNodesResponse, int32) {
 	req := &pb.Int64{Value: playerId}
 
 	targetPath := GetTargetPath(app, locationActor)
 	rsp := &pb.AllocateNodesResponse{}
-	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, getLocation, req, rsp)
+	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, getLocation, traceId, req, rsp)
 	if code.IsFail(errCode) {
 		clog.Debugf("[GetLocation] playerId = %d, errCode = %v", playerId, errCode)
 		return nil, errCode
@@ -57,12 +57,12 @@ func GetLocation(app cfacade.IApplication, playerId int64) (*pb.AllocateNodesRes
 }
 
 // RemoveLocation 移除玩家位置
-func RemoveLocation(app cfacade.IApplication, playerId int64) int32 {
+func RemoveLocation(app cfacade.IApplication, playerId int64, traceId string) int32 {
 	req := &pb.Int64{Value: playerId}
 
 	targetPath := GetTargetPath(app, locationActor)
 	rsp := &pb.Int32{}
-	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, removeLocation, req, rsp)
+	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, removeLocation, traceId, req, rsp)
 	if code.IsFail(errCode) {
 		clog.Warnf("[RemoveLocation] playerId = %d, errCode = %v", playerId, errCode)
 		return errCode
@@ -72,7 +72,7 @@ func RemoveLocation(app cfacade.IApplication, playerId int64) int32 {
 }
 
 // Heartbeat 节点心跳
-func Heartbeat(app cfacade.IApplication, nodeId, nodeType string) int32 {
+func Heartbeat(app cfacade.IApplication, nodeId, nodeType, traceId string) int32 {
 	req := &pb.HeartbeatRequest{
 		NodeId:   nodeId,
 		NodeType: nodeType,
@@ -80,7 +80,7 @@ func Heartbeat(app cfacade.IApplication, nodeId, nodeType string) int32 {
 
 	targetPath := GetTargetPath(app, locationActor)
 	rsp := &pb.Int32{}
-	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, heartbeat, req, rsp)
+	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, heartbeat, traceId, req, rsp)
 	if code.IsFail(errCode) {
 		clog.Warnf("[Heartbeat] nodeId = %s, errCode = %v", nodeId, errCode)
 		return errCode
@@ -90,10 +90,10 @@ func Heartbeat(app cfacade.IApplication, nodeId, nodeType string) int32 {
 }
 
 // GetBestGate 获取最优Gate节点
-func GetBestGate(app cfacade.IApplication) (string, int32) {
+func GetBestGate(app cfacade.IApplication, traceId string) (string, int32) {
 	targetPath := GetTargetPath(app, locationActor)
 	rsp := &pb.String{}
-	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, getBestGate, &pb.None{}, rsp)
+	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, getBestGate, traceId, &pb.None{}, rsp)
 	if code.IsFail(errCode) {
 		clog.Warnf("[GetBestGate] errCode = %v", errCode)
 		return "", errCode
@@ -103,12 +103,12 @@ func GetBestGate(app cfacade.IApplication) (string, int32) {
 }
 
 // GetBestGateFromNodes 从指定的Gate节点列表中获取最优节点
-func GetBestGateFromNodes(app cfacade.IApplication, nodeIds []string) (string, int32) {
+func GetBestGateFromNodes(app cfacade.IApplication, nodeIds []string, traceId string) (string, int32) {
 	req := &pb.StringList{Values: nodeIds}
 
 	targetPath := GetTargetPath(app, locationActor)
 	rsp := &pb.String{}
-	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, getBestGateFromNodes, req, rsp)
+	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, getBestGateFromNodes, traceId, req, rsp)
 	if code.IsFail(errCode) {
 		clog.Warnf("[GetBestGateFromNodes] errCode = %v", errCode)
 		return "", errCode
@@ -118,12 +118,12 @@ func GetBestGateFromNodes(app cfacade.IApplication, nodeIds []string) (string, i
 }
 
 // GetBestGameFromNodes 从指定的Game节点列表中获取最优节点
-func GetBestGameFromNodes(app cfacade.IApplication, nodeIds []string) (string, int32) {
+func GetBestGameFromNodes(app cfacade.IApplication, nodeIds []string, traceId string) (string, int32) {
 	req := &pb.StringList{Values: nodeIds}
 
 	targetPath := GetTargetPath(app, locationActor)
 	rsp := &pb.String{}
-	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, getBestGameFromNodes, req, rsp)
+	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, getBestGameFromNodes, traceId, req, rsp)
 	if code.IsFail(errCode) {
 		clog.Warnf("[GetBestGameFromNodes] errCode = %v", errCode)
 		return "", errCode
@@ -133,10 +133,10 @@ func GetBestGameFromNodes(app cfacade.IApplication, nodeIds []string) (string, i
 }
 
 // GetBestGame 获取最优Game节点
-func GetBestGame(app cfacade.IApplication) (string, int32) {
+func GetBestGame(app cfacade.IApplication, traceId string) (string, int32) {
 	targetPath := GetTargetPath(app, locationActor)
 	rsp := &pb.String{}
-	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, getBestGame, &pb.None{}, rsp)
+	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, getBestGame, traceId, &pb.None{}, rsp)
 	if code.IsFail(errCode) {
 		clog.Warnf("[GetBestGame] errCode = %v", errCode)
 		return "", errCode
@@ -146,12 +146,12 @@ func GetBestGame(app cfacade.IApplication) (string, int32) {
 }
 
 // GetNodeOnlineCount 获取节点在线人数
-func GetNodeOnlineCount(app cfacade.IApplication, nodeId string) (int32, int32) {
+func GetNodeOnlineCount(app cfacade.IApplication, nodeId, traceId string) (int32, int32) {
 	req := &pb.String{Value: nodeId}
 
 	targetPath := GetTargetPath(app, locationActor)
 	rsp := &pb.Int32{}
-	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, getNodeOnlineCount, req, rsp)
+	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, getNodeOnlineCount, traceId, req, rsp)
 	if code.IsFail(errCode) {
 		return 0, errCode
 	}

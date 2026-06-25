@@ -1,8 +1,10 @@
 package gate
 
 import (
+	"context"
 	"time"
 
+	ccontext "github.com/cherry-game/cherry/extend/context"
 	cstring "github.com/cherry-game/cherry/extend/string"
 	cfacade "github.com/cherry-game/cherry/facade"
 	clog "github.com/cherry-game/cherry/logger"
@@ -40,7 +42,7 @@ func (p *ActorAgent) OnInit() {
 	p.Remote().Register("setSession", p.setSession)
 }
 
-func (p *ActorAgent) setSession(req *pb.StringKeyValue) {
+func (p *ActorAgent) setSession(ctx context.Context, req *pb.StringKeyValue) {
 	if req.Key == "" {
 		return
 	}
@@ -67,7 +69,7 @@ func GetUID(app cfacade.IApplication, sdkId, pid int32, openId string) (cfacade.
 }
 
 // login 用户登录，验证帐号 (*pb.LoginResponse, int32)
-func (p *ActorAgent) login(session *cproto.Session, req *pb.LoginRequest) {
+func (p *ActorAgent) login(ctx context.Context, session *cproto.Session, req *pb.LoginRequest) {
 	done := metrics.TrackRequest("gate.actor.login")
 	defer done(false)
 	agent, found := pomelo.GetAgent(p.ActorID(), session.Uid)
@@ -92,7 +94,8 @@ func (p *ActorAgent) login(session *cproto.Session, req *pb.LoginRequest) {
 	// 根据token带来的sdk参数，从中心节点获取userId
 	// 3. 计算并打印执行时间
 	// startTime := time.Now()
-	userId, errCode := rpcCenter.GetUID(p.App(), sdkRow.SdkId, userToken.PID, userToken.OpenID)
+	traceId := ccontext.GetTraceId(ctx)
+	userId, errCode := rpcCenter.GetUID(p.App(), sdkRow.SdkId, userToken.PID, userToken.OpenID, traceId)
 	// elapsed := time.Since(startTime)
 	// clog.Debugf("ReadySPin代码执行耗时: %s %s", elapsed, userToken.OpenID)
 	if userId == 0 || code.IsFail(errCode) {
@@ -116,7 +119,7 @@ func (p *ActorAgent) login(session *cproto.Session, req *pb.LoginRequest) {
 
 	// 调用Center分配Game节点（负载均衡）
 	gateNodeId := p.App().NodeID()
-	allocResp, errCode := rpcCenter.AllocateNodes(p.App(), userId, gateNodeId)
+	allocResp, errCode := rpcCenter.AllocateNodes(p.App(), userId, gateNodeId, traceId)
 	if code.IsFail(errCode) || allocResp == nil {
 		clog.Warnf("[login] 分配节点失败: userId=%d, errCode=%d", userId, errCode)
 		// 如果分配失败，使用请求中的ServerId作为后备
@@ -172,7 +175,7 @@ func (p *ActorAgent) checkGateSession(uid cfacade.UID) {
 	for _, member := range members {
 		// user是gate.go里自定义的agentActorID
 		actorPath := cfacade.NewPath(member.GetNodeID(), "user")
-		p.Call(actorPath, pomelo.KickFuncName, rsp)
+		p.Call(actorPath, pomelo.KickFuncName, "", rsp)
 	}
 }
 
@@ -184,7 +187,7 @@ func (p *ActorAgent) onSessionClose(agent *pomelo.Agent) {
 	clog.Infof("[onSessionClose] 移除玩家位置: userId=%d ", userId)
 	// 通知Center移除玩家位置
 	if userId > 0 {
-		errCode := rpcCenter.RemoveLocation(p.App(), userId)
+		errCode := rpcCenter.RemoveLocation(p.App(), userId, "")
 		if code.IsFail(errCode) {
 			clog.Infof("[onSessionClose] 移除玩家位置失败: userId=%d, errCode=%d", userId, errCode)
 		}
@@ -199,9 +202,9 @@ func (p *ActorAgent) onSessionClose(agent *pomelo.Agent) {
 	childId := cstring.ToString(session.Uid)
 	if childId != "" {
 		targetPath := cfacade.NewChildPath(serverId, "player", childId)
-		p.Call(targetPath, "sessionClose", nil)
+		p.Call(targetPath, "sessionClose", "", nil)
 		gameTargetPath := cfacade.NewChildPath(serverId, "slots", childId)
-		p.Call(gameTargetPath, "sessionClose", nil)
+		p.Call(gameTargetPath, "sessionClose", "", nil)
 	}
 
 	// 自己退出

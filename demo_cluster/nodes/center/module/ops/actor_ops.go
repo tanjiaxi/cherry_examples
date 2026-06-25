@@ -1,6 +1,8 @@
 package ops
 
 import (
+	"context"
+
 	cactor "github.com/cherry-game/cherry/net/actor"
 	"github.com/cherry-game/examples/demo_cluster/internal/code"
 	"github.com/cherry-game/examples/demo_cluster/internal/pb"
@@ -26,6 +28,6 @@ func (p *ActorOps) OnInit() {
 }
 
 // ping 请求center是否响应
-func (p *ActorOps) ping() (*pb.Bool, int32) {
+func (p *ActorOps) ping(ctx context.Context) (*pb.Bool, int32) {
 	return pingReturn, code.OK
 }

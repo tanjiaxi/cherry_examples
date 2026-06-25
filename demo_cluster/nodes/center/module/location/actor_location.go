@@ -1,6 +1,7 @@
 package location
 
 import (
+	"context"
 	"time"
 
 	cfacade "github.com/cherry-game/cherry/facade"
@@ -105,7 +106,7 @@ func (p *ActorLocation) getHealthyGameNodes() []string {
 }
 
 // allocateNodes 为玩家分配节点
-func (p *ActorLocation) allocateNodes(req *pb.AllocateNodesRequest) (*pb.AllocateNodesResponse, int32) {
+func (p *ActorLocation) allocateNodes(ctx context.Context, req *pb.AllocateNodesRequest) (*pb.AllocateNodesResponse, int32) {
 	if req.UserId <= 0 || req.GateNodeId == "" {
 		return nil, code.ParamError
 	}
@@ -141,7 +142,7 @@ func (p *ActorLocation) allocateNodes(req *pb.AllocateNodesRequest) (*pb.Allocat
 }
 
 // getLocation 获取玩家位置
-func (p *ActorLocation) getLocation(req *pb.Int64) (*pb.AllocateNodesResponse, int32) {
+func (p *ActorLocation) getLocation(ctx context.Context, req *pb.Int64) (*pb.AllocateNodesResponse, int32) {
 	loc, exists := p.locationMgr.GetLocation(req.Value)
 	if !exists {
 		return nil, code.PlayerLocationNotFound
@@ -156,7 +157,7 @@ func (p *ActorLocation) getLocation(req *pb.Int64) (*pb.AllocateNodesResponse, i
 }
 
 // removeLocation 移除玩家位置
-func (p *ActorLocation) removeLocation(req *pb.Int64) int32 {
+func (p *ActorLocation) removeLocation(ctx context.Context, req *pb.Int64) int32 {
 	clog.Infof("[removeLocation] 队列中消息: RemoteCount=%d, LocalCount=%d", int(p.Remote().Count()), int(p.Local().Count()))
 	err := p.locationMgr.RemoveLocation(req.Value)
 	if err != nil {
@@ -166,7 +167,7 @@ func (p *ActorLocation) removeLocation(req *pb.Int64) int32 {
 }
 
 // heartbeat 节点心跳
-func (p *ActorLocation) heartbeat(req *pb.HeartbeatRequest) int32 {
+func (p *ActorLocation) heartbeat(ctx context.Context, req *pb.HeartbeatRequest) int32 {
 	if req.NodeId == "" {
 		return code.ParamError
 	}
@@ -176,7 +177,7 @@ func (p *ActorLocation) heartbeat(req *pb.HeartbeatRequest) int32 {
 }
 
 // getBestGate 获取最优Gate节点
-func (p *ActorLocation) getBestGate(_ *pb.None) (*pb.String, int32) {
+func (p *ActorLocation) getBestGate(ctx context.Context, _ *pb.None) (*pb.String, int32) {
 	// 获取所有Gate节点
 	gateNodes := p.App().Discovery().ListByType("gate")
 	if len(gateNodes) == 0 {
@@ -211,7 +212,7 @@ func (p *ActorLocation) getBestGate(_ *pb.None) (*pb.String, int32) {
 }
 
 // getBestGame 获取最优Game节点
-func (p *ActorLocation) getBestGame(_ *pb.None) (*pb.String, int32) {
+func (p *ActorLocation) getBestGame(ctx context.Context, _ *pb.None) (*pb.String, int32) {
 	gameNodes := p.getHealthyGameNodes()
 	if len(gameNodes) == 0 {
 		return nil, code.NoAvailableGame
@@ -226,7 +227,7 @@ func (p *ActorLocation) getBestGame(_ *pb.None) (*pb.String, int32) {
 }
 
 // getBestGateFromNodes 从指定的Gate节点列表中获取最优节点
-func (p *ActorLocation) getBestGateFromNodes(req *pb.StringList) (*pb.String, int32) {
+func (p *ActorLocation) getBestGateFromNodes(ctx context.Context, req *pb.StringList) (*pb.String, int32) {
 	if req == nil || len(req.Values) == 0 {
 		return nil, code.ParamError
 	}
@@ -276,7 +277,7 @@ func (p *ActorLocation) getBestGateFromNodes(req *pb.StringList) (*pb.String, in
 }
 
 // getBestGameFromNodes 从指定的Game节点列表中获取最优节点
-func (p *ActorLocation) getBestGameFromNodes(req *pb.StringList) (*pb.String, int32) {
+func (p *ActorLocation) getBestGameFromNodes(ctx context.Context, req *pb.StringList) (*pb.String, int32) {
 	if req == nil || len(req.Values) == 0 {
 		return nil, code.ParamError
 	}
@@ -316,7 +317,7 @@ func (p *ActorLocation) getBestGameFromNodes(req *pb.StringList) (*pb.String, in
 }
 
 // getNodeOnlineCount 获取节点在线人数
-func (p *ActorLocation) getNodeOnlineCount(req *pb.String) (*pb.Int32, int32) {
+func (p *ActorLocation) getNodeOnlineCount(ctx context.Context, req *pb.String) (*pb.Int32, int32) {
 	count := p.nodeCounter.GetCount(req.Value)
 	return &pb.Int32{Value: count}, code.OK
 }

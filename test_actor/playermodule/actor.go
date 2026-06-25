@@ -27,9 +27,9 @@ func (p *Actor) OnInit() {
 	targetFuncName := "hello"
 	targetFuncName2 := "callPrarentHello"
 	fmt.Println(targetPath)
-	p.CallWait(targetPath, targetFuncName, nil, nil)
+	p.CallWait(targetPath, targetFuncName, "", nil, nil)
 	//调用子actor，targetFuncName2 方法又回调用父actor
-	p.CallWait(targetPath, targetFuncName2, nil, nil)
+	p.CallWait(targetPath, targetFuncName2, "", nil, nil)
 	//fmt.Println(reply)
 }
 

@@ -328,7 +328,7 @@
         gatePort = gate[1];
         console.log(serverId, gateHost, gatePort);
 
-        pomelo.init({host: gateHost, port: gatePort, path: '/'}, function () {
+        pomelo.init({host: gateHost, port: gatePort}, function () {
             console.log("connected!");
 
             var loginRequest = new proto.pb.LoginRequest();

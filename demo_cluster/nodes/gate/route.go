@@ -130,7 +130,7 @@ func handleGameNodeOffline(agent *pomelo.Agent, session *cproto.Session) {
 
 	// 1. 调用Center重新分配Game节点（负载均衡）
 	// agent 嵌入了 IApplication，可以直接作为 app 使用
-	allocResp, errCode := rpcCenter.AllocateNodes(agent, userId, gateNodeId)
+	allocResp, errCode := rpcCenter.AllocateNodes(agent, userId, gateNodeId, "")
 	if code.IsFail(errCode) || allocResp == nil {
 		clog.Warnf("[handleGameNodeOffline] 重新分配节点失败: userId=%d, errCode=%d", userId, errCode)
 		// 尝试本地选择
