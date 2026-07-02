@@ -1,26 +1,29 @@
 module github.com/cherry-game/examples
 
-go 1.24
+go 1.25.0
 
 // 统一protobuf版本，解决冲突
 replace (
 	// 使用本地 cherry 框架源码（可以自由修改）
-	github.com/cherry-game/cherry => ./3rd/cherry-game/cherry
+	// github.com/cherry-game/cherry => ./3rd/cherry-game/cherry
+	//不能写成 因为每个组件下面都有mod
+	//github.com/cherry-game/components => ./3rd/cherry-game/components
+	// github.com/cherry-game/components/cron => ./3rd/cherry-game/components/cron
+	// github.com/cherry-game/components/data-config => ./3rd/cherry-game/components/data-config
+	// github.com/cherry-game/components/etcd => ./3rd/cherry-game/components/etcd
+	// github.com/cherry-game/components/gin => ./3rd/cherry-game/components/gin
+	// github.com/cherry-game/components/gops => ./3rd/cherry-game/components/gops
 
 	// 统一 protobuf 版本（必须同时 replace 两个包）
 	github.com/golang/protobuf => github.com/golang/protobuf v1.5.4
 	google.golang.org/protobuf => google.golang.org/protobuf v1.34.2
 )
-
+require (
+    github.com/cherry-game/cherry v1.5.3  // 使用远程版本
+)
 require (
 	github.com/DmitriyVTitov/size v1.5.0
 	github.com/ahmetb/go-linq/v3 v3.2.0
-	github.com/cherry-game/cherry v1.4.10
-	github.com/cherry-game/components/cron v1.4.1
-	github.com/cherry-game/components/data-config v1.4.1
-	github.com/cherry-game/components/etcd v1.4.1
-	github.com/cherry-game/components/gin v1.4.1
-	github.com/cherry-game/components/gops v1.4.1
 	github.com/gin-gonic/gin v1.11.0
 	github.com/goburrow/cache v0.1.4
 	github.com/jackc/pgx/v5 v5.6.0
@@ -30,7 +33,6 @@ require (
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/nats-io/nats.go v1.47.0
 	github.com/prometheus/client_golang v1.19.1
-	github.com/redis/go-redis/v9 v9.21.0
 	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/spf13/cast v1.10.0
 	github.com/tidwall/gjson v1.18.0
@@ -43,6 +45,7 @@ require (
 	gorm.io/gen v0.3.27
 	gorm.io/gorm v1.31.1
 )
+
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
@@ -111,15 +114,15 @@ require (
 	go.uber.org/mock v0.5.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.20.0 // indirect
-	golang.org/x/crypto v0.40.0 // indirect
-	golang.org/x/mod v0.25.0 // indirect
-	golang.org/x/net v0.42.0 // indirect
-	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/sys v0.35.0 // indirect
-	golang.org/x/text v0.27.0 // indirect
-	golang.org/x/tools v0.34.0 // indirect
-	google.golang.org/genproto v0.0.0-20210602131652-f16073e35f0c // indirect
-	google.golang.org/grpc v1.41.0 // indirect
+	golang.org/x/crypto v0.53.0 // indirect
+	golang.org/x/mod v0.36.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
+	golang.org/x/sync v0.21.0 // indirect
+	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/text v0.38.0 // indirect
+	golang.org/x/tools v0.45.0 // indirect
+	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
+	google.golang.org/grpc v1.56.3 // indirect
 	gorm.io/datatypes v1.2.4 // indirect
 	gorm.io/driver/mysql v1.6.0 // indirect
 	gorm.io/hints v1.1.0 // indirect

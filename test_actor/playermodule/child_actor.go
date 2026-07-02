@@ -32,7 +32,7 @@ func (p *childActor) callPrarentHello() {
 	text := "[childActor] Call callPrarentHello()"
 	parentPath := cherryFacade.NewPath(p.Path().NodeID, p.Path().ActorID)
 	fmt.Println(parentPath)
-	result := p.Call(parentPath, "callChildHello", nil)
+	result := p.Call(parentPath, "callChildHello", "", nil)
 	fmt.Println(text, result)
 }
 func (*childActor) OnStop() {

@@ -157,7 +157,8 @@ func NewConfigLogger(config *Config, opts ...zap.Option) *CherryLogger {
 	}
 	var encoder zapcore.Encoder
 	if config.EnableConsole { // 或者是你自定义的配置项，如 config.JsonFormat
-		encoder = zapcore.NewConsoleEncoder(encoderConfig)
+		// encoder = zapcore.NewConsoleEncoder(encoderConfig)
+		encoder = zapcore.NewJSONEncoder(encoderConfig) // 全行转为标准 JSON 字段
 	} else {
 		encoder = zapcore.NewJSONEncoder(encoderConfig) // 全行转为标准 JSON 字段
 	}

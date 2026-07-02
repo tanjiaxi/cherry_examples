@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-20 22:33:18
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-12-09 22:05:45
+ * @LastEditTime: 2026-06-30 11:55:38
  * @FilePath: /examples/demo_cluster/nodes/game/server/ slots/component/level_data_types.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -94,7 +94,7 @@ func (r *RoomDataInfo) CopyFrom(otherData *RoomDataInfo) (*RoomDataInfo, error) 
 
 // 使用copier库
 func (r *RoomDataInfo) CopierToData() (*RoomDataInfo, error) {
-	//内存池里面拿一个
+	//内存池里面拿一个,这里不能这样使用,copier.Copy使用了深copy(申请的新内存),使对象池,失去了意义.
 	dst := RoomDataPool.Get().(*RoomDataInfo)
 	err := copier.Copy(dst, r)
 	if err != nil {

@@ -17,7 +17,7 @@ func main() {
 
 	logger := cherryLogger.NewConfigLogger(config)
 
-	logger.Info("111111111111111111111111111111")
+	logger.SugaredLogger.Info("111111111111111111111111111111")
 	logger.Debugf("aaaaaaaaaaaaaa %s", "aaaaa args.......")
 	logger.Infow("failed to fetch URL.", "url", "http://example.com")
 	logger.Infow("failed to fetch URL.",
@@ -32,6 +32,6 @@ func main() {
 		"url", "http://example.com",
 		"name", "url name",
 	)
-	logger.Fatal("fatal fatal fatal fatal fatal")
+	logger.SugaredLogger.Fatal("fatal fatal fatal fatal fatal")
 
 }

@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-20 22:24:34
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2026-01-05 17:27:46
+ * @LastEditTime: 2026-07-02 17:07:21
  * @FilePath: /examples/demo_cluster/nodes/game/module/slots/room/level_rooms.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -27,13 +27,15 @@ type (
 func (p *ActorRooms) AliasID() string {
 	return "slots"
 }
+
 func (p *ActorRooms) OnInit() {
 	p.childExitTime = time.Minute * 30
 }
+
 func (p *ActorRooms) OnFindChild(msg *cfacade.Message) (cfacade.IActor, bool) {
 	// 动态创建 player child actor
 	childID := msg.TargetPath().ChildID
-	childActor, err := p.Child().Create(childID, NewActorRoom())
+	childActor, err := p.Child().Create(childID, NewActorRoom(p.App()))
 	if err != nil {
 		return nil, false
 	}

@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-09-15 18:02:10
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2026-01-11 22:49:50
+ * @LastEditTime: 2026-07-01 13:52:02
  * @FilePath: /examples/demo_cluster/nodes/game/game.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -28,6 +28,7 @@ import (
 	cdiscovery "github.com/cherry-game/cherry/net/discovery"
 	cherryETCD "github.com/cherry-game/components/etcd"
 	cherryGORM "github.com/cherry-game/examples/demo_cluster/internal/component/pg_gorm"
+	cherryRedis "github.com/cherry-game/examples/demo_cluster/internal/component/redis"
 	slotsLeveCore "github.com/cherry-game/examples/demo_cluster/nodes/game/server/slots/core"
 )
 
@@ -65,12 +66,16 @@ func Run(profileFilePath, nodeID string) {
 	app.Register(metricsComponent)
 	metrics.SetGlobal(metricsComponent)
 
-	//注册配置etcd缓存组件
+	// 注册配置etcd缓存组件
 	app.Register(checkConfigVersion.New("/cherry/config/slots/levels/", configCacheSlots.GetInstance()))
-	//注册关卡相关逻辑
+	// 注册关卡相关逻辑
 	app.Register(slotsLeveCore.New())
 	// 注册心跳组件，定时向Center发送心跳
 	// app.Register(heartbeat.New("game"))
+
+	// 注册redis组件
+	app.Register(cherryRedis.NewRedisCompent())
+
 	app.AddActors(
 		&player.ActorPlayers{},
 		&slotsRoom.ActorRooms{},

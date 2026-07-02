@@ -1,6 +1,7 @@
 package pomelo
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"sync/atomic"
@@ -14,6 +15,7 @@ import (
 	pomeloMessage "github.com/cherry-game/cherry/net/parser/pomelo/message"
 	pomeloPacket "github.com/cherry-game/cherry/net/parser/pomelo/packet"
 	cproto "github.com/cherry-game/cherry/net/proto"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -156,6 +158,7 @@ func (a *Agent) readChan() {
 	for {
 		packets, isBreak, err := pomeloPacket.Read(a.conn)
 		if isBreak || err != nil {
+			clog.DebugContext(context.Background(), "read err", zap.String("err", err.Error()))
 			return
 		}
 

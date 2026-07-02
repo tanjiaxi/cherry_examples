@@ -20,52 +20,47 @@
       "pool_size": 10
     },
     "etcd": {
-        "end_points": "10.10.10.251:2379",
-        "@end_points": "10.10.10.251:2379,dev1.com:2379",
-        "prefix" : "cherry",
-        "ttl": 1000,
-        "dial_timeout": 3,
-        "dial_keep_alive_time": 1,
-        "dial_keep_alive_timeout": 1,
-        "user": "",
-        "password": ""
+      "end_points": "10.10.10.251:2379",
+      "@end_points": "10.10.10.251:2379,dev1.com:2379",
+      "prefix": "cherry",
+      "ttl": 1000,
+      "dial_timeout": 3,
+      "dial_keep_alive_time": 1,
+      "dial_keep_alive_timeout": 1,
+      "user": "",
+      "password": ""
     }
   },
   "node": {
-    "master": [
-      {
-        "node_id": "gc-master",
-        "address": "",
-        "__settings__": {
-          "ref_logger": "master_log"
-        },
-        "enable": true
-      }
-    ],
-    "center": [
-      {
-        "node_id": "gc-center",
-        "address": "",
-        "__settings__": {
-          "ref_logger": "center_log",
-          "db_id_list": {
-            "center_db_id": "center_db_1"
-          }
-        },
-        "enable": true
-      }
-    ],
-    "gate": [
-      {
+    "master": [{
+      "node_id": "gc-master",
+      "address": "",
+      "__settings__": {
+        "ref_logger": "master_log"
+      },
+      "enable": true
+    }],
+    "center": [{
+      "node_id": "gc-center",
+      "address": "",
+      "__settings__": {
+        "ref_logger": "center_log",
+        "db_id_list": {
+          "center_db_id": "center_db_1"
+        }
+      },
+      "enable": true
+    }],
+    "gate": [{
         "node_id": "gc-gate-1",
         "address": "0.0.0.0:10010",
         "__settings__": {
-          "db_id_list" : {
+          "db_id_list": {
             "center_db_id": "game_db_1"
           },
           "tcp_address": "0.0.0.0:20010",
           "ref_logger": "gate_log",
-          "call_time_out":"1"
+          "call_time_out": "1"
 
         },
         "enable": true
@@ -74,12 +69,12 @@
         "node_id": "gc-gate-2",
         "address": "0.0.0.0:10011",
         "__settings__": {
-          "db_id_list" : {
+          "db_id_list": {
             "game_db_id": "game_db_1"
           },
           "tcp_address": "0.0.0.0:20011",
           "ref_logger": "gate_log",
-          "call_time_out":"1"
+          "call_time_out": "1"
         },
         "enable": true
       },
@@ -87,79 +82,75 @@
         "node_id": "gc-gate-3",
         "address": "0.0.0.0:20012",
         "__settings__": {
-          "db_id_list" : {
+          "db_id_list": {
             "game_db_id": "game_db_1"
           },
           "tcp_address": "0.0.0.0:20012",
           "ref_logger": "gate_log",
-          "call_time_out":"1"
+          "call_time_out": "1"
         },
         "enable": true
       }
     ],
-    "web": [
-      {
-        "node_id": "gc-web-1",
-        "address": "0.0.0.0:8081",
-        "__settings__": {
-          "ref_logger": "web_log",
-          "call_time_out": "10" 
+    "web": [{
+      "node_id": "gc-web-1",
+      "address": "0.0.0.0:8081",
+      "__settings__": {
+        "ref_logger": "web_log",
+        "call_time_out": "10"
+      },
+      "enable": true
+    }],
+    "game": [{
+      "node_id": "^\\d+$",
+      "__settings__": {
+        "db_id_list": {
+          "game_db_id": "game_db_1"
         },
-        "enable": true
-      }
-    ],
-    "game": [
-      {
-        "node_id": "^\\d+$",
-        "__settings__": {
-          "db_id_list" : {
-            "game_db_id": "game_db_1"
-          },
-          "ref_logger": "game_log"
-        },
-        "enable": true
-      }
-    ]
+        "ref_logger": "game_log"
+      },
+      "enable": true
+    }]
   },
   "logger": {
     "master_log": {
       "level": "Debug",
-      "enable_console": false,
+      "enable_console": true,
       "enable_write_file": true,
       "file_link_path": "logs/debug.log",
       "file_path_format": "logs/debug_%Y%m%d%H%M.log"
     },
     "web_log": {
       "level": "Debug",
-      "enable_console": false,
+      "enable_console": true,
       "enable_write_file": true,
       "file_link_path": "logs/debug.log",
       "file_path_format": "logs/debug_%Y%m%d%H%M.log"
     },
     "center_log": {
       "level": "Debug",
-      "enable_console": false,
+      "enable_console": true,
       "enable_write_file": true,
       "file_link_path": "logs/debug.log",
       "file_path_format": "logs/debug_%Y%m%d%H%M.log"
     },
     "gate_log": {
       "level": "Debug",
-      "enable_console": false,
+      "enable_console": true,
       "enable_write_file": true,
       "file_link_path": "logs/debug.log",
       "file_path_format": "logs/debug_%Y%m%d%H%M.log"
     },
     "game_log": {
       "level": "Debug",
-      "enable_console": false,
+      "enable_console": true,
       "enable_write_file": true,
       "file_link_path": "logs/debug.log",
       "file_path_format": "logs/debug_%Y%m%d%H%M.log"
     },
     "cross_log": {
       "level": "Debug",
-      "enable_console": false,
+      "enable_console": true,
       "enable_write_file": true,
       "file_link_path": "logs/debug.log",
       "file_path_format": "logs/debug_%Y%m%d%H%M.log"
@@ -174,50 +165,61 @@
       "reload_time": 3000
     },
     "redis": {
-      "prefix_key": "data_config",
+      "prefix_key": "classic_slots_",
       "subscribe_key": "data_config_change",
       "address": "10.10.10.251:6379",
       "password": "",
-      "db": 7
+      "db": 0
+    }
+  },
+  "redis": {
+    "prefix_key": "classic_slots_",
+    "subscribe_key": "data_config_change",
+    "use_cluster": false,
+    "single": {
+      "address": "10.10.10.251:6379",
+      "password": "",
+      "db": 0
+    },
+    "cluster": {
+      "address": ["10.10.10.251:6379"],
+      "password": "",
+      "db": 0
     }
   },
   "db": {
-    "center_db_group": [
-      {
-        "enable": true,
-        "db_id": "center_db_1",
-        "dsn" : "",
-        "db_name": "classic_slots",
-        "host": "10.10.10.251",
-        "port": 5432,
-        "user_name": "postgres",
-        "password": "postgres",
-        "max_idle_connect": 200,
-        "max_open_connect": 200,
-        "slow_threshold_ms": 20,
-        "max_life_time_minute": 30,
-        "max_Idle_time_minute": 10,
-        "log_mode": false
-      }
-    ],
-    "game_db_group": [
-      {
-        "enable": true,
-        "db_id": "game_db_1",
-        "dsn" : "",
-        "db_name": "classic_slots",
-        "host": "10.10.10.251",
-        "port": 5432,
-        "user_name": "postgres",
-        "password": "postgres",
-        "max_idle_connect": 200,
-        "max_open_connect": 200,
-        "slow_threshold_ms": 20,
-        "max_life_time_minute": 30,
-        "max_Idle_time_minute": 10,
-        "log_mode": false
-      }
-    ]
+    "center_db_group": [{
+      "enable": true,
+      "db_id": "center_db_1",
+      "dsn": "",
+      "db_name": "classic_slots",
+      "host": "10.10.10.251",
+      "port": 5432,
+      "user_name": "postgres",
+      "password": "postgres",
+      "max_idle_connect": 200,
+      "max_open_connect": 200,
+      "slow_threshold_ms": 20,
+      "max_life_time_minute": 30,
+      "max_Idle_time_minute": 10,
+      "log_mode": false
+    }],
+    "game_db_group": [{
+      "enable": true,
+      "db_id": "game_db_1",
+      "dsn": "",
+      "db_name": "classic_slots",
+      "host": "10.10.10.251",
+      "port": 5432,
+      "user_name": "postgres",
+      "password": "postgres",
+      "max_idle_connect": 200,
+      "max_open_connect": 200,
+      "slow_threshold_ms": 20,
+      "max_life_time_minute": 30,
+      "max_Idle_time_minute": 10,
+      "log_mode": false
+    }]
   },
   "runtime_monitor": {
     "master": {

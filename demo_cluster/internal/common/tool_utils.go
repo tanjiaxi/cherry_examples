@@ -73,6 +73,7 @@ func SplitNumber(str, sep string) ([]int, error) {
 	}
 	return result, nil
 }
+
 func SplitString(str, sep string) ([]string, error) {
 	if str == "" {
 		return []string{}, nil
@@ -91,6 +92,7 @@ func SplitString(str, sep string) ([]string, error) {
 	}
 	return result, nil
 }
+
 func PrintMemUsage() {
 	var m runtime.MemStats
 	// 读取当前的内存状态到 m 中
@@ -122,6 +124,7 @@ func PrintMemUsage() {
 	}
 	fmt.Printf("------------------------------------\n")
 }
+
 func bToMb(b uint64) uint64 {
 	return b / 1024
 }
@@ -134,4 +137,13 @@ func GenerateTraceID(nodeID string, seqId uint) string {
 		nodeID,
 		seqId,
 	)
+}
+
+// StringToInt32 将字符串安全转为 int32，失败时返回默认值 0
+func StringToInt32(s string) int32 {
+	val, err := strconv.ParseInt(s, 10, 32)
+	if err != nil {
+		panic(err)
+	}
+	return int32(val)
 }

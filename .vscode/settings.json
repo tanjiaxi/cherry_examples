@@ -8,5 +8,6 @@
         "--proto_path=."
     ],
     "commentTranslate.browse.mode": "inplace",
-    "commentTranslate.source": "Google"
+    "commentTranslate.source": "Google",
+    "go.delveConfig": {}
 }
