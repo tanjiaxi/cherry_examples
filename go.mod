@@ -15,6 +15,7 @@ replace (
 require (
 	github.com/DmitriyVTitov/size v1.5.0
 	github.com/ahmetb/go-linq/v3 v3.2.0
+	github.com/allegro/bigcache/v3 v3.1.0
 	github.com/cherry-game/cherry v1.4.10
 	github.com/cherry-game/components/cron v1.4.1
 	github.com/cherry-game/components/data-config v1.4.1

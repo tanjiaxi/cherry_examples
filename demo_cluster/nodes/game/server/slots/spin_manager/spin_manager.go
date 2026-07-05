@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-20 23:46:24
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2026-07-01 16:55:11
+ * @LastEditTime: 2026-07-04 23:29:09
  * @FilePath: /examples/demo_cluster/nodes/game/server/ slots/component/spin_manager.go
  * @Description: 这是进入spin，前，后的数据获取和处理。 （玩家赔率的控制，产生的数据，处理，管理关卡的数据转换提供给关卡逻辑）
  */
@@ -14,6 +14,7 @@ import (
 	configCacheSlots "github.com/cherry-game/examples/demo_cluster/internal/config_cache/slots"
 	logicGameModel "github.com/cherry-game/examples/demo_cluster/internal/model/logic_model"
 	"github.com/cherry-game/examples/demo_cluster/internal/pb"
+	"github.com/cherry-game/examples/demo_cluster/nodes/game/db/dynamodb"
 	slotsModel "github.com/cherry-game/examples/demo_cluster/nodes/game/model"
 )
 
@@ -21,7 +22,7 @@ import (
 type SpinManager struct{}
 
 // 为spin做准备
-func ReadySPin(ctx context.Context, roomId, ruleId int32, isInit bool, bet int, roomCongfig configCacheSlots.IRoomListConfig, roomDataInfo *slotsModel.RoomDataInfo, roomDataManager *RoomDataManager) (*pb.SpinResult, error) {
+func ReadySPin(ctx context.Context, roomId, ruleId int32, isInit bool, bet int, roomCongfig configCacheSlots.IRoomListConfig, roomDataInfo *slotsModel.RoomDataInfo, roomDataManager *dynamodb.RoomDataManager) (*pb.SpinResult, error) {
 	collectAddMoney, reelJsonObj, redBlackFluctuationVal, err := SpinBefore(ruleId)
 	if err != nil {
 		return nil, err
@@ -39,7 +40,8 @@ func ReadySPin(ctx context.Context, roomId, ruleId int32, isInit bool, bet int, 
 	// 这里需要需要做数据存储
 	SpinAfter(ctx, roomDataInfo)
 	roomDataInfo.MarkDirty()
-	roomDataManager.SaveRoomDataInfo(ctx, roomDataInfo)
+	roomDataInfo.SpinNum++
+	roomDataManager.SaveData(ctx, roomDataInfo)
 	return SpinResult, nil
 }
 

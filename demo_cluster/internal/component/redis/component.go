@@ -11,6 +11,47 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// 1. 定义我们的前缀钩子结构体
+type RedisPrefixHook struct {
+	Prefix string
+}
+
+// 2. 必须实现这两个方法（来自 go-redis.Hook 接口）
+func (h *RedisPrefixHook) DialHook(next redis.DialHook) redis.DialHook { return next }
+
+func (h *RedisPrefixHook) ProcessHook(next redis.ProcessHook) redis.ProcessHook {
+	return func(ctx context.Context, cmd redis.Cmder) error {
+		// 在命令发送给 Redis 之前，拦截并修改 Key
+		args := cmd.Args()
+
+		// Redis 命令通常格式为: [SET, key, value] 或 [GET, key]
+		// 第 0 位是命令本身(SET)，第 1 位就是 Key
+		if len(args) > 1 {
+			if keyStr, ok := args[1].(string); ok {
+				// 关键点：把原来的 key 改成 "前缀 + 原key"
+				args[1] = h.Prefix + keyStr
+			}
+		}
+
+		return next(ctx, cmd) // 继续执行原来的 Redis 操作
+	}
+}
+
+// 3. 管道命令(Pipeline)也需要处理
+func (h *RedisPrefixHook) ProcessPipelineHook(next redis.ProcessPipelineHook) redis.ProcessPipelineHook {
+	return func(ctx context.Context, cmds []redis.Cmder) error {
+		for _, cmd := range cmds {
+			args := cmd.Args()
+			if len(args) > 1 {
+				if keyStr, ok := args[1].(string); ok {
+					args[1] = h.Prefix + keyStr
+				}
+			}
+		}
+		return next(ctx, cmds)
+	}
+}
+
 type RedisConfig struct {
 	PrefixKey    string         `json:"prefix_key"`
 	SubscribeKey string         `json:"subscribe_key"`
@@ -107,7 +148,8 @@ func (r *RedisCompent) Init() {
 				MinIdleConns: 10,
 			})
 		}
-
+		// 使用钩子函数加前缀
+		r.redisClient.AddHook(&RedisPrefixHook{Prefix: cfg.PrefixKey})
 		// 商业级必备：初始化后立即进行 Ping 健康检查，确保配置和网络切实可用
 		if err := r.redisClient.Ping(ctx).Err(); err != nil {
 			_ = r.redisClient.Close() // 失败时清理已创建的连接池

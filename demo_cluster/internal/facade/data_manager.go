@@ -1,7 +1,8 @@
 package facade
 
+import "context"
+
 type DataManager[T any] interface {
-	SaveData(tableName, key string, value T) error
-	LoadData(tableName, key string) (T, error)
-	GetKey(item ...string) string
+	GetData(ctx context.Context, factory func() T, key ...string) (T, bool)
+	SaveData(ctx context.Context, data T, key ...string) error
 }

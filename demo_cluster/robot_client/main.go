@@ -25,22 +25,22 @@ import (
 
 // ==================== 配置变量 ====================
 var (
-	maxRobotNum           = 10000                      // 最大机器人数
-	batchSize             = 1500                       // 每批启动数量
-	batchInterval         = 10 * time.Millisecond      // 批次间隔
-	errorThreshold        = 0.1                        // 错误率阈值 (10%)
-	printInterval         = 5 * time.Second            // 状态打印间隔
-	holdDuration          = 60 * time.Second           // 保持连接时间
-	spinInterval          = 500 * time.Millisecond     // Spin 请求间隔
-	url                   = "http://10.10.10.251:8081" // web node
-	pid                   = "2126001"                  // sdk包id
+	maxRobotNum           = 10000                   // 最大机器人数
+	batchSize             = 100                     // 每批启动数量
+	batchInterval         = 10 * time.Millisecond   // 批次间隔
+	errorThreshold        = 0.1                     // 错误率阈值 (10%)
+	printInterval         = 5 * time.Second         // 状态打印间隔
+	holdDuration          = 60 * time.Second        // 保持连接时间
+	spinInterval          = 500 * time.Millisecond  // Spin 请求间隔
+	url                   = "http://127.0.0.1:8081" // web node
+	pid                   = "2126001"               // sdk包id
 	printLog              = false
 	useServerList         = true  // 是否使用 serverList 接口获取地址
 	defaultAreaId   int32 = 1     // 默认区ID
 	defaultServerId int32 = 10001 // 默认服ID（0表示自动选择）
 	useWebSocket          = true  // 使用 WebSocket 连接（serverList返回的是ws地址）
 	// 备用配置（当 useServerList=false 时使用）
-	fallbackAddr = "10.10.10.251:10010" // 备用网关地址（TCP）
+	fallbackAddr = "127.0.0.1:10010" // 备用网关地址（TCP）
 )
 
 // 服务器节点 pprof 地址
@@ -190,8 +190,10 @@ func (m *APIMetrics) GetStats() (count, totalLatency, maxLatency, errors int64) 
 var (
 	apiMetrics   map[string]*APIMetrics
 	apiMetricsMu sync.RWMutex
-	apiOrder     = []string{"GetToken", "ConnectTCP", "ConnectWS", "UserLogin", "PlayerSelect",
-		"ActorCreate", "ActorEnter", "ActorEnterMachine", "ActorMachine", "ActorSpin"}
+	apiOrder     = []string{
+		"GetToken", "ConnectTCP", "ConnectWS", "UserLogin", "PlayerSelect",
+		"ActorCreate", "ActorEnter", "ActorEnterMachine", "ActorMachine", "ActorSpin",
+	}
 )
 
 func initAPIMetrics() {
@@ -283,7 +285,7 @@ func recordAPIMetrics(apiName string, startTime time.Time, isError bool) {
 // initLogger 初始化日志，同时输出到控制台和文件
 func initLogger() {
 	// 创建 logs 目录
-	if err := os.MkdirAll("logs", 0755); err != nil {
+	if err := os.MkdirAll("logs", 0o755); err != nil {
 		fmt.Printf("Failed to create logs directory: %v\n", err)
 		return
 	}
@@ -621,6 +623,42 @@ func RunRobotWithMetrics(url, pid, userName, password string, printLog bool) *ro
 			name string
 			fn   func() error
 		}{"ActorMachine", func() error { return cli.ActorMachine() }},
+		struct {
+			name string
+			fn   func() error
+		}{"ActorSpin", func() error { return cli.ActorSpin() }},
+		struct {
+			name string
+			fn   func() error
+		}{"ActorSpin", func() error { return cli.ActorSpin() }},
+		struct {
+			name string
+			fn   func() error
+		}{"ActorSpin", func() error { return cli.ActorSpin() }},
+		struct {
+			name string
+			fn   func() error
+		}{"ActorSpin", func() error { return cli.ActorSpin() }},
+		struct {
+			name string
+			fn   func() error
+		}{"ActorSpin", func() error { return cli.ActorSpin() }},
+		struct {
+			name string
+			fn   func() error
+		}{"ActorSpin", func() error { return cli.ActorSpin() }},
+		struct {
+			name string
+			fn   func() error
+		}{"ActorSpin", func() error { return cli.ActorSpin() }},
+		struct {
+			name string
+			fn   func() error
+		}{"ActorSpin", func() error { return cli.ActorSpin() }},
+		struct {
+			name string
+			fn   func() error
+		}{"ActorSpin", func() error { return cli.ActorSpin() }},
 		struct {
 			name string
 			fn   func() error

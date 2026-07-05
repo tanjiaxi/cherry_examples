@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-20 22:24:38
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2026-07-01 14:46:56
+ * @LastEditTime: 2026-07-04 21:08:21
  * @FilePath: /examples/demo_cluster/nodes/game/module/slots/room/level_room.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -23,6 +23,7 @@ import (
 	configCacheSlots "github.com/cherry-game/examples/demo_cluster/internal/config_cache/slots"
 	"github.com/cherry-game/examples/demo_cluster/internal/pb"
 	rpcGame "github.com/cherry-game/examples/demo_cluster/internal/rpc/game"
+	"github.com/cherry-game/examples/demo_cluster/nodes/game/db/dynamodb"
 	spinEngine "github.com/cherry-game/examples/demo_cluster/nodes/game/server/slots/spin_engine/machine"
 	spinManager "github.com/cherry-game/examples/demo_cluster/nodes/game/server/slots/spin_manager"
 )
@@ -34,7 +35,7 @@ type (
 		pomelo.ActorBase
 		curRoomId int32
 
-		roomDataManager *spinManager.RoomDataManager
+		roomDataManager *dynamodb.RoomDataManager
 		levelMutex      *sync.RWMutex
 		// 同步控制
 		syncTimer *time.Timer
@@ -45,7 +46,7 @@ type (
 func NewActorRoom(app cfacade.IApplication) *ActorRoom {
 	a := &ActorRoom{}
 	a.levelMutex = &sync.RWMutex{}
-	a.roomDataManager = spinManager.NewSessoinManager(app)
+	a.roomDataManager = dynamodb.NewRoomDataManager(app)
 	return a
 }
 
@@ -118,8 +119,8 @@ func (r *ActorRoom) machineinfo(ctx context.Context, session *cproto.Session, re
 	}
 
 	// 3. 获取或初始化房间数据
-	roomDataInfo, err := r.roomDataManager.GetData(int32(userInfo.UserId), roomId)
-	if err != nil {
+	roomDataInfo := r.roomDataManager.GetData(ctx, userInfo.UserId, roomId)
+	if roomDataInfo == nil {
 		hasError = true
 		response := &pb.ErrorResponse{
 			Code:    code.NoRoomPlayerData,
@@ -207,8 +208,8 @@ func (r *ActorRoom) spin(ctx context.Context, session *cproto.Session, req *pb.S
 		return
 	}
 	// start := time.Now()
-	roomDataInfo, err := r.roomDataManager.GetLevelSessionDataByRoomId(int32(userInfo.UserId), roomId)
-	if err != nil {
+	roomDataInfo := r.roomDataManager.GetData(ctx, userInfo.UserId, roomId)
+	if roomDataInfo == nil {
 		hasError = true
 		response := &pb.ErrorResponse{
 			Code:    code.NoRoomPlayerData,
@@ -222,15 +223,15 @@ func (r *ActorRoom) spin(ctx context.Context, session *cproto.Session, req *pb.S
 	// cost := time.Since(start)
 
 	// clog.Infof("执行耗时: %v", cost)
-	if err != nil {
-		hasError = true
-		response := &pb.ErrorResponse{
-			Code:    code.UpdateRoomPlayerDataFial,
-			Message: "no room data info",
-		}
-		r.Response(session, response)
-		return
-	}
+	// if err != nil {
+	// 	hasError = true
+	// 	response := &pb.ErrorResponse{
+	// 		Code:    code.UpdateRoomPlayerDataFial,
+	// 		Message: "no room data info",
+	// 	}
+	// 	r.Response(session, response)
+	// 	return
+	// }
 	// 1. 验证房间配置
 	n2CfgRoomlist, error := configCacheSlots.GetInstance().GetRoomConfig(roomId)
 	if error != nil || n2CfgRoomlist == nil {
@@ -252,7 +253,6 @@ func (r *ActorRoom) spin(ctx context.Context, session *cproto.Session, req *pb.S
 		r.Response(session, response)
 		return
 	}
-	r.roomDataManager.UpdateLevelSessionData(roomDataInfo)
 	clog.Infof("spin: userId=%d, roomId=%d, version=%d ,feature=%v",
 		userInfo.UserId, roomId, roomDataInfo.Version, roomDataInfo)
 	SpinResponse := &pb.SpinResponse{
