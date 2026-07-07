@@ -114,42 +114,42 @@
   },
   "logger": {
     "master_log": {
-      "level": "warn",
+      "level": "info",
       "enable_console": false,
       "enable_write_file": true,
       "file_link_path": "logs/master.log",
       "file_path_format": "logs/master_%Y%m%d%H%M.log"
     },
     "web_log": {
-      "level": "warn",
+      "level": "info",
       "enable_console": false,
       "enable_write_file": true,
       "file_link_path": "logs/web.log",
       "file_path_format": "logs/web_%Y%m%d%H%M.log"
     },
     "center_log": {
-      "level": "warn",
+      "level": "info",
       "enable_console": false,
       "enable_write_file": true,
       "file_link_path": "logs/center.log",
       "file_path_format": "logs/center_%Y%m%d%H%M.log"
     },
     "gate_log": {
-      "level": "warn",
+      "level": "info",
       "enable_console": false,
       "enable_write_file": true,
       "file_link_path": "logs/gate.log",
       "file_path_format": "logs/gate_%Y%m%d%H%M.log"
     },
     "game_log": {
-      "level": "warn",
+      "level": "info",
       "enable_console": false,
       "enable_write_file": true,
       "file_link_path": "logs/game.log",
       "file_path_format": "logs/game_%Y%m%d%H%M.log"
     },
     "cross_log": {
-      "level": "warn",
+      "level": "info",
       "enable_console": false,
       "enable_write_file": true,
       "file_link_path": "logs/cross.log",

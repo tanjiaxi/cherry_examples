@@ -76,7 +76,7 @@ func setupGCLog(nodeType, nodeId string) {
 
 	// 创建 logs 目录
 	logsDir := "logs"
-	if err := os.MkdirAll(logsDir, 0755); err != nil {
+	if err := os.MkdirAll(logsDir, 0o755); err != nil {
 		log.Printf("Failed to create logs directory: %v", err)
 		return
 	}
@@ -87,7 +87,7 @@ func setupGCLog(nodeType, nodeId string) {
 	logFilePath := filepath.Join(logsDir, logFileName)
 
 	// 打开日志文件
-	gcLogFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	gcLogFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 	if err != nil {
 		log.Printf("Failed to open GC log file: %v", err)
 		return
@@ -102,6 +102,7 @@ func setupGCLog(nodeType, nodeId string) {
 
 	fmt.Printf("GC log enabled: %s (GODEBUG=%s)\n", logFilePath, godebug)
 }
+
 func versionCommand() *cli.Command {
 	return &cli.Command{
 		Name:      "version",
@@ -124,7 +125,7 @@ func masterCommand() *cli.Command {
 		Action: func(c *cli.Context) error {
 			path, node := getParameters(c)
 			setupGCLog("master", node)
-			// startPprofServer("master")
+			startPprofServer("master")
 			master.Run(path, node)
 			return nil
 		},
@@ -156,7 +157,7 @@ func webCommand() *cli.Command {
 		Action: func(c *cli.Context) error {
 			path, node := getParameters(c)
 			setupGCLog("web", node)
-			// startPprofServer("web")
+			startPprofServer("web")
 			web.Run(path, node)
 			return nil
 		},
@@ -172,7 +173,7 @@ func gateCommand() *cli.Command {
 		Action: func(c *cli.Context) error {
 			path, node := getParameters(c)
 			setupGCLog("gate", node)
-			// startPprofServer("gate")
+			startPprofServer("gate")
 			gate.Run(path, node)
 			return nil
 		},
@@ -188,7 +189,7 @@ func gameCommand() *cli.Command {
 		Action: func(c *cli.Context) error {
 			path, node := getParameters(c)
 			setupGCLog("game", node)
-			// startPprofServer("game")
+			startPprofServer("game")
 			game.Run(path, node)
 			return nil
 		},

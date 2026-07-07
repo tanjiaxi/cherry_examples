@@ -2,13 +2,17 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-25 15:57:48
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2026-03-10 17:58:32
+ * @LastEditTime: 2026-07-07 10:14:29
  * @FilePath: /examples/demo_cluster/nodes/web/web.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
 package web
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/cherry-game/cherry"
 	cherryFile "github.com/cherry-game/cherry/extend/file"
 	cherryCron "github.com/cherry-game/components/cron"
@@ -67,17 +71,27 @@ func httpServerComponent(addr string) *cherryGin.Component {
 	// http server使用gin组件搭建，这里增加一个RecoveryWithZap中间件
 	httpServer.Use(cherryGin.RecoveryWithZap(true))
 
-	// 映射h5客户端静态文件到static目录，例如：http://127.0.0.1/static/protocol.js
-	httpServer.Static("/static", "./static/")
+	// ✅ 获取可执行文件所在目录
+	execPath, err := os.Executable()
+	if err != nil {
+		panic(fmt.Sprintf("failed to get executable path: %v", err))
+	}
+	execDir := filepath.Dir(execPath)
+
+	// ✅ 构建绝对路径
+	staticDir := filepath.Join(execDir, "web/static")
+	viewDir := filepath.Join(execDir, "web/view")
+	// 映射h5客户端静态文件到static目录，例如：http://10.10.10.251/static/protocol.js
+	httpServer.Static("/static", staticDir)
 
 	// 加载./view目录的html模板文件(详情查看gin文档)
-	viewFiles := cherryFile.WalkFiles("./view/", ".html")
+	viewFiles := cherryFile.WalkFiles(viewDir, ".html")
 	if len(viewFiles) < 1 {
 		panic("view files not found.")
 	}
 	httpServer.LoadHTMLFiles(viewFiles...)
 
-	//注册 controller
+	// 注册 controller
 	httpServer.Register(new(controller.Controller))
 
 	return httpServer

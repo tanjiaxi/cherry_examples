@@ -25,30 +25,30 @@ import (
 
 // ==================== 配置变量 ====================
 var (
-	maxRobotNum           = 10000                   // 最大机器人数
-	batchSize             = 100                     // 每批启动数量
-	batchInterval         = 10 * time.Millisecond   // 批次间隔
-	errorThreshold        = 0.1                     // 错误率阈值 (10%)
-	printInterval         = 5 * time.Second         // 状态打印间隔
-	holdDuration          = 60 * time.Second        // 保持连接时间
-	spinInterval          = 500 * time.Millisecond  // Spin 请求间隔
-	url                   = "http://127.0.0.1:8081" // web node
-	pid                   = "2126001"               // sdk包id
+	maxRobotNum           = 5000                       // 最大机器人数
+	batchSize             = 250                        // 每批启动数量
+	batchInterval         = 10 * time.Millisecond      // 批次间隔
+	errorThreshold        = 0.1                        // 错误率阈值 (10%)
+	printInterval         = 5 * time.Second            // 状态打印间隔
+	holdDuration          = 60 * time.Second           // 保持连接时间
+	spinInterval          = 500 * time.Millisecond     // Spin 请求间隔
+	url                   = "http://10.10.10.251:8081" // web node
+	pid                   = "2126001"                  // sdk包id
 	printLog              = false
 	useServerList         = true  // 是否使用 serverList 接口获取地址
 	defaultAreaId   int32 = 1     // 默认区ID
 	defaultServerId int32 = 10001 // 默认服ID（0表示自动选择）
 	useWebSocket          = true  // 使用 WebSocket 连接（serverList返回的是ws地址）
 	// 备用配置（当 useServerList=false 时使用）
-	fallbackAddr = "127.0.0.1:10010" // 备用网关地址（TCP）
+	fallbackAddr = "10.10.10.251:10010" // 备用网关地址（TCP）
 )
 
 // 服务器节点 pprof 地址
 var serverPprofAddrs = map[string]string{
-	"game":   "http://127.0.0.1:6060",
-	"gate":   "http://127.0.0.1:6061",
-	"web":    "http://127.0.0.1:6062",
-	"center": "http://127.0.0.1:6063",
+	"game":   "http://10.10.10.251:6060",
+	"gate":   "http://10.10.10.251:6061",
+	"web":    "http://10.10.10.251:6062",
+	"center": "http://10.10.10.251:6063",
 }
 
 // ==================== 指标计数器 ====================

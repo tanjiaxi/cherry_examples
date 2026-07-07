@@ -23,6 +23,10 @@ const (
 )
 
 var count int32
+var (
+	globalBigCache *bigcache.BigCache
+	once           sync.Once
+)
 
 // DirtyEntry 通用脏数据包装器
 type DirtyEntry struct {
@@ -42,15 +46,45 @@ type DataRepository[T any] struct {
 	wg        sync.WaitGroup
 }
 
+// 初始化全局 BigCache (应用启动时调用一次),不能一个玩家new 一个,内存会爆炸
+func InitGlobalBigCache() error {
+	var err error
+	config := bigcache.Config{
+		// 1. 分片数，必须是 2 的幂（推荐 1024 或 256），分片越多并发锁竞争越小
+		Shards: 1024,
+
+		// 2. 缓存数据的生命周期（例如 30 分钟不访问就过期）
+		LifeWindow: 30 * time.Minute,
+
+		// 3. 开启定时清理协程的间隔（例如每 1 分钟去清理一次过期数据）
+		CleanWindow: 1 * time.Minute,
+
+		// 4. 初始化预估：预计在这 30 分钟内，全服最多有多少条数据
+		MaxEntriesInWindow: 1 * 10000, // 假设 1 万条
+
+		// 5. 单条数据的预估大小（单位：字节 Bytes）
+		MaxEntrySize: 1500, // 1000 字节
+
+		// 6. 🔥 最核心的防 OOM 安全线（单位：MB）
+		// 限制整个缓存不管怎么扩容，最多只能吃 2GB (2048MB) 内存。到达后会自动踢掉最老的数据
+		HardMaxCacheSize: 2048,
+	}
+	once.Do(func() {
+		globalBigCache, err = bigcache.New(context.Background(), config)
+	})
+	return err
+}
+
 func NewDataRepository[T any](tableName string, redisComp *cherryRedis.RedisCompent, bcConfig bigcache.Config) (*DataRepository[T], error) {
-	bc, err := bigcache.New(context.Background(), bcConfig)
-	if err != nil {
-		return nil, err
+	InitGlobalBigCache()
+	// 确保全局 BigCache 已初始化
+	if globalBigCache == nil {
+		return nil, fmt.Errorf("global BigCache not initialized, call InitGlobalBigCache first")
 	}
 	repo := &DataRepository[T]{
 		tableName: tableName,
 		activeMap: make(map[string]T),
-		bigCache:  bc,
+		bigCache:  globalBigCache,
 		redisComp: redisComp,
 		dirtyChan: make(chan DirtyEntry, 1000), // 脏队列缓冲区
 	}
