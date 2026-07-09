@@ -1,6 +1,7 @@
 package rpcCenter
 
 import (
+	"fmt"
 	"time"
 
 	cfacade "github.com/cherry-game/cherry/facade"
@@ -75,14 +76,16 @@ func GetDevAccount(app cfacade.IApplication, accountName, password string) strin
 		AccountName: accountName,
 		Password:    password,
 	}
-
+	startTime := time.Now()
 	targetPath := GetTargetPath(app, accountActor)
 	rsp := &pb.String{}
-	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, getDevAccount, "", req, rsp)
+	traceId := fmt.Sprint(accountName, password)
+	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, getDevAccount, traceId, req, rsp)
 	if code.IsFail(errCode) {
 		clog.Warnf("[GetDevAccount] accountName = %s, errCode = %v", accountName, errCode)
 		return ""
 	}
+	clog.Infof("getDevAccount代码执行耗时: %s, traceId: %s, result: %s", time.Since(startTime), traceId, rsp.Value)
 
 	return rsp.Value
 }
@@ -122,6 +125,7 @@ func GetUID(app cfacade.IApplication, sdkId, pid int32, openId, traceId string) 
 
 	return rsp.Value, code.OK
 }
+
 func GetCenterNodeID(app cfacade.IApplication) string {
 	list := app.Discovery().ListByType(centerType)
 	if len(list) > 0 {

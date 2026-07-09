@@ -86,7 +86,7 @@ func NewDataRepository[T any](tableName string, redisComp *cherryRedis.RedisComp
 		activeMap: make(map[string]T),
 		bigCache:  globalBigCache,
 		redisComp: redisComp,
-		dirtyChan: make(chan DirtyEntry, 1000), // 脏队列缓冲区
+		dirtyChan: make(chan DirtyEntry, 5), // 脏队列缓冲区
 	}
 	// 这里只能使用1个go,不然数据会错乱
 	for i := 0; i < 1; i++ {

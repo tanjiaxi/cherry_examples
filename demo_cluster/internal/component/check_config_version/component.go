@@ -36,11 +36,12 @@ func New(keyPrefix string, configDataCenter config_cache.IConfigCenter) *CheckCo
 	}
 	return c
 }
+
 func (c *CheckConfigETCD) Name() string {
 	return "etcd"
 }
-func (c *CheckConfigETCD) register() {
 
+func (c *CheckConfigETCD) register() {
 	jsonString := "100"
 	registerKeyFormat := c.keyPrefix + "%s"
 	key := fmt.Sprintf(registerKeyFormat, c.App().NodeID())
@@ -50,6 +51,7 @@ func (c *CheckConfigETCD) register() {
 		return
 	}
 }
+
 func (c *CheckConfigETCD) Init() {
 	c.ttl = 10
 
@@ -121,7 +123,7 @@ func (c *CheckConfigETCD) cliInit() {
 
 func (c *CheckConfigETCD) getLeaseID() {
 	var err error
-	//设置租约时间
+	// 设置租约时间
 	resp, err := c.cli.Grant(context.Background(), c.ttl)
 	if err != nil {
 		clog.Fatal(err)
@@ -130,7 +132,7 @@ func (c *CheckConfigETCD) getLeaseID() {
 
 	c.leaseID = resp.ID
 
-	//设置续租 定期发送需求请求
+	// 设置续租 定期发送需求请求
 	keepaliveChan, err := c.cli.KeepAlive(context.Background(), resp.ID)
 	if err != nil {
 		clog.Fatal(err)
@@ -140,8 +142,14 @@ func (c *CheckConfigETCD) getLeaseID() {
 	go func() {
 		for {
 			select {
-			case <-keepaliveChan:
-				{
+			// 💡 修复核心：必须接收第二个布尔值 ok，用来判断通道是否已经关闭
+			case _, ok := <-keepaliveChan:
+				if !ok {
+					clog.Error("etcd keepalive channel 被关闭，可能连接已断开，停止续租监听！")
+					// 这里可以根据业务选择：
+					// 1. 直接 return 退出协程
+					// 2. 或者是触发重新获取租约的逻辑 c.getLeaseID()
+					return
 				}
 			case die := <-c.App().DieChan():
 				{

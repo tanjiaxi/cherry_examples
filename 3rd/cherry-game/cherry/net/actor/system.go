@@ -1,11 +1,13 @@
 package cherryActor
 
 import (
+	"context"
 	"strings"
 	"sync"
 	"time"
 
 	ccode "github.com/cherry-game/cherry/code"
+	ccontext "github.com/cherry-game/cherry/extend/context"
 	cutils "github.com/cherry-game/cherry/extend/utils"
 	cfacade "github.com/cherry-game/cherry/facade"
 	clog "github.com/cherry-game/cherry/logger"
@@ -238,7 +240,10 @@ func (p *System) CallWait(source, target, funcName, traceId string, arg, reply a
 		)
 		return ccode.ActorFuncNameError
 	}
-
+	withCtx := ccontext.WithContext(context.Background(), &ccontext.CommonContext{
+		TraceId: traceId,
+	})
+	clog.InfoContext(withCtx, "CallWait")
 	// forward to remote actor
 	if targetPath.NodeID != "" && targetPath.NodeID != sourcePath.NodeID {
 		clusterPacket := cproto.BuildClusterPacket(source, target, funcName, traceId)
@@ -274,7 +279,7 @@ func (p *System) CallWait(source, target, funcName, traceId string, arg, reply a
 		message.TraceId = traceId
 
 		var result interface{}
-		//相同节点的相同actor
+		// 相同节点的相同actor
 		if sourcePath.ActorID == targetPath.ActorID {
 			if sourcePath.ChildID == targetPath.ChildID {
 				return ccode.ActorSourceEqualTarget
@@ -287,7 +292,7 @@ func (p *System) CallWait(source, target, funcName, traceId string, arg, reply a
 
 			childActor.PostRemote(&message)
 		} else {
-			//相同节点的不同actor
+			// 相同节点的不同actor
 			if !p.PostRemote(&message) {
 				clog.Warnf("[CallWait] Post remote fail. [source = %s, target = %s, funcName = %s]", source, target, funcName)
 				return ccode.ActorCallFail

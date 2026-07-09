@@ -9,6 +9,7 @@ import (
 
 	cerror "github.com/cherry-game/cherry/error"
 	clog "github.com/cherry-game/cherry/logger"
+	cproto "github.com/cherry-game/cherry/net/proto"
 	"github.com/nats-io/nats.go"
 )
 
@@ -139,7 +140,6 @@ func (p *Connect) initReplySubscribe() {
 			clog.Warnf("Waiter not found for reqID = %s", reqID) // ← 添加这行
 		}
 	})
-
 	if err != nil {
 		clog.Warnf(" err = %v", err)
 		return
@@ -181,13 +181,16 @@ func (p *Connect) RequestSync(subject string, data []byte, tod ...time.Duration)
 		close(ch)
 		return nil, err
 	}
-	clog.Info("NatsPublis id = %d, reqID = %s", p.id, reqID)
+	clog.Infof("NatsPublis id = %d, reqID = %s", p.id, reqID)
+	clusterPacket, err := cproto.UnmarshalPacket(data)
+	clog.Infof("NatsReq id = %d, reqID = %s, clusterPacket = %s", p.id, reqID, clusterPacket.String())
+	defer clusterPacket.Recycle()
 	select {
 	case resp, ok := <-ch:
 		if !ok || resp == nil {
 			return nil, cerror.ClusterRequestTimeout
 		}
-		clog.Info("NatsRec id = %d, reqID = %s", p.id, reqID)
+		clog.Infof("NatsRec id = %d, reqID = %s", p.id, reqID)
 		return resp.Data, nil
 	case <-time.After(timeout):
 		p.waiters.Delete(reqID)

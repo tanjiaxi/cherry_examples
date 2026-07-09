@@ -166,11 +166,9 @@ func (p *Robot) ConnectToWebSocket(addr string) error {
 	// start := time.Now()
 	err := p.Client.ConnectToWS(host, path)
 	// elapsed := time.Since(start)
-
 	// if elapsed > 50*time.Millisecond {
 	// 	cherryLogger.Warnf("[%s] ConnectToWS slow: %v (host=%s)", p.TagName, elapsed, host)
 	// }
-
 	if err != nil {
 		return cherryError.Errorf("connect to websocket fail: %v", err)
 	}
@@ -183,13 +181,19 @@ func (p *Robot) ConnectToWebSocket(addr string) error {
 // GetToken  http登录获取token对象
 func (p *Robot) GetToken(url string, pid, userName, password string) error {
 	requestURL := fmt.Sprintf("%s/login", url)
-	jsonBytes, _, err := cherryHttp.GET(requestURL, map[string]string{
+	traceId := fmt.Sprintf("%s%s", userName, password)
+	jsonBytes, _, err, traceInfo := cherryHttp.GlobalClientGetWithTrace(requestURL, map[string]string{
+		// jsonBytes, _, err := cherryHttp.GET(requestURL, map[string]string{
 		"pid":      pid,
 		"account":  userName,
 		"password": password,
 	})
-
 	if err != nil {
+		// 只在错误时打印详细trace
+		if traceInfo != nil {
+			cherryLogger.Errorf("[%s] GetToken FAILED - 详细追踪:", p.TagName)
+			traceInfo.Print(traceId)
+		}
 		return err
 	}
 
@@ -205,6 +209,14 @@ func (p *Robot) GetToken(url string, pid, userName, password string) error {
 	p.Token = rsp.Data.(string)
 	p.TagName = fmt.Sprintf("%s_%s", pid, userName)
 	p.StartTime = cherryTime.Now()
+	// 成功的情况下，可选：只在超过阈值时打印
+	if traceInfo != nil && !traceInfo.GetConnStart.IsZero() && !traceInfo.FirstByte.IsZero() {
+		totalTime := traceInfo.FirstByte.Sub(traceInfo.GetConnStart)
+		if totalTime > 1000*time.Millisecond { // 超过1秒才打印
+			cherryLogger.Warnf("[%s] GetToken SLOW (%v) - 详细追踪:", p.TagName, totalTime)
+			traceInfo.Print(traceId)
+		}
+	}
 
 	return nil
 }
@@ -220,7 +232,6 @@ func (p *Robot) UserLogin(serverId int32) error {
 		Token:    p.Token,
 		Params:   nil,
 	})
-
 	if err != nil {
 		return err
 	}

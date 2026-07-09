@@ -25,9 +25,9 @@ import (
 
 // ==================== 配置变量 ====================
 var (
-	maxRobotNum           = 5000                       // 最大机器人数
-	batchSize             = 250                        // 每批启动数量
-	batchInterval         = 10 * time.Millisecond      // 批次间隔
+	maxRobotNum           = 30000                      // 最大机器人数
+	batchSize             = 600                        // 每批启动数量
+	batchInterval         = 1 * time.Millisecond       // 批次间隔
 	errorThreshold        = 0.1                        // 错误率阈值 (10%)
 	printInterval         = 5 * time.Second            // 状态打印间隔
 	holdDuration          = 60 * time.Second           // 保持连接时间
@@ -57,6 +57,11 @@ var (
 	totalLatencyMs, maxLatencyMs, spinRequests, spinErrors int64
 	testStartTime                                          time.Time
 	stopSpawning, stopSpinning                             int32
+)
+
+var (
+	firstRequestTime int64 // 用Unix时间戳存储，替代time.Time结构体
+	lastRequestTime  int64
 )
 
 // 保存所有成功连接的 robot
@@ -120,16 +125,29 @@ func (m *APIMetrics) Record(latencyMs int64, isError bool) {
 	nowSec := time.Now().Unix()
 	idx := int(nowSec % 60)
 
-	// 如果跨秒了，清理旧数据
+	// FIX 1: 更安全的清理逻辑
 	if nowSec > m.startSecond {
-		// 清理从 startSecond+1 到 nowSec 之间的所有槽位
-		for sec := m.startSecond + 1; sec <= nowSec; sec++ {
-			clearIdx := int(sec % 60)
-			m.windowCounts[clearIdx] = 0
+		// 计算需要清理的秒数
+		skipSeconds := nowSec - m.startSecond
+
+		// 如果跨度超过60秒，清空所有
+		if skipSeconds >= 60 {
+			for i := range m.windowCounts {
+				m.windowCounts[i] = 0
+			}
+		} else {
+			// 只清理过期的槽位（不包括当前秒）
+			for i := int64(1); i <= skipSeconds; i++ {
+				clearSec := m.startSecond + i
+				clearIdx := int(clearSec % 60)
+				// 不要清理当前秒的槽位
+				if clearIdx != idx {
+					m.windowCounts[clearIdx] = 0
+				}
+			}
 		}
 		m.startSecond = nowSec
 	}
-
 	m.windowCounts[idx]++
 }
 
@@ -146,8 +164,10 @@ func (m *APIMetrics) GetRealtimeQPS() float64 {
 	for i := 1; i <= m.windowSize; i++ {
 		sec := nowSec - int64(i)
 		idx := int(sec % 60)
-		// 检查数据是否有效 (不超过 60 秒)
-		if nowSec-sec <= 60 {
+
+		// FIX: 正确检查数据是否有效
+		// 只统计在 startSecond 之后的数据
+		if sec > m.startSecond-60 && sec >= m.startSecond-int64(m.windowSize) {
 			total += m.windowCounts[idx]
 			validSeconds++
 		}
@@ -269,6 +289,13 @@ func getAllServerMetrics() []ServerNodeMetrics {
 }
 
 func recordAPIMetrics(apiName string, startTime time.Time, isError bool) {
+	// 记录时间时的逻辑
+	now := time.Now().UnixNano()
+	// 原子比较并交换，只保留最早的时间
+	atomic.CompareAndSwapInt64(&firstRequestTime, 0, now)
+	// 原子更新，只保留最晚的时间
+	atomic.StoreInt64(&lastRequestTime, now)
+
 	latencyMs := time.Since(startTime).Milliseconds()
 	// if latencyMs > 100 {
 	// 	clog.Warnf("[recordAPIMetrics] %s : timeout: %d ms", apiName, latencyMs)
@@ -572,7 +599,7 @@ func RunRobotWithMetrics(url, pid, userName, password string, printLog bool) *ro
 	// 	}
 	// }
 	// 获取Gate地址和ServerId
-	gateAddr, serverId := getGateAddrAndServerId()
+	// gateAddr, serverId := getGateAddrAndServerId()
 
 	// 构建步骤列表
 	var steps []struct {
@@ -586,84 +613,54 @@ func RunRobotWithMetrics(url, pid, userName, password string, printLog bool) *ro
 	}{"GetToken", func() error { return cli.GetToken(url, pid, userName, password) }})
 
 	// 根据配置选择连接方式
-	if useServerList && useWebSocket {
-		steps = append(steps, struct {
-			name string
-			fn   func() error
-		}{"ConnectWS", func() error { return cli.ConnectToWebSocket(gateAddr) }})
-	} else {
-		steps = append(steps, struct {
-			name string
-			fn   func() error
-		}{"ConnectTCP", func() error { return cli.ConnectToTCP(gateAddr) }})
-	}
+	// if useServerList && useWebSocket {
+	// 	steps = append(steps, struct {
+	// 		name string
+	// 		fn   func() error
+	// 	}{"ConnectWS", func() error { return cli.ConnectToWebSocket(gateAddr) }})
+	// } else {
+	// 	steps = append(steps, struct {
+	// 		name string
+	// 		fn   func() error
+	// 	}{"ConnectTCP", func() error { return cli.ConnectToTCP(gateAddr) }})
+	// }
 
-	steps = append(steps,
-		struct {
-			name string
-			fn   func() error
-		}{"UserLogin", func() error { return cli.UserLogin(serverId) }},
-		struct {
-			name string
-			fn   func() error
-		}{"PlayerSelect", func() error { return cli.PlayerSelect() }},
-		struct {
-			name string
-			fn   func() error
-		}{"ActorCreate", func() error { return cli.ActorCreate() }},
-		struct {
-			name string
-			fn   func() error
-		}{"ActorEnter", func() error { return cli.ActorEnter() }},
-		struct {
-			name string
-			fn   func() error
-		}{"ActorEnterMachine", func() error { return cli.ActorEnterEnterMachine() }},
-		struct {
-			name string
-			fn   func() error
-		}{"ActorMachine", func() error { return cli.ActorMachine() }},
-		struct {
-			name string
-			fn   func() error
-		}{"ActorSpin", func() error { return cli.ActorSpin() }},
-		struct {
-			name string
-			fn   func() error
-		}{"ActorSpin", func() error { return cli.ActorSpin() }},
-		struct {
-			name string
-			fn   func() error
-		}{"ActorSpin", func() error { return cli.ActorSpin() }},
-		struct {
-			name string
-			fn   func() error
-		}{"ActorSpin", func() error { return cli.ActorSpin() }},
-		struct {
-			name string
-			fn   func() error
-		}{"ActorSpin", func() error { return cli.ActorSpin() }},
-		struct {
-			name string
-			fn   func() error
-		}{"ActorSpin", func() error { return cli.ActorSpin() }},
-		struct {
-			name string
-			fn   func() error
-		}{"ActorSpin", func() error { return cli.ActorSpin() }},
-		struct {
-			name string
-			fn   func() error
-		}{"ActorSpin", func() error { return cli.ActorSpin() }},
-		struct {
-			name string
-			fn   func() error
-		}{"ActorSpin", func() error { return cli.ActorSpin() }},
-		struct {
-			name string
-			fn   func() error
-		}{"ActorSpin", func() error { return cli.ActorSpin() }},
-	)
+	// steps = append(steps,
+	// 	struct {
+	// 		name string
+	// 		fn   func() error
+	// 	}{"UserLogin", func() error { return cli.UserLogin(serverId) }},
+	// 	struct {
+	// 		name string
+	// 		fn   func() error
+	// 	}{"PlayerSelect", func() error { return cli.PlayerSelect() }},
+	// 	struct {
+	// 		name string
+	// 		fn   func() error
+	// 	}{"ActorCreate", func() error { return cli.ActorCreate() }},
+	// 	struct {
+	// 		name string
+	// 		fn   func() error
+	// 	}{"ActorEnter", func() error { return cli.ActorEnter() }},
+	// 	struct {
+	// 		name string
+	// 		fn   func() error
+	// 	}{"ActorEnterMachine", func() error { return cli.ActorEnterEnterMachine() }},
+	// 	struct {
+	// 		name string
+	// 		fn   func() error
+	// 	}{"ActorMachine", func() error { return cli.ActorMachine() }},
+	// 	struct {
+	// 		name string
+	// 		fn   func() error
+	// 	}{"ActorSpin", func() error { return cli.ActorSpin() }},
+	// )
+	// for i := 0; i < 50; i++ {
+	// 	steps = append(steps, struct {
+	// 		name string
+	// 		fn   func() error
+	// 	}{"ActorSpin", func() error { return cli.ActorSpin() }})
+	// }
 
 	for _, step := range steps {
 		apiStart := time.Now()
@@ -811,16 +808,21 @@ func PrintAPIMetrics() {
 		if cnt > 0 {
 			avg = tot / cnt
 		}
+
 		var errRate float64
 		if cnt > 0 {
 			errRate = float64(errs) / float64(cnt) * 100
 		}
 
 		// 计算总体平均 QPS
+		// 计算活跃时长时的逻辑
+		firstTime := atomic.LoadInt64(&firstRequestTime)
+		lastTime := atomic.LoadInt64(&lastRequestTime)
+		activeDuration := time.Duration(lastTime - firstTime).Seconds()
 		elapsed := time.Since(testStartTime).Seconds()
 		var avgQPS float64
 		if elapsed > 0 {
-			avgQPS = float64(cnt) / elapsed
+			avgQPS = float64(cnt) / activeDuration
 		}
 
 		// 获取实时 QPS (滑动窗口)
