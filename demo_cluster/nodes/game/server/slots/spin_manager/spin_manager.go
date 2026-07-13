@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-20 23:46:24
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2026-07-04 23:29:09
+ * @LastEditTime: 2026-07-13 20:10:18
  * @FilePath: /examples/demo_cluster/nodes/game/server/ slots/component/spin_manager.go
  * @Description: 这是进入spin，前，后的数据获取和处理。 （玩家赔率的控制，产生的数据，处理，管理关卡的数据转换提供给关卡逻辑）
  */
@@ -41,7 +41,6 @@ func ReadySPin(ctx context.Context, roomId, ruleId int32, isInit bool, bet int, 
 	SpinAfter(ctx, roomDataInfo)
 	roomDataInfo.MarkDirty()
 	roomDataInfo.SpinNum++
-	roomDataManager.SaveData(ctx, roomDataInfo)
 	return SpinResult, nil
 }
 

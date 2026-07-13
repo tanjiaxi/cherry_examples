@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-20 22:24:38
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2026-07-04 21:08:21
+ * @LastEditTime: 2026-07-13 20:08:27
  * @FilePath: /examples/demo_cluster/nodes/game/module/slots/room/level_room.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -10,6 +10,7 @@ package room
 
 import (
 	"context"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -59,6 +60,25 @@ func (r *ActorRoom) OnInit() {
 	r.Local().Register("spin", r.spin)                 // 关卡spin
 	r.Local().Register("bonus", r.bonus)               // 关卡bonus请求
 	r.Local().Register("collect", r.collect)           // 关卡collect 请求
+	r.Local().Register("dbQriteQueue", r.HandleSaveMsg)
+
+	// 初始化玩家定时落地，使用时间轮 (5 分钟定时间隔，并加入随机扰动错开波峰)
+	delay := time.Duration(rand.Intn(30)) * 2 * time.Second
+	r.Timer().Add(delay, r.onTimerSaveTrigger, true)
+}
+
+// 定时器触发落地
+func (r *ActorRoom) onTimerSaveTrigger() {
+	// 扔一条 Save 消息给玩家 Actor 自己，排队处理，防止与其它玩家 Actor 外部消息发生并发冲突
+	message := cfacade.GetMessage()
+	message.FuncName = "dbQriteQueue"
+	r.PostLocal(&message)
+}
+
+// 定时器触发落地
+func (r *ActorRoom) HandleSaveMsg() {
+	//
+	r.roomDataManager.SaveData(context.Background())
 }
 
 func (r *ActorRoom) sessionClose(ctx context.Context) {

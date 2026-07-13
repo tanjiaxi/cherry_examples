@@ -25,8 +25,8 @@ import (
 
 // ==================== 配置变量 ====================
 var (
-	maxRobotNum           = 30000                      // 最大机器人数
-	batchSize             = 600                        // 每批启动数量
+	maxRobotNum           = 1                          // 最大机器人数
+	batchSize             = 1                          // 每批启动数量
 	batchInterval         = 1 * time.Millisecond       // 批次间隔
 	errorThreshold        = 0.1                        // 错误率阈值 (10%)
 	printInterval         = 5 * time.Second            // 状态打印间隔
@@ -599,7 +599,7 @@ func RunRobotWithMetrics(url, pid, userName, password string, printLog bool) *ro
 	// 	}
 	// }
 	// 获取Gate地址和ServerId
-	// gateAddr, serverId := getGateAddrAndServerId()
+	gateAddr, serverId := getGateAddrAndServerId()
 
 	// 构建步骤列表
 	var steps []struct {
@@ -613,54 +613,54 @@ func RunRobotWithMetrics(url, pid, userName, password string, printLog bool) *ro
 	}{"GetToken", func() error { return cli.GetToken(url, pid, userName, password) }})
 
 	// 根据配置选择连接方式
-	// if useServerList && useWebSocket {
-	// 	steps = append(steps, struct {
-	// 		name string
-	// 		fn   func() error
-	// 	}{"ConnectWS", func() error { return cli.ConnectToWebSocket(gateAddr) }})
-	// } else {
-	// 	steps = append(steps, struct {
-	// 		name string
-	// 		fn   func() error
-	// 	}{"ConnectTCP", func() error { return cli.ConnectToTCP(gateAddr) }})
-	// }
+	if useServerList && useWebSocket {
+		steps = append(steps, struct {
+			name string
+			fn   func() error
+		}{"ConnectWS", func() error { return cli.ConnectToWebSocket(gateAddr) }})
+	} else {
+		steps = append(steps, struct {
+			name string
+			fn   func() error
+		}{"ConnectTCP", func() error { return cli.ConnectToTCP(gateAddr) }})
+	}
 
-	// steps = append(steps,
-	// 	struct {
-	// 		name string
-	// 		fn   func() error
-	// 	}{"UserLogin", func() error { return cli.UserLogin(serverId) }},
-	// 	struct {
-	// 		name string
-	// 		fn   func() error
-	// 	}{"PlayerSelect", func() error { return cli.PlayerSelect() }},
-	// 	struct {
-	// 		name string
-	// 		fn   func() error
-	// 	}{"ActorCreate", func() error { return cli.ActorCreate() }},
-	// 	struct {
-	// 		name string
-	// 		fn   func() error
-	// 	}{"ActorEnter", func() error { return cli.ActorEnter() }},
-	// 	struct {
-	// 		name string
-	// 		fn   func() error
-	// 	}{"ActorEnterMachine", func() error { return cli.ActorEnterEnterMachine() }},
-	// 	struct {
-	// 		name string
-	// 		fn   func() error
-	// 	}{"ActorMachine", func() error { return cli.ActorMachine() }},
-	// 	struct {
-	// 		name string
-	// 		fn   func() error
-	// 	}{"ActorSpin", func() error { return cli.ActorSpin() }},
-	// )
-	// for i := 0; i < 50; i++ {
-	// 	steps = append(steps, struct {
-	// 		name string
-	// 		fn   func() error
-	// 	}{"ActorSpin", func() error { return cli.ActorSpin() }})
-	// }
+	steps = append(steps,
+		struct {
+			name string
+			fn   func() error
+		}{"UserLogin", func() error { return cli.UserLogin(serverId) }},
+		struct {
+			name string
+			fn   func() error
+		}{"PlayerSelect", func() error { return cli.PlayerSelect() }},
+		struct {
+			name string
+			fn   func() error
+		}{"ActorCreate", func() error { return cli.ActorCreate() }},
+		struct {
+			name string
+			fn   func() error
+		}{"ActorEnter", func() error { return cli.ActorEnter() }},
+		struct {
+			name string
+			fn   func() error
+		}{"ActorEnterMachine", func() error { return cli.ActorEnterEnterMachine() }},
+		struct {
+			name string
+			fn   func() error
+		}{"ActorMachine", func() error { return cli.ActorMachine() }},
+		struct {
+			name string
+			fn   func() error
+		}{"ActorSpin", func() error { return cli.ActorSpin() }},
+	)
+	for i := 0; i < 50; i++ {
+		steps = append(steps, struct {
+			name string
+			fn   func() error
+		}{"ActorSpin", func() error { return cli.ActorSpin() }})
+	}
 
 	for _, step := range steps {
 		apiStart := time.Now()

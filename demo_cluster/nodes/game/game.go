@@ -2,13 +2,15 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-09-15 18:02:10
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2026-07-04 21:25:06
+ * @LastEditTime: 2026-07-13 19:32:35
  * @FilePath: /examples/demo_cluster/nodes/game/game.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
 package game
 
 import (
+	"time"
+
 	"github.com/cherry-game/cherry"
 	cherrySnowflake "github.com/cherry-game/cherry/extend/snowflake"
 	cstring "github.com/cherry-game/cherry/extend/string"
@@ -27,6 +29,7 @@ import (
 
 	cdiscovery "github.com/cherry-game/cherry/net/discovery"
 	cherryETCD "github.com/cherry-game/components/etcd"
+	dbqueue "github.com/cherry-game/examples/demo_cluster/internal/component/db_queue"
 	cherryGORM "github.com/cherry-game/examples/demo_cluster/internal/component/pg_gorm"
 	cherryRedis "github.com/cherry-game/examples/demo_cluster/internal/component/redis"
 	slotsLeveCore "github.com/cherry-game/examples/demo_cluster/nodes/game/server/slots/core"
@@ -76,6 +79,19 @@ func Run(profileFilePath, nodeID string) {
 	// 注册redis组件
 	app.Register(cherryRedis.NewRedisCompent())
 
+	// 2. 各个业务表的队列精细配置
+	configs := map[string]dbqueue.TableConfig{
+		"classic_slots_user_room": {
+			QueueCount:    4,               // 该表开 4 个后台分流队列，时序按 PlayerID Hashing
+			QueueSize:     2048,            // Channel 缓冲区
+			BulkSize:      100,             // 凑齐 100 条就批量保存
+			FlushInterval: 3 * time.Second, // 或者没凑够，到了 3 秒也保存一次
+		},
+	}
+	saver := dbqueue.NewRedisBackend(cherryRedis.NewRedisCompent())
+	// 3. 注册为 Cherry 全局组件
+	dbQueueComponent := dbqueue.NewDBWriteQueueComponent(configs, saver)
+	app.Register(dbQueueComponent)
 	app.AddActors(
 		&player.ActorPlayers{},
 		&slotsRoom.ActorRooms{},

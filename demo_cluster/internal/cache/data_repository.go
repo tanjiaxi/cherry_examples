@@ -38,10 +38,14 @@ type DataRepository[T any] struct {
 	status    int32 // 💡 原子状态：0运行，1准备关闭
 	tableName string
 	mu        sync.RWMutex
-	activeMap map[string]T
+	activeMap map[string]T // 玩家数据
+	// 脏数据机制和hash对比优化
+	lastHashes map[string]uint64 // 记录上一次保存的数据 Hash，防止重复同步相同数据
+	dityData   map[string][]byte // 脏数据暂存区，防 BigCache 淘汰导致数据丢失
+
 	bigCache  *bigcache.BigCache
 	redisComp *cherryRedis.RedisCompent // 缓存组件引用
-	dirtyChan chan DirtyEntry
+	dirtyChan chan DirtyEntry           // 队列里面只需要有需要更新的key
 	closeChan chan struct{}
 	wg        sync.WaitGroup
 }
