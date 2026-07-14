@@ -1,6 +1,7 @@
 package cherryActor
 
 import (
+	"context"
 	"time"
 
 	cherryTimeWheel "github.com/cherry-game/cherry/extend/time_wheel"
@@ -130,7 +131,7 @@ func (p *actorTimer) callUpdateTimer(id uint64, traceId string) func() {
 	}
 }
 
-func (p *actorTimer) _updateTimer_(id uint64) {
+func (p *actorTimer) _updateTimer_(ctx context.Context, id uint64) {
 	value, found := p.timerInfoMap[id]
 	if !found {
 		return

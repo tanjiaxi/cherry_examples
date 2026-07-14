@@ -25,15 +25,16 @@ import (
 
 // ==================== 配置变量 ====================
 var (
-	maxRobotNum           = 1                          // 最大机器人数
-	batchSize             = 1                          // 每批启动数量
-	batchInterval         = 1 * time.Millisecond       // 批次间隔
-	errorThreshold        = 0.1                        // 错误率阈值 (10%)
-	printInterval         = 5 * time.Second            // 状态打印间隔
-	holdDuration          = 60 * time.Second           // 保持连接时间
-	spinInterval          = 500 * time.Millisecond     // Spin 请求间隔
-	url                   = "http://10.10.10.251:8081" // web node
-	pid                   = "2126001"                  // sdk包id
+	maxRobotNum    = 8000                       // 最大机器人数
+	batchSize      = 800                        // 每批启动数量
+	batchInterval  = 1 * time.Millisecond       // 批次间隔
+	errorThreshold = 0.1                        // 错误率阈值 (10%)
+	printInterval  = 5 * time.Second            // 状态打印间隔
+	holdDuration   = 60 * time.Second           // 保持连接时间
+	spinInterval   = 500 * time.Millisecond     // Spin 请求间隔
+	url            = "http://10.10.10.251:8081" // web node
+
+	pid                   = "2126001" // sdk包id
 	printLog              = false
 	useServerList         = true  // 是否使用 serverList 接口获取地址
 	defaultAreaId   int32 = 1     // 默认区ID
@@ -655,7 +656,7 @@ func RunRobotWithMetrics(url, pid, userName, password string, printLog bool) *ro
 			fn   func() error
 		}{"ActorSpin", func() error { return cli.ActorSpin() }},
 	)
-	for i := 0; i < 50; i++ {
+	for i := 0; i < 100; i++ {
 		steps = append(steps, struct {
 			name string
 			fn   func() error

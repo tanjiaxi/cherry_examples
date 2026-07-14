@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-20 22:24:38
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2026-07-13 20:08:27
+ * @LastEditTime: 2026-07-14 17:53:05
  * @FilePath: /examples/demo_cluster/nodes/game/module/slots/room/level_room.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -10,7 +10,6 @@ package room
 
 import (
 	"context"
-	"math/rand"
 	"sync"
 	"time"
 
@@ -53,6 +52,7 @@ func NewActorRoom(app cfacade.IApplication) *ActorRoom {
 
 func (r *ActorRoom) OnInit() {
 	r.Remote().Register("sessionClose", r.sessionClose)
+	r.Remote().Register("dbQriteQueue", r.HandleSaveMsg)
 	clog.Debugf("[actorRoom] path = %s init!", r.PathString())
 	// 处理gate的节点actor消息
 	r.Local().Register("entermachine", r.enterMachine) // 进入关卡
@@ -60,31 +60,32 @@ func (r *ActorRoom) OnInit() {
 	r.Local().Register("spin", r.spin)                 // 关卡spin
 	r.Local().Register("bonus", r.bonus)               // 关卡bonus请求
 	r.Local().Register("collect", r.collect)           // 关卡collect 请求
-	r.Local().Register("dbQriteQueue", r.HandleSaveMsg)
 
 	// 初始化玩家定时落地，使用时间轮 (5 分钟定时间隔，并加入随机扰动错开波峰)
-	delay := time.Duration(rand.Intn(30)) * 2 * time.Second
-	r.Timer().Add(delay, r.onTimerSaveTrigger, true)
+	// delay := time.Duration(rand.Intn(20)) * time.Second
+	// r.Timer().Add(delay, r.onTimerSaveTrigger, true)
 }
 
 // 定时器触发落地
 func (r *ActorRoom) onTimerSaveTrigger() {
 	// 扔一条 Save 消息给玩家 Actor 自己，排队处理，防止与其它玩家 Actor 外部消息发生并发冲突
 	message := cfacade.GetMessage()
+	message.Target = r.PathString()
 	message.FuncName = "dbQriteQueue"
-	r.PostLocal(&message)
+	// targetPath := cfacade.NewChildPath(, "dbQriteQueue","")
+	// pomelo.LocalDataRoute(agent, session, route, msg, targetPath)
+	r.PostRemote(&message)
 }
 
 // 定时器触发落地
-func (r *ActorRoom) HandleSaveMsg() {
-	//
-	r.roomDataManager.SaveData(context.Background())
+func (r *ActorRoom) HandleSaveMsg(ctx context.Context) {
+	r.roomDataManager.SaveData(ctx)
 }
 
 func (r *ActorRoom) sessionClose(ctx context.Context) {
 	// online.UnBindPlayer(r.uid)
 	// r.isOnline = false
-	r.Exit()
+	// r.Exit()
 
 	clog.Debugf("[actorPlayer] exit! uis = %d", 10)
 }
@@ -229,6 +230,8 @@ func (r *ActorRoom) spin(ctx context.Context, session *cproto.Session, req *pb.S
 	}
 	// start := time.Now()
 	roomDataInfo := r.roomDataManager.GetData(ctx, userInfo.UserId, roomId)
+	roomDataInfo.SpinNum++
+	r.roomDataManager.SaveData(ctx)
 	if roomDataInfo == nil {
 		hasError = true
 		response := &pb.ErrorResponse{

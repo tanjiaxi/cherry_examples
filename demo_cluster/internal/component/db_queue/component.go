@@ -54,7 +54,7 @@ type DBWriteQueueComponent struct {
 	cfacade.Component
 	name       string
 	config     map[string]TableConfig // 表配置
-	saver      PersistenceBackend     // 具体的底层数据库保存实现
+	Saver      PersistenceBackend     // 具体的底层数据库保存实现
 	workers    map[string][]*worker   // 运行中的 workers: table -> []*worker
 	wg         sync.WaitGroup
 	ctx        context.Context
@@ -73,6 +73,7 @@ func NewDBWriteQueueComponent(config map[string]TableConfig, saver PersistenceBa
 		workers:    make(map[string][]*worker),
 		ctx:        ctx,
 		cancelFunc: cancel,
+		Saver:      saver,
 	}
 }
 
@@ -102,7 +103,8 @@ func (d *DBWriteQueueComponent) Init() {
 			d.wg.Add(1)
 			go func(w *worker) {
 				defer d.wg.Done()
-				w.run(d.ctx, d.saver)
+				clog.Infof("Init work")
+				w.run(d.ctx, d.Saver)
 			}(w)
 		}
 		clog.Infof("[%s] Init table [%s] with %d queues successfully", d.Name(), table, tCfg.QueueCount)
@@ -147,6 +149,8 @@ func (d *DBWriteQueueComponent) SubmitTask(task *DbWriteTask) bool {
 		clog.Errorf("[%s] SubmitTask failed: table [%s] queue not registered", d.Name(), task.Table)
 		return false
 	}
+	count++
+	clog.Debugf("flush dbqueue tasks, size = %d", count)
 	workerIndex := task.PlayerID % int32(len(d.workers[task.Table]))
 	select {
 	case d.workers[task.Table][workerIndex].queue <- task:
@@ -158,6 +162,8 @@ func (d *DBWriteQueueComponent) SubmitTask(task *DbWriteTask) bool {
 	}
 }
 
+var count = 0
+
 type worker struct {
 	queue         chan *DbWriteTask
 	table         string
@@ -166,7 +172,7 @@ type worker struct {
 	batchMap      map[string]*DbWriteTask // 消费端用来合并去重的内存 Map
 }
 
-func (w *worker) run(ctx context.Context, saver PersistenceBackend) {
+func (w *worker) run(ctx context.Context, Saver PersistenceBackend) {
 	timer := time.NewTimer(w.flushInterval)
 	defer timer.Stop()
 
@@ -174,30 +180,30 @@ func (w *worker) run(ctx context.Context, saver PersistenceBackend) {
 		select {
 		case task, ok := <-w.queue:
 			if !ok {
-				w.flush(ctx, saver)
+				w.flush(ctx, Saver)
 				clog.Infof("dbqueue channel closed")
 				return
 			}
 			key := w.getHashKey(w.table, strconv.FormatInt(int64(task.PlayerID), 10), task.ExtraKeyId)
 			w.batchMap[key] = task
-
+			clog.Infof("dbqueue worker batchMap len: %d", len(w.batchMap))
 			if len(w.batchMap) >= w.bulkSize {
-				w.flush(ctx, saver)
+				w.flush(ctx, Saver)
 			}
 		case <-ctx.Done():
 			// 强制刷入剩余数据
-			w.flush(ctx, saver)
+			w.flush(ctx, Saver)
 			clog.Infof("dbqueue worker stoped")
 			return
 		case <-timer.C:
 			// 定时刷入数据
-			w.flush(ctx, saver)
+			w.flush(ctx, Saver)
 			timer.Reset(w.flushInterval)
 		}
 	}
 }
 
-func (w *worker) flush(ctx context.Context, saver PersistenceBackend) {
+func (w *worker) flush(ctx context.Context, Saver PersistenceBackend) {
 	if len(w.batchMap) == 0 {
 		return
 	}
@@ -207,9 +213,10 @@ func (w *worker) flush(ctx context.Context, saver PersistenceBackend) {
 	}
 
 	if len(tasks) > 0 {
-		err := saver.BatchSave(ctx, tasks)
+		err := Saver.BatchSave(ctx, tasks)
 		if err != nil {
 			clog.Errorf("save batch failed. err = %v", err)
+			return // 发生错误时直接返回，不要清空 map，留到下次 flush 重试
 		}
 	}
 

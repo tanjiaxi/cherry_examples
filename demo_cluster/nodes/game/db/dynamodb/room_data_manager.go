@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-24 18:11:37
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2026-07-13 20:06:50
+ * @LastEditTime: 2026-07-14 14:18:07
  * @FilePath: /examples/demo_cluster/nodes/game/server/ slots/core/session_mgr.go
  * @Description: 管理房间的数据，获取数据库数据，落地数据到数据库
  */
@@ -17,7 +17,6 @@ import (
 	cfacade "github.com/cherry-game/cherry/facade"
 	dbQueue "github.com/cherry-game/examples/demo_cluster/internal/component/db_queue"
 	dbqueue "github.com/cherry-game/examples/demo_cluster/internal/component/db_queue"
-	cherryRedis "github.com/cherry-game/examples/demo_cluster/internal/component/redis"
 	slotsModel "github.com/cherry-game/examples/demo_cluster/nodes/game/model"
 )
 
@@ -26,17 +25,17 @@ var tableName = "classic_slots_user_room"
 type RoomDataManager struct {
 	// 后面可以换成任意的方式存储
 	// cacheEntity        ifacade.DataManager[*slotsModel.RoomDataInfo]
-	persistenceBackend dbQueue.PersistenceBackend
-	dbQueueComp        *dbQueue.DBWriteQueueComponent // 保存组件引用
-	roomDataInfo       *slotsModel.RoomDataInfo
+	// persistenceBackend dbQueue.PersistenceBackend
+	dbQueueComp  *dbQueue.DBWriteQueueComponent // 保存组件引用
+	roomDataInfo *slotsModel.RoomDataInfo
 }
 
 func NewRoomDataManager(app cfacade.IApplication) *RoomDataManager {
-	redisComp := app.Find(cherryRedis.Name).(*cherryRedis.RedisCompent)
+	// redisComp := app.Find(cherryRedis.Name).(*cherryRedis.RedisCompent)
 	// 初始化 BigCache 的配置
 	// bcConfig := bigcache.DefaultConfig(30 * time.Minute)
 	// cacheEntity, error := cache.NewDataRepository[*slotsModel.RoomDataInfo](tableName, redisComp, bcConfig)
-	redisBackend := dbQueue.NewRedisBackend(redisComp)
+	// redisBackend := dbQueue.NewRedisBackend(redisComp)
 	// if error != nil {
 	// 	clog.ErrorContext(context.Background(), "new cacheEntity error", zap.Any("error", error))
 	// }
@@ -48,8 +47,8 @@ func NewRoomDataManager(app cfacade.IApplication) *RoomDataManager {
 
 	return &RoomDataManager{
 		// cacheEntity: cacheEntity,
-		dbQueueComp:        dbQueueComp,
-		persistenceBackend: redisBackend,
+		dbQueueComp: dbQueueComp,
+		// persistenceBackend: redisBackend,
 	}
 }
 
@@ -64,17 +63,20 @@ func (s *RoomDataManager) GetData(ctx context.Context, userID, roomId int32) *sl
 	if s.roomDataInfo != nil {
 		return s.roomDataInfo
 	}
-	data, err := s.persistenceBackend.Load(ctx, tableName, strconv.FormatInt(int64(userID), 10), strconv.FormatInt(int64(roomId), 10))
-	var roomInfo *slotsModel.RoomDataInfo
+	data, err := s.dbQueueComp.Saver.Load(ctx, tableName, strconv.FormatInt(int64(userID), 10), strconv.FormatInt(int64(roomId), 10))
+	roomInfo := &slotsModel.RoomDataInfo{}
 	if err == nil {
 		err = json.Unmarshal(data, roomInfo)
+		if err != nil {
+			return nil
+		}
+		s.roomDataInfo = roomInfo
+		return roomInfo
+	} else {
+		roomInfo = s.NewPlayerRoomData(userID, roomId)
 		s.roomDataInfo = roomInfo
 		return roomInfo
 	}
-	if err != nil {
-		return s.NewPlayerRoomData(userID, roomId)
-	}
-	return nil
 	// roomInfo, isSuccess := s.cacheEntity.GetData(ctx, func() *slotsModel.RoomDataInfo {
 	// 	return s.NewPlayerRoomData(userID, roomId)
 	// }, strconv.FormatInt(int64(userID), 10), strconv.FormatInt(int64(roomId), 10))

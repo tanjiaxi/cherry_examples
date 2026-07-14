@@ -2,7 +2,6 @@ package dbqueue
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -41,12 +40,12 @@ func (r *RedisBackend) BatchSave(ctx context.Context, tasks []*DbWriteTask) erro
 			pipe.HDel(ctx, hashKey, FieldKey)
 		} else {
 			// 2. 序列化数据（Redis Hash 字段只能存储 String/Binary，这里使用标准的 JSON 序列化）
-			bytes, err := json.Marshal(task.Data)
-			if err != nil {
-				return fmt.Errorf("redis batch save json marshal failed,hashKey : %s, filedKey: %s, err: %w", hashKey, FieldKey, err)
-			}
+			// bytes, err := json.Marshal(task.Data)
+			// if err != nil {
+			// 	return fmt.Errorf("redis batch save json marshal failed,hashKey : %s, filedKey: %s, err: %w", hashKey, FieldKey, err)
+			// }
 			// 将修改/插入操作放入 HSET 管道
-			pipe.HSet(ctx, hashKey, FieldKey, bytes)
+			pipe.HSet(ctx, hashKey, FieldKey, task.Data)
 		}
 	}
 	// 3. 一次性提交并执行管道内的所有命令
