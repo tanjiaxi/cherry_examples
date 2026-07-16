@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-09-15 18:02:10
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2026-07-16 10:52:12
+ * @LastEditTime: 2026-07-16 11:50:16
  * @FilePath: /examples/demo_cluster/nodes/game/game.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -86,6 +86,7 @@ func Run(profileFilePath, nodeID string) {
 			QueueSize:     2048,             // Channel 缓冲区
 			BulkSize:      1200,             // 凑齐 100 条就批量保存
 			FlushInterval: 20 * time.Second, // 或者没凑够，到了 3 秒也保存一次
+			StopBulkSize:  2000,
 		},
 	}
 	// 注册db写入队列组件

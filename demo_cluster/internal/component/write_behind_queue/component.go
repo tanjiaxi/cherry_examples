@@ -35,18 +35,20 @@ type BatchSaver interface {
 	SaveBatch(table string, tasks []*DbWriteTask) error
 }
 type TableConfig struct {
-	QueueCount    int           // 该表开启的队列(Worker)数量
-	QueueSize     int           // 单个队列的 Channel 缓冲大小
+	QueueCount    int           // 该表开启的队列(Worker)数量,建议设为跟主机的物理 CPU 核心数相同,不过根据实际数据量
+	QueueSize     int           // 单个队列的 Channel 缓冲大小,根据表数据的大小
 	BulkSize      int           // 单次批量写入的最大条数（去重后）
-	FlushInterval time.Duration // 强制刷入数据库的时间间隔
+	FlushInterval time.Duration // 强制刷入数据库的时间间隔,根据数据重要性
+	StopBulkSize  int           // 停服的时候单次批量写入的最大条数（去重后）,为了快速同步
 }
 
 func DefaultTableConfig() *TableConfig {
 	return &TableConfig{
-		QueueCount:    1,
-		QueueSize:     1024,
-		BulkSize:      100,
-		FlushInterval: 2 * time.Second,
+		QueueCount:    2,
+		QueueSize:     10240,
+		BulkSize:      200,
+		FlushInterval: 10 * time.Second,
+		StopBulkSize:  2000,
 	}
 }
 
@@ -96,6 +98,7 @@ func (d *DBWriteQueueComponent) Init() {
 				queue:         make(chan *DbWriteTask, tCfg.QueueSize),
 				table:         table,
 				bulkSize:      tCfg.BulkSize,
+				stopBulkSize:  tCfg.StopBulkSize,
 				flushInterval: tCfg.FlushInterval,
 				batchMap:      make(map[string]*DbWriteTask),
 			}
@@ -121,6 +124,7 @@ func (d *DBWriteQueueComponent) OnStop() {
 	d.mu.RLock()
 	for _, workers := range d.workers {
 		for _, w := range workers {
+			w.bulkSize = w.stopBulkSize
 			close(w.queue) // 关闭通道，通知 worker 消费完剩余积压
 		}
 	}
@@ -163,6 +167,7 @@ type worker struct {
 	queue         chan *DbWriteTask
 	table         string
 	bulkSize      int
+	stopBulkSize  int
 	flushInterval time.Duration
 	batchMap      map[string]*DbWriteTask // 消费端用来合并去重的内存 Map
 }
