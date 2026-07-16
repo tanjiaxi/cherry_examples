@@ -25,8 +25,8 @@ import (
 
 // ==================== 配置变量 ====================
 var (
-	maxRobotNum    = 8000                       // 最大机器人数
-	batchSize      = 800                        // 每批启动数量
+	maxRobotNum    = 6000                       // 最大机器人数
+	batchSize      = 500                        // 每批启动数量
 	batchInterval  = 1 * time.Millisecond       // 批次间隔
 	errorThreshold = 0.1                        // 错误率阈值 (10%)
 	printInterval  = 5 * time.Second            // 状态打印间隔
@@ -656,12 +656,12 @@ func RunRobotWithMetrics(url, pid, userName, password string, printLog bool) *ro
 			fn   func() error
 		}{"ActorSpin", func() error { return cli.ActorSpin() }},
 	)
-	for i := 0; i < 100; i++ {
-		steps = append(steps, struct {
-			name string
-			fn   func() error
-		}{"ActorSpin", func() error { return cli.ActorSpin() }})
-	}
+	// for i := 0; i < 100; i++ {
+	// 	steps = append(steps, struct {
+	// 		name string
+	// 		fn   func() error
+	// 	}{"ActorSpin", func() error { return cli.ActorSpin() }})
+	// }
 
 	for _, step := range steps {
 		apiStart := time.Now()

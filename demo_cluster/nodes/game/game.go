@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-09-15 18:02:10
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2026-07-14 18:21:01
+ * @LastEditTime: 2026-07-16 10:52:12
  * @FilePath: /examples/demo_cluster/nodes/game/game.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -21,6 +21,7 @@ import (
 	checkConfigVersion "github.com/cherry-game/examples/demo_cluster/internal/component/check_config_version"
 	commonDb "github.com/cherry-game/examples/demo_cluster/internal/component/db"
 	"github.com/cherry-game/examples/demo_cluster/internal/component/metrics"
+	dbqueue "github.com/cherry-game/examples/demo_cluster/internal/component/write_behind_queue"
 	configCacheSlots "github.com/cherry-game/examples/demo_cluster/internal/config_cache/slots"
 	"github.com/cherry-game/examples/demo_cluster/internal/data"
 	"github.com/cherry-game/examples/demo_cluster/nodes/game/db"
@@ -29,7 +30,6 @@ import (
 
 	cdiscovery "github.com/cherry-game/cherry/net/discovery"
 	cherryETCD "github.com/cherry-game/components/etcd"
-	dbqueue "github.com/cherry-game/examples/demo_cluster/internal/component/db_queue"
 	cherryGORM "github.com/cherry-game/examples/demo_cluster/internal/component/pg_gorm"
 	cherryRedis "github.com/cherry-game/examples/demo_cluster/internal/component/redis"
 	slotsLeveCore "github.com/cherry-game/examples/demo_cluster/nodes/game/server/slots/core"
@@ -82,17 +82,17 @@ func Run(profileFilePath, nodeID string) {
 	// 2. 各个业务表的队列精细配置
 	configs := map[string]dbqueue.TableConfig{
 		"classic_slots_user_room": {
-			QueueCount:    4,               // 该表开 4 个后台分流队列，时序按 PlayerID Hashing
-			QueueSize:     2048,            // Channel 缓冲区
-			BulkSize:      100,             // 凑齐 100 条就批量保存
-			FlushInterval: 5 * time.Second, // 或者没凑够，到了 3 秒也保存一次
+			QueueCount:    4,                // 该表开 4 个后台分流队列，时序按 PlayerID Hashing
+			QueueSize:     2048,             // Channel 缓冲区
+			BulkSize:      1200,             // 凑齐 100 条就批量保存
+			FlushInterval: 20 * time.Second, // 或者没凑够，到了 3 秒也保存一次
 		},
 	}
 	// 注册db写入队列组件
 	redisCompent := cherryRedis.NewRedisCompent()
 	// redisCompent这里本来是个组件,但是Init()在Startup后面执行
 	redisCompent.Init()
-	saver := dbqueue.NewRedisBackend(redisCompent)
+	saver := dbqueue.NewRedisBackend(redisCompent.GetDb())
 	dbQueueComponent := dbqueue.NewDBWriteQueueComponent(configs, saver)
 	app.Register(dbQueueComponent)
 

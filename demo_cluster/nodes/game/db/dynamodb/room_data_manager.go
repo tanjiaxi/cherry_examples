@@ -2,7 +2,7 @@
  * @Author: t 921865806@qq.com
  * @Date: 2025-11-24 18:11:37
  * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2026-07-14 14:18:07
+ * @LastEditTime: 2026-07-16 11:12:11
  * @FilePath: /examples/demo_cluster/nodes/game/server/ slots/core/session_mgr.go
  * @Description: 管理房间的数据，获取数据库数据，落地数据到数据库
  */
@@ -15,8 +15,7 @@ import (
 	"strconv"
 
 	cfacade "github.com/cherry-game/cherry/facade"
-	dbQueue "github.com/cherry-game/examples/demo_cluster/internal/component/db_queue"
-	dbqueue "github.com/cherry-game/examples/demo_cluster/internal/component/db_queue"
+	dbQueue "github.com/cherry-game/examples/demo_cluster/internal/component/write_behind_queue"
 	slotsModel "github.com/cherry-game/examples/demo_cluster/nodes/game/model"
 )
 
@@ -40,9 +39,9 @@ func NewRoomDataManager(app cfacade.IApplication) *RoomDataManager {
 	// 	clog.ErrorContext(context.Background(), "new cacheEntity error", zap.Any("error", error))
 	// }
 	comp := app.Find("db_write_queue")
-	var dbQueueComp *dbqueue.DBWriteQueueComponent
+	var dbQueueComp *dbQueue.DBWriteQueueComponent
 	if comp != nil {
-		dbQueueComp = comp.(*dbqueue.DBWriteQueueComponent)
+		dbQueueComp = comp.(*dbQueue.DBWriteQueueComponent)
 	}
 
 	return &RoomDataManager{
@@ -92,7 +91,7 @@ func (s *RoomDataManager) SaveData(ctx context.Context) error {
 	}
 	data, err := json.Marshal(s.roomDataInfo)
 	if err == nil {
-		s.dbQueueComp.SubmitTask(&dbqueue.DbWriteTask{
+		s.dbQueueComp.SubmitTask(&dbQueue.DbWriteTask{
 			Table:      tableName,
 			ExtraKeyId: strconv.FormatInt(int64(s.roomDataInfo.RoomId), 10),
 			PlayerID:   s.roomDataInfo.UserId,
