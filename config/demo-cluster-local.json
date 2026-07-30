@@ -17,7 +17,7 @@
       "request_timeout": 20,
       "user": "",
       "password": "",
-      "pool_size": 10
+      "pool_size": 100
     },
     "etcd": {
       "end_points": "10.10.10.251:2379",
@@ -222,7 +222,7 @@
     }]
   },
   "runtime_monitor": {
-    "master": {
+    "gc-master": {
       "enabled": false,
       "collect_interval": 5,
       "print_interval": 60,
@@ -231,7 +231,7 @@
       "metrics_port": 30010,
       "enable_alert": true
     },
-    "center": {
+    "gc-center": {
       "enabled": false,
       "collect_interval": 5,
       "print_interval": 60,
@@ -240,7 +240,7 @@
       "metrics_port": 30011,
       "enable_alert": true
     },
-    "gate": {
+    "gc-gate-1": {
       "enabled": false,
       "collect_interval": 5,
       "print_interval": 60,
@@ -249,7 +249,7 @@
       "metrics_port": 30012,
       "enable_alert": true
     },
-    "game": {
+    "10001": {
       "enabled": false,
       "collect_interval": 5,
       "print_interval": 60,
@@ -258,7 +258,7 @@
       "metrics_port": 30013,
       "enable_alert": true
     },
-    "web": {
+    "gc-web-1": {
       "enabled": false,
       "collect_interval": 5,
       "print_interval": 60,

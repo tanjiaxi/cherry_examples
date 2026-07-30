@@ -42,9 +42,7 @@ func (p *ActorPlayers) OnInit() {
 func (p *ActorPlayers) OnFindChild(msg *cfacade.Message) (cfacade.IActor, bool) {
 	// 动态创建 player child actor ，这里ChildID是userId
 	childID := msg.TargetPath().ChildID
-	childActor, err := p.Child().Create(childID, &actorPlayer{
-		isOnline: false,
-	})
+	childActor, err := p.Child().Create(childID, NewActorPlayer(p.App()))
 
 	if err != nil {
 		return nil, false

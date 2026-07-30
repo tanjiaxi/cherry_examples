@@ -29,7 +29,7 @@ import (
 )
 
 // 关卡房间 cactor
-// 一个玩家对应一个房间，
+// 一个玩家对应一个actor,包含了这个玩家的所有房间，
 type (
 	ActorRoom struct {
 		pomelo.ActorBase
@@ -51,15 +51,15 @@ func NewActorRoom(app cfacade.IApplication) *ActorRoom {
 }
 
 func (r *ActorRoom) OnInit() {
-	r.Remote().Register("sessionClose", r.sessionClose)
-	r.Remote().Register("dbQriteQueue", r.HandleSaveMsg)
-	clog.Debugf("[actorRoom] path = %s init!", r.PathString())
+	// r.Remote().Register("sessionClose", r.sessionClose)
+	// r.Remote().Register("dbQriteQueue", r.HandleSaveMsg)
+	// clog.Debugf("[actorRoom] path = %s init!", r.PathString())
 	// 处理gate的节点actor消息
-	r.Local().Register("entermachine", r.enterMachine) // 进入关卡
-	r.Local().Register("machineinfo", r.machineinfo)   // 初始化关卡数据
-	r.Local().Register("spin", r.spin)                 // 关卡spin
-	r.Local().Register("bonus", r.bonus)               // 关卡bonus请求
-	r.Local().Register("collect", r.collect)           // 关卡collect 请求
+	// r.Local().Register("entermachine", r.enterMachine) // 进入关卡
+	// r.Local().Register("machineinfo", r.machineinfo)   // 初始化关卡数据
+	// r.Local().Register("spin", r.spin)                 // 关卡spin
+	// r.Local().Register("bonus", r.bonus)               // 关卡bonus请求
+	// r.Local().Register("collect", r.collect)           // 关卡collect 请求
 
 	// 初始化玩家定时落地，使用时间轮 (5 分钟定时间隔，并加入随机扰动错开波峰)
 	// delay := time.Duration(rand.Intn(20)) * time.Second
@@ -77,11 +77,6 @@ func (r *ActorRoom) onTimerSaveTrigger() {
 	r.PostRemote(&message)
 }
 
-// 定时器触发落地
-func (r *ActorRoom) HandleSaveMsg(ctx context.Context) {
-	r.roomDataManager.SaveData(ctx)
-}
-
 func (r *ActorRoom) sessionClose(ctx context.Context) {
 	// online.UnBindPlayer(r.uid)
 	// r.isOnline = false
@@ -90,7 +85,7 @@ func (r *ActorRoom) sessionClose(ctx context.Context) {
 	clog.Debugf("[actorPlayer] exit! uis = %d", 10)
 }
 
-func (r *ActorRoom) enterMachine(ctx context.Context, session *cproto.Session, req *pb.EnterMachine) {
+func (r *ActorRoom) EnterMachine(ctx context.Context, session *cproto.Session, req *pb.EnterMachine) {
 	done := metrics.TrackRequest("game.slots.entermachine")
 	defer done(false)
 
@@ -108,7 +103,7 @@ func (r *ActorRoom) enterMachine(ctx context.Context, session *cproto.Session, r
 	r.Response(session, response)
 }
 
-func (r *ActorRoom) machineinfo(ctx context.Context, session *cproto.Session, req *pb.MachineInfo) {
+func (r *ActorRoom) Machineinfo(ctx context.Context, session *cproto.Session, req *pb.MachineInfo) {
 	done := metrics.TrackRequest("game.slots.machineinfo")
 	hasError := false
 	defer func() { done(hasError) }()
@@ -128,11 +123,11 @@ func (r *ActorRoom) machineinfo(ctx context.Context, session *cproto.Session, re
 	}
 	traceId := ccontext.GetTraceId(ctx)
 	// 2. 获取用户信息
-	userInfo := rpcGame.GetUserInfo(r.Actor, session, traceId)
-	if userInfo == nil || userInfo.UserId == 0 {
+	userInfo, errCode := rpcGame.GetUserInfo(r.Actor, session, traceId)
+	if code.IsFail(errCode) {
 		hasError = true
 		response := &pb.ErrorResponse{
-			Code:    code.PlayerNoUserInfo,
+			Code:    errCode,
 			Message: "no user info",
 		}
 		r.Response(session, response)
@@ -208,7 +203,11 @@ func (r *ActorRoom) machineinfo(ctx context.Context, session *cproto.Session, re
 	r.Response(session, response)
 }
 
-func (r *ActorRoom) spin(ctx context.Context, session *cproto.Session, req *pb.Spin) {
+func (r *ActorRoom) Spin(ctx context.Context, session *cproto.Session, req *pb.Spin) {
+	if req.GetRequestId() == "" {
+		r.ResponseCode(session, code.InvalidRequest)
+		return
+	}
 	done := metrics.TrackRequest("game.slots.spin")
 	hasError := false
 	defer func() { done(hasError) }()
@@ -218,20 +217,27 @@ func (r *ActorRoom) spin(ctx context.Context, session *cproto.Session, req *pb.S
 	curBet := 10000 // req.CurBet
 	traceId := ccontext.GetTraceId(ctx)
 	// 2. 获取用户信息
-	userInfo := rpcGame.GetUserInfo(r.Actor, session, traceId)
-	if userInfo == nil || userInfo.UserId == 0 {
+	userInfo, errCode := rpcGame.GetUserInfo(r.Actor, session, traceId)
+	if code.IsFail(errCode) {
 		hasError = true
 		response := &pb.ErrorResponse{
-			Code:    code.PlayerNoUserInfo,
+			Code:    errCode,
 			Message: "no user info",
+		}
+		r.Response(session, response)
+		return
+	}
+	if userInfo.Money < int64(curBet) {
+		hasError = true
+		response := &pb.ErrorResponse{
+			Code:    code.NotEnoughMoney,
+			Message: "not enough money",
 		}
 		r.Response(session, response)
 		return
 	}
 	// start := time.Now()
 	roomDataInfo := r.roomDataManager.GetData(ctx, userInfo.UserId, roomId)
-	roomDataInfo.SpinNum++
-	r.roomDataManager.SaveData(ctx)
 	if roomDataInfo == nil {
 		hasError = true
 		response := &pb.ErrorResponse{
@@ -276,6 +282,17 @@ func (r *ActorRoom) spin(ctx context.Context, session *cproto.Session, req *pb.S
 		r.Response(session, response)
 		return
 	}
+	roomDataInfo.Version++
+	//保存数据
+	if err := r.roomDataManager.SaveData(ctx, roomId); err != nil {
+		hasError = true
+		response := &pb.ErrorResponse{
+			Code:    code.GetRulstInfoError,
+			Message: "save room data error",
+		}
+		r.Response(session, response)
+		return
+	}
 	clog.Infof("spin: userId=%d, roomId=%d, version=%d ,feature=%v",
 		userInfo.UserId, roomId, roomDataInfo.Version, roomDataInfo)
 	SpinResponse := &pb.SpinResponse{
@@ -290,8 +307,8 @@ func (r *ActorRoom) spin(ctx context.Context, session *cproto.Session, req *pb.S
 	r.Response(session, SpinResponse)
 }
 
-func (r *ActorRoom) bonus(ctx context.Context, session *cproto.Session, _ *pb.Bonus) {
+func (r *ActorRoom) Bonus(ctx context.Context, session *cproto.Session, _ *pb.Bonus) {
 }
 
-func (r *ActorRoom) collect(ctx context.Context, session *cproto.Session, _ *pb.CollectDone) {
+func (r *ActorRoom) Collect(ctx context.Context, session *cproto.Session, _ *pb.CollectDone) {
 }

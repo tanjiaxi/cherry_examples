@@ -14,6 +14,7 @@ import (
 	cfacade "github.com/cherry-game/cherry/facade"
 	clog "github.com/cherry-game/cherry/logger"
 	cproto "github.com/cherry-game/cherry/net/proto"
+	"github.com/cherry-game/examples/demo_cluster/internal/code"
 	"github.com/cherry-game/examples/demo_cluster/internal/pb"
 	sessionKey "github.com/cherry-game/examples/demo_cluster/internal/session_key"
 )
@@ -45,19 +46,18 @@ func SessionClose(app cfacade.IApplication, session *cproto.Session, traceId str
 
 	//clog.Infof("send close session to game node. [node = %s, uid = %d]", nodeID, session.Uid)
 }
-func GetUserInfo(a cfacade.IActor, session *cproto.Session, traceId string) *pb.GetUserInfoResponse {
-	nodeID := session.GetString(sessionKey.ServerID)
-	if nodeID == "" {
-		clog.Warnf("Get server id fail. session = %s", session.Uid)
-		return nil
-	}
+func GetUserInfo(a cfacade.IActor, session *cproto.Session, traceId string) (*pb.GetUserInfoResponse, int32) {
 	userInfo := &pb.GetUserInfoResponse{}
-	targetPath := cfacade.NewChildPath("", playerActor, session.Uid)
-	a.CallWait(targetPath, getPlayerData, traceId, &pb.Int32{
+	//调用自己服务的actor
+	targetPath := cfacade.NewChildPath(a.App().NodeID(), playerActor, session.Uid)
+	errCode := a.CallWait(targetPath, getPlayerData, traceId, &pb.Int32{
 		Value: int32(session.Uid),
 	}, userInfo)
-	// app.ActorSystem().CallWait(sourcePath, targetPath, getPlayerData, &pb.Int64{
-	// 	Value: session.Uid,
-	// }, userInfo)
-	return userInfo
+	if code.IsFail(errCode) {
+		return nil, errCode
+	}
+	if userInfo.UserId <= 0 {
+		return nil, code.PlayerNoUserInfo
+	}
+	return userInfo, code.OK
 }

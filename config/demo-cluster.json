@@ -17,7 +17,7 @@
       "request_timeout": 20,
       "user": "",
       "password": "",
-      "pool_size": 10
+      "pool_size": 100
     },
     "etcd": {
       "end_points": "127.0.0.1:2379",
@@ -114,42 +114,42 @@
   },
   "logger": {
     "master_log": {
-      "level": "info",
+      "level": "error",
       "enable_console": false,
       "enable_write_file": true,
       "file_link_path": "logs/master.log",
       "file_path_format": "logs/master_%Y%m%d%H%M.log"
     },
     "web_log": {
-      "level": "info",
+      "level": "error",
       "enable_console": false,
       "enable_write_file": true,
       "file_link_path": "logs/web.log",
       "file_path_format": "logs/web_%Y%m%d%H%M.log"
     },
     "center_log": {
-      "level": "info",
+      "level": "error",
       "enable_console": false,
       "enable_write_file": true,
       "file_link_path": "logs/center.log",
       "file_path_format": "logs/center_%Y%m%d%H%M.log"
     },
     "gate_log": {
-      "level": "info",
+      "level": "error",
       "enable_console": false,
       "enable_write_file": true,
       "file_link_path": "logs/gate.log",
       "file_path_format": "logs/gate_%Y%m%d%H%M.log"
     },
     "game_log": {
-      "level": "info",
+      "level": "error",
       "enable_console": false,
       "enable_write_file": true,
       "file_link_path": "logs/game.log",
       "file_path_format": "logs/game_%Y%m%d%H%M.log"
     },
     "cross_log": {
-      "level": "info",
+      "level": "error",
       "enable_console": false,
       "enable_write_file": true,
       "file_link_path": "logs/cross.log",
@@ -222,7 +222,7 @@
     }]
   },
   "runtime_monitor": {
-    "master": {
+    "gc-master": {
       "enabled": true,
       "collect_interval": 5,
       "print_interval": 60,
@@ -231,7 +231,7 @@
       "metrics_port": 30010,
       "enable_alert": true
     },
-    "center": {
+    "gc-center": {
       "enabled": true,
       "collect_interval": 5,
       "print_interval": 60,
@@ -240,7 +240,7 @@
       "metrics_port": 30011,
       "enable_alert": true
     },
-    "gate": {
+    "gc-gate-1": {
       "enabled": true,
       "collect_interval": 5,
       "print_interval": 60,
@@ -249,7 +249,7 @@
       "metrics_port": 30012,
       "enable_alert": true
     },
-    "game": {
+    "10001": {
       "enabled": true,
       "collect_interval": 5,
       "print_interval": 60,
@@ -258,7 +258,7 @@
       "metrics_port": 30013,
       "enable_alert": true
     },
-    "web": {
+    "gc-web-1": {
       "enabled": true,
       "collect_interval": 5,
       "print_interval": 60,

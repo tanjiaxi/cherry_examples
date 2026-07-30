@@ -12,6 +12,7 @@ import (
 	cherryGops "github.com/cherry-game/components/gops"
 	checkCenter "github.com/cherry-game/examples/demo_cluster/internal/component/check_center"
 	"github.com/cherry-game/examples/demo_cluster/internal/component/metrics"
+	"github.com/cherry-game/examples/demo_cluster/internal/component/runtime_monitor"
 	"github.com/cherry-game/examples/demo_cluster/internal/data"
 
 	cdiscovery "github.com/cherry-game/cherry/net/discovery"
@@ -50,6 +51,10 @@ func Run(profileFilePath, nodeID string) {
 
 	app.Register(cherryGORM.NewComponent())
 	app.Register(db.New())
+	// 注册 runtime monitor 组件
+	runtimeMonitor := runtime_monitor.New(nodeID)
+	app.Register(runtimeMonitor)
+	runtime_monitor.SetGlobal(runtimeMonitor) // 设置全局访问
 	//启动cherry引擎
 	app.Startup()
 }

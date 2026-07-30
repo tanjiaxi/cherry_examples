@@ -15,7 +15,7 @@ import (
 	"strconv"
 
 	cfacade "github.com/cherry-game/cherry/facade"
-	dbQueue "github.com/cherry-game/examples/demo_cluster/internal/component/write_behind_queue"
+	dbQueue "github.com/cherry-game/customize/components/write_behind_queue"
 	slotsModel "github.com/cherry-game/examples/demo_cluster/nodes/game/model"
 )
 
@@ -26,7 +26,7 @@ type RoomDataManager struct {
 	// cacheEntity        ifacade.DataManager[*slotsModel.RoomDataInfo]
 	// persistenceBackend dbQueue.PersistenceBackend
 	dbQueueComp  *dbQueue.DBWriteQueueComponent // 保存组件引用
-	roomDataInfo *slotsModel.RoomDataInfo
+	roomDataInfo map[int32]*slotsModel.RoomDataInfo
 }
 
 func NewRoomDataManager(app cfacade.IApplication) *RoomDataManager {
@@ -59,8 +59,8 @@ func (s *RoomDataManager) NewPlayerRoomData(userID, roomId int32) *slotsModel.Ro
 }
 
 func (s *RoomDataManager) GetData(ctx context.Context, userID, roomId int32) *slotsModel.RoomDataInfo {
-	if s.roomDataInfo != nil {
-		return s.roomDataInfo
+	if roomInfo, exists := s.roomDataInfo[roomId]; exists {
+		return roomInfo
 	}
 	data, err := s.dbQueueComp.Saver.Load(ctx, tableName, strconv.FormatInt(int64(userID), 10), strconv.FormatInt(int64(roomId), 10))
 	roomInfo := &slotsModel.RoomDataInfo{}
@@ -69,11 +69,11 @@ func (s *RoomDataManager) GetData(ctx context.Context, userID, roomId int32) *sl
 		if err != nil {
 			return nil
 		}
-		s.roomDataInfo = roomInfo
+		s.roomDataInfo[roomId] = roomInfo
 		return roomInfo
 	} else {
 		roomInfo = s.NewPlayerRoomData(userID, roomId)
-		s.roomDataInfo = roomInfo
+		s.roomDataInfo[roomId] = roomInfo
 		return roomInfo
 	}
 	// roomInfo, isSuccess := s.cacheEntity.GetData(ctx, func() *slotsModel.RoomDataInfo {
@@ -85,16 +85,16 @@ func (s *RoomDataManager) GetData(ctx context.Context, userID, roomId int32) *sl
 	// return nil
 }
 
-func (s *RoomDataManager) SaveData(ctx context.Context) error {
-	if s.roomDataInfo == nil {
+func (s *RoomDataManager) SaveData(ctx context.Context,roomId int32) error {
+	if s.roomDataInfo[roomId] == nil {
 		return fmt.Errorf("no roomDataInfo")
 	}
-	data, err := json.Marshal(s.roomDataInfo)
+	data, err := json.Marshal(s.roomDataInfo[roomId])
 	if err == nil {
 		s.dbQueueComp.SubmitTask(&dbQueue.DbWriteTask{
 			Table:      tableName,
-			ExtraKeyId: strconv.FormatInt(int64(s.roomDataInfo.RoomId), 10),
-			PlayerID:   s.roomDataInfo.UserId,
+			ExtraKeyId: strconv.FormatInt(int64(s.roomDataInfo[roomId].RoomId), 10),
+			PlayerID:   s.roomDataInfo[roomId].UserId,
 
 			OpType: dbQueue.OpUpdate,
 			Data:   data,

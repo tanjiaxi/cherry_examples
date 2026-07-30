@@ -184,7 +184,7 @@
                         <label class="col-sm-4 control-label">web节点</label>
                         <div class="col-sm-6">
                             <select class="form-control" id="web-url">
-                                <option value="http://10.10.10.251:8081">本机 10.10.10.251:8081</option>
+                                <option value="http://127.0.0.1:8081">本机 127.0.0.1:8081</option>
                             </select>
                         </div>
                     </div>
@@ -450,7 +450,7 @@
 
         var enterData = enterRequest.serializeBinary();
 
-        pomelo.request("game.slots.entermachine", enterData, function (data) {
+        pomelo.request("game.player.entermachine", enterData, function (data) {
             if (data.isError > 0) {
                 showError(data);
                 return;
@@ -475,7 +475,7 @@
 
         var infoData = infoRequest.serializeBinary();
 
-        pomelo.request("game.slots.machineinfo", infoData, function (data) {
+        pomelo.request("game.player.machineinfo", infoData, function (data) {
             if (data.isError > 0) {
                 showError(data);
                 return;
@@ -485,9 +485,9 @@
             console.log("机器信息:", data);
             
             var info = "📊 机器信息:<br>";
-            info += "- ID: " + data.id + "<br>";
-            info += "- 余额: " + data.balance + "<br>";
-            info += "- 下注金额: " + data.betamount + "<br>";
+            info += "- ID: " + data.base.id + "<br>";
+            info += "- 余额: " + data.base.userbet + "<br>";
+            info += "- 下注金额: " + data.base.basemoney + "<br>";
             appendSlotsResult(info);
         });
     }
@@ -501,7 +501,7 @@
 
         var spinData = spinRequest.serializeBinary();
 
-        pomelo.request("game.slots.spin", spinData, function (data) {
+        pomelo.request("game.player.spin", spinData, function (data) {
             if (data.isError > 0) {
                 showError(data);
                 return;
@@ -513,8 +513,8 @@
             spinCount++;
             var result = "🎰 Spin #" + spinCount + ":<br>";
             result += "- 机器ID: " + data.id + "<br>";
-            result += "- 总赢得: " + data.totalwin + "<br>";
-            result += "- 余额: " + data.balance + "<br>";
+            result += "- 总赢得: " + data.spinresult.wininfoList[0].win + "<br>";
+            result += "- 余额: " + data.userbet + "<br>";
             
             if (data.resultsList && data.resultsList.length > 0) {
                 result += "- 结果: ";
@@ -555,7 +555,7 @@
 
         var bonusData = bonusRequest.serializeBinary();
 
-        pomelo.request("game.slots.bonus", bonusData, function (data) {
+        pomelo.request("game.player.bonus", bonusData, function (data) {
             if (data.isError > 0) {
                 showError(data);
                 return;
@@ -579,7 +579,7 @@
 
         var collectData = collectRequest.serializeBinary();
 
-        pomelo.request("game.slots.collect", collectData, function (data) {
+        pomelo.request("game.player.collect", collectData, function (data) {
             if (data.isError > 0) {
                 showError(data);
                 return;

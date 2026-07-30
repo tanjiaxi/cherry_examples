@@ -905,7 +905,8 @@ proto.pb.Spin.toObject = function(includeInstance, msg) {
     testseed: jspb.Message.getFieldWithDefault(msg, 6, ""),
     testreellevel: jspb.Message.getFieldWithDefault(msg, 7, 0),
     token: jspb.Message.getFieldWithDefault(msg, 8, ""),
-    iscasinoquest: jspb.Message.getBooleanFieldWithDefault(msg, 9, false)
+    iscasinoquest: jspb.Message.getBooleanFieldWithDefault(msg, 9, false),
+    requestid: jspb.Message.getFieldWithDefault(msg, 10, "")
   };
 
   if (includeInstance) {
@@ -977,6 +978,10 @@ proto.pb.Spin.deserializeBinaryFromReader = function(msg, reader) {
     case 9:
       var value = /** @type {boolean} */ (reader.readBool());
       msg.setIscasinoquest(value);
+      break;
+    case 10:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setRequestid(value);
       break;
     default:
       reader.skipField();
@@ -1067,6 +1072,13 @@ proto.pb.Spin.serializeBinaryToWriter = function(message, writer) {
   if (f) {
     writer.writeBool(
       9,
+      f
+    );
+  }
+  f = message.getRequestid();
+  if (f.length > 0) {
+    writer.writeString(
+      10,
       f
     );
   }
@@ -1232,6 +1244,24 @@ proto.pb.Spin.prototype.getIscasinoquest = function() {
  */
 proto.pb.Spin.prototype.setIscasinoquest = function(value) {
   return jspb.Message.setProto3BooleanField(this, 9, value);
+};
+
+
+/**
+ * optional string requestId = 10;
+ * @return {string}
+ */
+proto.pb.Spin.prototype.getRequestid = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 10, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.pb.Spin} returns this
+ */
+proto.pb.Spin.prototype.setRequestid = function(value) {
+  return jspb.Message.setProto3StringField(this, 10, value);
 };
 
 

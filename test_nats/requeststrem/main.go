@@ -12,7 +12,8 @@ import (
 
 func main() {
 	createStream()
-	nc, err := nats.Connect(nats.DefaultURL)
+	// nc, err := nats.Connect(nats.DefaultURL)
+	nc, err := nats.Connect("nats://10.10.10.251:4222")
 	if err != nil {
 		log.Fatalf("连接 NATS 失败: %v", err)
 	}
@@ -42,7 +43,7 @@ func main() {
 
 func createStream() {
 	// 1. 连接到 NATS 服务器
-	nc, err := nats.Connect(nats.DefaultURL)
+	nc, err := nats.Connect("nats://10.10.10.251:4222")
 	if err != nil {
 		log.Fatalf("连接 NATS 失败: %v", err)
 	}

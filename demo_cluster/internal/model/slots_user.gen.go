@@ -24,7 +24,7 @@ type SlotsUser struct {
 	PlayerGroup       int32     `gorm:"column:player_group;comment:用户分组" json:"player_group"`                  // 用户分组
 	UserType          int32     `gorm:"column:user_type;comment:用户分类" json:"user_type"`                        // 用户分类
 	UserName          string    `gorm:"column:user_name;comment:名字" json:"user_name"`                          // 名字
-	Money             float64   `gorm:"column:money;comment:金币" json:"money"`                                  // 金币
+	Money             int64     `gorm:"column:money;comment:金币" json:"money"`                                  // 金币
 	Diamond           int64     `gorm:"column:diamond;comment:钻石" json:"diamond"`                              // 钻石
 	ScratchNum        int32     `gorm:"column:scratch_num;comment:刮刮卡" json:"scratch_num"`                     // 刮刮卡
 	UserLevel         int32     `gorm:"column:user_level;comment:等级" json:"user_level"`                        // 等级

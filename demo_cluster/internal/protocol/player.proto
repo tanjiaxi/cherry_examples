@@ -41,7 +41,7 @@ enum PlayerAttribute {
 }
 message getUserInfoResponse {
   int32 userId = 1;  // 玩家ID
-  float money = 2;   // 金币
+  int64 money = 2;   // 金币
   int64 diamond = 3; // 钻石
   int32 level = 4;   // 角色等级
   int64 curExp = 5;  // 当前经验

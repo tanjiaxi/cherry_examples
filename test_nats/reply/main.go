@@ -17,6 +17,7 @@ func BytesToInt64(buf []byte) int64 {
 
 func main() {
 	urls := nats.DefaultURL
+	urls = "nats://10.10.10.251:4222"
 	var opts []nats.Option
 	opts = setupConnOptions(opts)
 

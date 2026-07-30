@@ -3,12 +3,14 @@
     "areaId": 1,
     "areaName": "1区",
     "gateNodes": ["gc-gate-1"],
-    "defaultGate": "0.0.0.0:10010"
+    "defaultAddressGate": "0.0.0.0:10010",
+    "defaultTcpAddress":"0.0.0.0:20010"
   },
   {
     "areaId": 2,
     "areaName": "2区",
     "gateNodes": ["gc-gate-1"],
-    "defaultGate": "0.0.0.0:10011"
+    "defaultAddressGate": "0.0.0.0:10011",
+    "defaultTcpAddress":"0.0.0.0:20011"
   }
 ]

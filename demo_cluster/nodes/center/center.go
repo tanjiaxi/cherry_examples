@@ -15,6 +15,7 @@ import (
 	cherryETCD "github.com/cherry-game/components/etcd"
 	"github.com/cherry-game/examples/demo_cluster/internal/component/metrics"
 	cherryGORM "github.com/cherry-game/examples/demo_cluster/internal/component/pg_gorm"
+	"github.com/cherry-game/examples/demo_cluster/internal/component/runtime_monitor"
 	"github.com/cherry-game/examples/demo_cluster/internal/data"
 	"github.com/cherry-game/examples/demo_cluster/nodes/center/db"
 	"github.com/cherry-game/examples/demo_cluster/nodes/center/module/account"
@@ -42,6 +43,10 @@ func Run(profileFilePath, nodeID string) {
 	metricsComponent := metrics.New()
 	app.Register(metricsComponent)
 	metrics.SetGlobal(metricsComponent)
+	// 注册 runtime monitor 组件
+	runtimeMonitor := runtime_monitor.New(nodeID)
+	app.Register(runtimeMonitor)
+	runtime_monitor.SetGlobal(runtimeMonitor) // 设置全局访问
 	// 注册Actor - 这里才是真正的Actor模型
 	app.AddActors(
 		&account.ActorAccount{},

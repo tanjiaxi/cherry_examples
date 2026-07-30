@@ -338,7 +338,7 @@ func (p *Robot) ActorEnter() error {
 
 // ActorEnterEnterMachine 角色进入机台
 func (p *Robot) ActorEnterEnterMachine() error {
-	route := "game.slots.entermachine"
+	route := "game.player.entermachine"
 	req := &pb.EnterMachine{
 		Id:        86001,
 		SelectBet: 100000,
@@ -361,7 +361,7 @@ func (p *Robot) ActorEnterEnterMachine() error {
 
 // ActorMachine 角色机台信息
 func (p *Robot) ActorMachine() error {
-	route := "game.slots.machineinfo"
+	route := "game.player.machineinfo"
 	req := &pb.MachineInfo{
 		Id: 86001,
 	}
@@ -383,7 +383,7 @@ func (p *Robot) ActorMachine() error {
 
 // ActorSpin 角色进入机台spin
 func (p *Robot) ActorSpin() error {
-	route := "game.slots.spin"
+	route := "game.player.spin"
 	req := &pb.Spin{
 		Id:      86001,
 		CurBet:  100000,

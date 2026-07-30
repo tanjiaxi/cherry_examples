@@ -39,8 +39,7 @@ func ReadySPin(ctx context.Context, roomId, ruleId int32, isInit bool, bet int, 
 	}
 	// 这里需要需要做数据存储
 	SpinAfter(ctx, roomDataInfo)
-	roomDataInfo.MarkDirty()
-	roomDataInfo.SpinNum++
+
 	return SpinResult, nil
 }
 
@@ -58,5 +57,6 @@ func SpinBefore(ruleId int32) ([]int, *logicGameModel.N2CfgReelRoom, int, error)
 // 这里是操作,存储数据
 func SpinAfter(ctx context.Context, roomDataInfo *slotsModel.RoomDataInfo) {
 	roomDataInfo.CurBetNum = 1000000 // 临时测试数据
+	roomDataInfo.SpinNum++
 }
 func SpinEnd() {}

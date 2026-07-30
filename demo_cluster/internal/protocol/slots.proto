@@ -33,6 +33,7 @@ message Spin {
   int32 testReelLevel = 7; // 转轴等级
   string token = 8;        // 登录Token
   bool isCasinoQuest = 9;  // 是否在冒险任务关卡
+  string requestId = 10; // 客户端生成 UUID；网络重试必须复用同一个 requestId。
 }
 // spin回复
 message SpinResponse {

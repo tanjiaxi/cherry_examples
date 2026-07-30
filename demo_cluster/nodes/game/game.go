@@ -17,11 +17,12 @@ import (
 	cherryUtils "github.com/cherry-game/cherry/extend/utils"
 	cherryCron "github.com/cherry-game/components/cron"
 	cherryGops "github.com/cherry-game/components/gops"
+	dbqueue "github.com/cherry-game/customize/components/write_behind_queue"
 	checkCenter "github.com/cherry-game/examples/demo_cluster/internal/component/check_center"
 	checkConfigVersion "github.com/cherry-game/examples/demo_cluster/internal/component/check_config_version"
 	commonDb "github.com/cherry-game/examples/demo_cluster/internal/component/db"
 	"github.com/cherry-game/examples/demo_cluster/internal/component/metrics"
-	dbqueue "github.com/cherry-game/examples/demo_cluster/internal/component/write_behind_queue"
+	"github.com/cherry-game/examples/demo_cluster/internal/component/runtime_monitor"
 	configCacheSlots "github.com/cherry-game/examples/demo_cluster/internal/config_cache/slots"
 	"github.com/cherry-game/examples/demo_cluster/internal/data"
 	"github.com/cherry-game/examples/demo_cluster/nodes/game/db"
@@ -82,11 +83,13 @@ func Run(profileFilePath, nodeID string) {
 	// 2. 各个业务表的队列精细配置
 	configs := map[string]dbqueue.TableConfig{
 		"classic_slots_user_room": {
-			QueueCount:    4,                // 该表开 4 个后台分流队列，时序按 PlayerID Hashing
-			QueueSize:     2048,             // Channel 缓冲区
-			BulkSize:      1200,             // 凑齐 100 条就批量保存
-			FlushInterval: 20 * time.Second, // 或者没凑够，到了 3 秒也保存一次
-			StopBulkSize:  2000,
+			QueueCount:      4,                  // 该表开 4 个后台分流队列，时序按 PlayerID Hashing
+			QueueSize:       2048,               // Channel 缓冲区
+			BulkSize:        1200,               // 凑齐 100 条就批量保存
+			FlushInterval:   2000 * time.Second, // 或者没凑够，到了 3 秒也保存一次
+			StopBulkSize:    2000,
+			WriteTimeout:    3 * time.Second,  // 写入数据库的超时时间,根据数据库的响应时间
+			ShutdownTimeout: 15 * time.Second, // 关闭超时时间
 		},
 	}
 	// 注册db写入队列组件
@@ -96,7 +99,10 @@ func Run(profileFilePath, nodeID string) {
 	saver := dbqueue.NewRedisBackend(redisCompent.GetDb())
 	dbQueueComponent := dbqueue.NewDBWriteQueueComponent(configs, saver)
 	app.Register(dbQueueComponent)
-
+	// 注册 runtime monitor 组件
+	runtimeMonitor := runtime_monitor.New(nodeID)
+	app.Register(runtimeMonitor)
+	runtime_monitor.SetGlobal(runtimeMonitor) // 设置全局访问
 	app.AddActors(
 		&player.ActorPlayers{},
 		&slotsRoom.ActorRooms{},

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	cstring "github.com/cherry-game/cherry/extend/string"
+	cfacade "github.com/cherry-game/cherry/facade"
 	clog "github.com/cherry-game/cherry/logger"
 	"github.com/cherry-game/cherry/net/parser/pomelo"
 	cproto "github.com/cherry-game/cherry/net/proto"
@@ -20,6 +21,7 @@ import (
 	sessionKey "github.com/cherry-game/examples/demo_cluster/internal/session_key"
 	"github.com/cherry-game/examples/demo_cluster/nodes/game/db"
 	"github.com/cherry-game/examples/demo_cluster/nodes/game/module/online"
+	slotsRoom "github.com/cherry-game/examples/demo_cluster/nodes/game/module/slots/room"
 )
 
 type (
@@ -33,6 +35,7 @@ type (
 
 		// 玩家核心数据（从数据库加载，内存缓存）
 		playerData *PlayerData
+		slotsRoom  *slotsRoom.ActorRoom
 	}
 
 	// PlayerData 玩家核心数据
@@ -41,6 +44,12 @@ type (
 	}
 )
 
+func NewActorPlayer(app cfacade.IApplication) *actorPlayer {
+	return &actorPlayer{
+		slotsRoom: slotsRoom.NewActorRoom(app),
+		isOnline:  false,
+	}
+}
 func (p *actorPlayer) OnInit() {
 	clog.Debugf("[actorPlayer] path = %s init!", p.PathString())
 
@@ -57,6 +66,13 @@ func (p *actorPlayer) OnInit() {
 	// p.Remote().Register("updateMoney", p.UpdateMoney)
 	// p.Remote().Register("getMoney", p.GetMoney)
 	// p.Remote().Register("getLevel", p.GetLevel)
+
+	// 处理gate的节点actor消息
+	p.Local().Register("entermachine", p.slotsRoom.EnterMachine) // 进入关卡
+	p.Local().Register("machineinfo", p.slotsRoom.Machineinfo)   // 初始化关卡数据
+	p.Local().Register("spin", p.slotsRoom.Spin)                 // 关卡spin
+	p.Local().Register("bonus", p.slotsRoom.Bonus)               // 关卡bonus请求
+	p.Local().Register("collect", p.slotsRoom.Collect)           // 关卡collect 请求
 }
 
 // sessionClose 接收角色session关闭处理
@@ -255,7 +271,7 @@ func (p *actorPlayer) getPlayerData(ctx context.Context, msg *pb.Int32) (*pb.Get
 	CurExp, _ := strconv.ParseInt(p.playerData.CurExp, 10, 64)
 	return &pb.GetUserInfoResponse{
 		UserId:  p.playerData.UserID,
-		Money:   float32(p.playerData.Money),
+		Money:   int64(p.playerData.Money),
 		Diamond: p.playerData.Diamond,
 		Level:   p.playerData.UserLevel,
 		CurExp:  CurExp,

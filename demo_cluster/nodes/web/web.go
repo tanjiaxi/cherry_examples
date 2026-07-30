@@ -81,7 +81,7 @@ func httpServerComponent(addr string) *cherryGin.Component {
 	// ✅ 构建绝对路径
 	staticDir := filepath.Join(execDir, "web/static")
 	viewDir := filepath.Join(execDir, "web/view")
-	// 映射h5客户端静态文件到static目录，例如：http://10.10.10.251/static/protocol.js
+	// 映射h5客户端静态文件到static目录，例如：http://127.0.0.1/static/protocol.js
 	httpServer.Static("/static", staticDir)
 
 	// 加载./view目录的html模板文件(详情查看gin文档)

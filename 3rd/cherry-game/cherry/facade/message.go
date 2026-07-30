@@ -124,6 +124,7 @@ func NewActorPath(nodeID, actorID, childID string) *ActorPath {
 	}
 }
 
+// game1.player.123456
 func NewChildPath(nodeID, actorID, childID interface{}) string {
 	if childID == "" {
 		return NewPath(nodeID, actorID)
@@ -131,6 +132,7 @@ func NewChildPath(nodeID, actorID, childID interface{}) string {
 	return cstring.ToString(nodeID) + cconst.DOT + cstring.ToString(actorID) + cconst.DOT + cstring.ToString(childID)
 }
 
+// game1.player
 func NewPath(nodeID, actorID interface{}) string {
 	return cstring.ToString(nodeID) + cconst.DOT + cstring.ToString(actorID)
 }

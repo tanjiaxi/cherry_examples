@@ -16,12 +16,13 @@ import (
 )
 
 var (
-	rw             sync.RWMutex             // mutex
-	DefaultLogger  *CherryLogger            // 默认日志对象(控制台输出)
-	loggers        map[string]*CherryLogger // 日志实例存储map(key:日志名称,value:日志实例)
-	nodeID         string                   // current node id
-	printLevel     zapcore.Level            // cherry log print level
-	fileNameVarMap = map[string]string{}    // 日志输出文件名自定义变量
+	rw              sync.RWMutex             // mutex
+	DefaultLogger   *CherryLogger            // 默认日志对象(控制台输出)
+	loggers         map[string]*CherryLogger // 日志实例存储map(key:日志名称,value:日志实例)
+	nodeID          string                   // current node id
+	printLevel      zapcore.Level            // cherry log print level
+	fileNameVarMap  = map[string]string{}    // 日志输出文件名自定义变量
+	bufferedWriters []*zapcore.BufferedWriteSyncer
 )
 
 func init() {
@@ -59,11 +60,14 @@ func SetFileNameVar(key, value string) {
 }
 
 func Flush() {
-	_ = DefaultLogger.SugaredLogger.Sync()
-	_ = DefaultLogger.Logger.Sync()
-	for _, logger := range loggers {
-		_ = logger.SugaredLogger.Sync()
-		_ = logger.Logger.Sync()
+	// _ = DefaultLogger.SugaredLogger.Sync()
+	// _ = DefaultLogger.Logger.Sync()
+	// for _, logger := range loggers {
+	// 	_ = logger.SugaredLogger.Sync()
+	// 	_ = logger.Logger.Sync()
+	// }
+	for _, bw := range bufferedWriters {
+		bw.Stop() // 阻塞直到所有缓冲写入完成
 	}
 }
 
@@ -140,21 +144,54 @@ func NewConfigLogger(config *Config, opts ...zap.Option) *CherryLogger {
 		if err != nil {
 			panic(err)
 		}
-
-		writers = append(writers, zapcore.AddSync(hook))
+		// 包一层异步
+		bw := &zapcore.BufferedWriteSyncer{
+			WS:            zapcore.AddSync(hook),
+			Size:          256 * 1024,      // 256KB 缓冲区
+			FlushInterval: 5 * time.Second, // 每 5 秒刷一次
+		}
+		bufferedWriters = append(bufferedWriters, bw)
+		writers = append(writers, bw)
+		//同步
+		// writers = append(writers, zapcore.AddSync(hook))
 	}
 
 	if config.EnableConsole {
-		writers = append(writers, zapcore.AddSync(os.Stderr))
+		bw := &zapcore.BufferedWriteSyncer{
+			WS:            zapcore.AddSync(os.Stderr),
+			Size:          256 * 1024,
+			FlushInterval: 5 * time.Second,
+		}
+		bufferedWriters = append(bufferedWriters, bw)
+		writers = append(writers, bw)
+		//同步
+		// writers = append(writers, zapcore.AddSync(os.Stderr))
 	}
 
 	if config.IncludeStdout {
-		writers = append(writers, zapcore.Lock(os.Stdout))
+		bw := &zapcore.BufferedWriteSyncer{
+			WS:            zapcore.AddSync(os.Stdout),
+			Size:          256 * 1024,
+			FlushInterval: 5 * time.Second,
+		}
+		bufferedWriters = append(bufferedWriters, bw)
+		writers = append(writers, bw)
+		//同步
+		// writers = append(writers, zapcore.AddSync(os.Stdout))
 	}
 
 	if config.IncludeStderr {
-		writers = append(writers, zapcore.Lock(os.Stderr))
+		bw := &zapcore.BufferedWriteSyncer{
+			WS:            zapcore.AddSync(os.Stderr),
+			Size:          256 * 1024,
+			FlushInterval: 5 * time.Second,
+		}
+		bufferedWriters = append(bufferedWriters, bw)
+		writers = append(writers, bw)
+		//同步
+		// writers = append(writers, zapcore.AddSync(os.Stderr))
 	}
+
 	var encoder zapcore.Encoder
 	if config.EnableConsole { // 或者是你自定义的配置项，如 config.JsonFormat
 		// encoder = zapcore.NewConsoleEncoder(encoderConfig)

@@ -9,7 +9,6 @@ import (
 
 	cerror "github.com/cherry-game/cherry/error"
 	clog "github.com/cherry-game/cherry/logger"
-	cproto "github.com/cherry-game/cherry/net/proto"
 	"github.com/nats-io/nats.go"
 )
 
@@ -156,7 +155,7 @@ func (p *Connect) Request(subject string, data []byte, tod ...time.Duration) ([]
 	return natsMsg.Data, nil
 }
 
-func (p *Connect) RequestSync(subject string, data []byte, tod ...time.Duration) ([]byte, error) {
+func (p *Connect) RequestSync(subject string, data []byte, tod ...time.Duration) ([]byte, time.Time, error) {
 	timeout := GetTimeout(tod...)
 
 	reqID := strconv.FormatUint(atomic.AddUint64(&p.seq, 1), 10)
@@ -170,33 +169,29 @@ func (p *Connect) RequestSync(subject string, data []byte, tod ...time.Duration)
 	msg.Header.Set(REQ_ID, reqID)
 	msg.Header.Set(CON_ID, strconv.FormatInt(int64(p.id), 10))
 	msg.Data = data
-
 	err := p.PublishMsg(msg)
-
 	// release msg
 	ReleaseMsg(msg)
 
 	if err != nil {
 		p.waiters.Delete(reqID)
 		close(ch)
-		return nil, err
+		return nil, time.Time{}, err
 	}
-	clog.Infof("NatsPublis id = %d, reqID = %s", p.id, reqID)
-	clusterPacket, err := cproto.UnmarshalPacket(data)
-	clog.Infof("NatsReq id = %d, reqID = %s, clusterPacket = %s", p.id, reqID, clusterPacket.String())
-	defer clusterPacket.Recycle()
 	select {
 	case resp, ok := <-ch:
+		replyAt := time.Now()
 		if !ok || resp == nil {
-			return nil, cerror.ClusterRequestTimeout
+			return nil, time.Time{}, cerror.ClusterRequestTimeout
 		}
-		clog.Infof("NatsRec id = %d, reqID = %s", p.id, reqID)
-		return resp.Data, nil
+		// replyAt is the local timestamp at which the reply woke the waiter.
+		// Callers use it to distinguish NATS request/reply time from post-reply work.
+		return resp.Data, replyAt, nil
 	case <-time.After(timeout):
 		p.waiters.Delete(reqID)
 		clog.Warnf("NatsResSync timeout id = %d, reqID = %s", p.id, reqID)
 		close(ch)
-		return nil, cerror.ClusterRequestTimeout
+		return nil, time.Time{}, cerror.ClusterRequestTimeout
 	}
 }
 

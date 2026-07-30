@@ -161,6 +161,7 @@ func (p *Cluster) localProcess() {
 
 func (p *Cluster) remoteProcess() {
 	process := func(natsMsg *nats.Msg) {
+		recvTime := time.Now() // ← NATS 回调被调用
 		packet, err := cproto.UnmarshalPacket(natsMsg.Data)
 		if err != nil {
 			// clog.Warnf("[remoteProcess] Unmarshal fail. [subject = %s, err = %v]",
@@ -177,7 +178,14 @@ func (p *Cluster) remoteProcess() {
 		if err == nil {
 			if handlerInfo, ok := isConcurrentHandler(targetPath.ActorID, packet.FuncName); ok {
 				// 并发处理：直接开 goroutine，绕过 Actor mailbox
-				go p.handleConcurrent(natsMsg, packet, handlerInfo)
+				go func() {
+					scheduleTime := time.Now()
+					clog.Infof(
+						"concurrent dispatch delay: natsCallbackToSchedule=%v traceId=%s",
+						scheduleTime.Sub(recvTime), packet.TraceId,
+					)
+					p.handleConcurrent(natsMsg, packet, handlerInfo)
+				}()
 				return
 			}
 		}
@@ -197,20 +205,32 @@ func (p *Cluster) remoteProcess() {
 			zap.String("conID", message.Header.Get("conID")), zap.String("reqID", message.Header.Get("reqID")))
 		p.app.ActorSystem().PostRemote(&message)
 	}
-
-	conn := cnats.GetConnect()
-	err := conn.Subscribe(p.remoteSubject, process)
-	if err != nil {
-		// clog.Errorf("[remoteProcess] Create subscribe fail. [subject = %s, err = %v]",
-		// 	p.remoteSubject,
-		// 	err,
-		// )
-		clog.ErrorContext(context.Background(), "[remoteProcess] create subscribe fail", zap.String("subject", p.remoteSubject), zap.Error(err))
+	logicPoolSize := 10
+	for i := 0; i < logicPoolSize; i++ {
+		conn := cnats.GetConnect()
+		err := conn.QueueSubscribe(p.remoteSubject, "service-group", process)
+		if err != nil {
+			// clog.Errorf("[remoteProcess] Create subscribe fail. [subject = %s, err = %v]",
+			// 	p.remoteSubject,
+			// 	err,
+			// )
+			clog.ErrorContext(context.Background(), "[remoteProcess] create subscribe fail", zap.String("subject", p.remoteSubject), zap.Error(err))
+		}
 	}
+	// conn := cnats.GetConnect()
+	// err := conn.Subscribe(p.remoteSubject, process)
+	// if err != nil {
+	// 	// clog.Errorf("[remoteProcess] Create subscribe fail. [subject = %s, err = %v]",
+	// 	// 	p.remoteSubject,
+	// 	// 	err,
+	// 	// )
+	// 	clog.ErrorContext(context.Background(), "[remoteProcess] create subscribe fail", zap.String("subject", p.remoteSubject), zap.Error(err))
+	// }
 }
 
 // handleConcurrent 并发处理请求
 func (p *Cluster) handleConcurrent(natsMsg *nats.Msg, packet *cproto.ClusterPacket, handlerInfo *HandlerInfo) {
+	t0 := time.Now()
 	defer packet.Recycle()
 
 	// 获取 worker（带超时）
@@ -225,12 +245,12 @@ func (p *Cluster) handleConcurrent(natsMsg *nats.Msg, packet *cproto.ClusterPack
 		p.sendErrorResponse(natsMsg, ccode.RPCRemoteExecuteError)
 		return
 	}
-
+	t1 := time.Now()
 	startTime := time.Now()
 
 	// 调用处理函数
 	rsp := p.invokeHandler(handlerInfo, packet)
-
+	t2 := time.Now()
 	elapsed := time.Since(startTime)
 	if elapsed > 100*time.Millisecond {
 		// clog.Warnf("[handleConcurrent] timeout request: %s.%s took %v",
@@ -243,6 +263,11 @@ func (p *Cluster) handleConcurrent(natsMsg *nats.Msg, packet *cproto.ClusterPack
 	if natsMsg.Reply != "" {
 		p.sendResponse(natsMsg, rsp)
 	}
+	t3 := time.Now()
+	clog.Infof(
+		"handleConcurrent breakdown: total=%v waitWorker=%v invoke=%v sendResponse=%v target=%s func=%s traceId=%s",
+		t3.Sub(t0), t1.Sub(t0), t2.Sub(t1), t3.Sub(t2), packet.TargetPath, packet.FuncName, packet.TraceId,
+	)
 }
 
 // invokeHandler 调用处理函数
@@ -492,7 +517,7 @@ func (p *Cluster) PublishRemoteType(nodeType string, cpacket *cproto.ClusterPack
 
 func (p *Cluster) RequestRemote(nodeID string, cpacket *cproto.ClusterPacket, timeout ...time.Duration) ([]byte, int32) {
 	defer cpacket.Recycle()
-
+	t0 := time.Now()
 	nodeType, err := p.app.Discovery().GetType(nodeID)
 	if err != nil {
 		// clog.Warnf("[RequestRemote] Get node type fail. [nodeID = %s, %s, err = %v]",
@@ -516,9 +541,10 @@ func (p *Cluster) RequestRemote(nodeID string, cpacket *cproto.ClusterPacket, ti
 			zap.String("baseInfo", cpacket.PrintLog()), zap.Error(err))
 		return nil, ccode.RPCMarshalError
 	}
-
 	subject := GetRemoteSubject(p.prefix, nodeType, nodeID)
-	natsData, err := cnats.GetConnect().RequestSync(subject, msg, timeout...)
+	start := time.Now()
+	natsData, replyAt, err := cnats.GetConnect().RequestSync(subject, msg, timeout...)
+	requestSyncReturnedAt := time.Now()
 	if err != nil {
 		// clog.Warnf("[RequestRemote] Nats request fail. [nodeID = %s, %s, err = %v]",
 		// 	nodeID,
@@ -530,7 +556,6 @@ func (p *Cluster) RequestRemote(nodeID string, cpacket *cproto.ClusterPacket, ti
 
 		return nil, ccode.RPCRemoteExecuteError
 	}
-
 	rsp := &cproto.Response{}
 	if err = proto.Unmarshal(natsData, rsp); err != nil {
 		clog.Warnf("[RequestRemote] unmarshal fail. [nodeID = %s, %s, rsp = %v, err = %v]",
@@ -544,6 +569,10 @@ func (p *Cluster) RequestRemote(nodeID string, cpacket *cproto.ClusterPacket, ti
 
 		return nil, ccode.RPCUnmarshalError
 	}
-
+	unmarshalCompletedAt := time.Now()
+	clog.Infof(
+		"RequestRemote breakdown: preSync=%v natsRoundTrip=%v postReply=%v unmarshal=%v total=%v subject=%s traceId=%s",
+		start.Sub(t0), replyAt.Sub(start), requestSyncReturnedAt.Sub(replyAt), unmarshalCompletedAt.Sub(requestSyncReturnedAt), unmarshalCompletedAt.Sub(t0), subject, cpacket.TraceId,
+	)
 	return rsp.Data, rsp.Code
 }

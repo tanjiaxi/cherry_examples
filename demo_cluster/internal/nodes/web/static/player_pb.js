@@ -1071,7 +1071,7 @@ proto.pb.getUserInfoResponse.prototype.toObject = function(opt_includeInstance) 
 proto.pb.getUserInfoResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
     userid: jspb.Message.getFieldWithDefault(msg, 1, 0),
-    money: jspb.Message.getFloatingPointFieldWithDefault(msg, 2, 0.0),
+    money: jspb.Message.getFieldWithDefault(msg, 2, 0),
     diamond: jspb.Message.getFieldWithDefault(msg, 3, 0),
     level: jspb.Message.getFieldWithDefault(msg, 4, 0),
     curexp: jspb.Message.getFieldWithDefault(msg, 5, 0)
@@ -1116,7 +1116,7 @@ proto.pb.getUserInfoResponse.deserializeBinaryFromReader = function(msg, reader)
       msg.setUserid(value);
       break;
     case 2:
-      var value = /** @type {number} */ (reader.readFloat());
+      var value = /** @type {number} */ (reader.readInt64());
       msg.setMoney(value);
       break;
     case 3:
@@ -1168,8 +1168,8 @@ proto.pb.getUserInfoResponse.serializeBinaryToWriter = function(message, writer)
     );
   }
   f = message.getMoney();
-  if (f !== 0.0) {
-    writer.writeFloat(
+  if (f !== 0) {
+    writer.writeInt64(
       2,
       f
     );
@@ -1217,11 +1217,11 @@ proto.pb.getUserInfoResponse.prototype.setUserid = function(value) {
 
 
 /**
- * optional float money = 2;
+ * optional int64 money = 2;
  * @return {number}
  */
 proto.pb.getUserInfoResponse.prototype.getMoney = function() {
-  return /** @type {number} */ (jspb.Message.getFloatingPointFieldWithDefault(this, 2, 0.0));
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 2, 0));
 };
 
 
@@ -1230,7 +1230,7 @@ proto.pb.getUserInfoResponse.prototype.getMoney = function() {
  * @return {!proto.pb.getUserInfoResponse} returns this
  */
 proto.pb.getUserInfoResponse.prototype.setMoney = function(value) {
-  return jspb.Message.setProto3FloatField(this, 2, value);
+  return jspb.Message.setProto3IntField(this, 2, value);
 };
 
 

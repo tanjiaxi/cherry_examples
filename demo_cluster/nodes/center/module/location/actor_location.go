@@ -246,13 +246,14 @@ func (p *ActorLocation) getBestGateFromNodes(ctx context.Context, req *pb.String
 		for _, reqNodeId := range req.Values {
 			if nodeId == reqNodeId {
 				validNodeIds = append(validNodeIds, nodeId)
-				// 获取TCP地址
-				settings := node.GetSettings()
-				if tcpAddr, ok := settings["tcp_address"]; ok && tcpAddr != "" {
-					nodeAddrMap[nodeId] = tcpAddr
-				} else {
-					nodeAddrMap[nodeId] = node.GetAddress()
-				}
+				// 获取TCP地址,现在不需要
+				// settings := node.GetSettings()
+				// if tcpAddr, ok := settings["tcp_address"]; ok && tcpAddr != "" {
+				// 	nodeAddrMap[nodeId] = tcpAddr
+				// } else {
+				// 	nodeAddrMap[nodeId] = node.GetAddress()
+				// }
+				nodeAddrMap[nodeId] = node.GetAddress()
 				break
 			}
 		}

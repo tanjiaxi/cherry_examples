@@ -30,7 +30,7 @@ var pprofPorts = map[string]string{
 	"game":   ":6060",
 	"gate":   ":6061",
 	"web":    ":6062",
-	"center": "0.0.0.0:6063",
+	"center": ":6063",
 	"master": ":6064",
 }
 

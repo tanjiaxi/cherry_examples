@@ -34,6 +34,10 @@ var (
 	UpdateRoomPlayerDataFial int32 = 312 //更新房间玩家数据失败
 	GetRulstInfoError        int32 = 313 //获取房间信息失败
 	RegisterError            int32 = 314 // 注册异常
+	NotEnoughMoney           int32 = 315 // 金币不足
+	InvalidRequest           int32 = 316
+	AssetSettleFailed        int32 = 317
+	SpinInProgress           int32 = 318
 
 	// 节点分配相关错误码
 	NoAvailableGate        int32 = 401 // 无可用Gate节点

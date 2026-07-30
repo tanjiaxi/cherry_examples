@@ -15,11 +15,11 @@ import (
 
 type (
 	AreaRow struct {
-		AreaId      int32    `json:"areaId"`      // 游戏区id
-		AreaName    string   `json:"areaName"`    // 游戏区名称
-		GateNodes   []string `json:"gateNodes"`   // 该区的Gate节点ID列表
-		DefaultGate string   `json:"defaultGate"` // 默认Gate地址（后备）
-		Gate        string   `json:"gate"`        // 兼容旧配置
+		AreaId             int32    `json:"areaId"`             // 游戏区id
+		AreaName           string   `json:"areaName"`           // 游戏区名称
+		GateNodes          []string `json:"gateNodes"`          // 该区的Gate节点ID列表
+		DefaultAddressGate string   `json:"defaultAddressGate"` // 默认Gate地址（后备）
+		DefaultTcpAddress  string   `json:"defaultTcpAddress"`  // 兼容旧配置
 	}
 
 	// 游戏区

@@ -68,13 +68,16 @@ func (p *ActorAccount) registerDevAccount(req *pb.DevRegister) int32 {
 func (p *ActorAccount) getDevAccount(req *pb.DevRegister) (*pb.String, int32) {
 	accountName := req.AccountName
 	passWord := req.Password
-
+	start := time.Now()
 	devAccount, _ := server.DevAccountWithName(accountName)
 	if devAccount == nil || passWord != devAccount.Password {
 		clog.Warnf("[getDevAccount] AccountAuthFail accountName = %s, passWord = %s, findAccountName = %s, findPassWord = %s", accountName, passWord, devAccount.DeviceName, devAccount.Password)
 		return nil, code.AccountAuthFail
 	}
-
+	elapsed := time.Since(start)
+	clog.Infof(
+		"RequestSync elapsed=%v accountName=%s",
+		elapsed, accountName)
 	return &pb.String{Value: devAccount.DeviceName}, code.OK
 }
 

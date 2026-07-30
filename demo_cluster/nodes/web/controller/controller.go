@@ -33,7 +33,7 @@ func (p *Controller) index(c *cherryGin.Context) {
 }
 
 // hello 输出json示例
-// http://10.10.10.251/hello
+// http://127.0.0.1/hello
 func (p *Controller) hello(c *cherryGin.Context) {
 	// 输出json
 	code.RenderResult(c, code.OK, map[string]string{
@@ -42,7 +42,7 @@ func (p *Controller) hello(c *cherryGin.Context) {
 }
 
 // register 开发模式帐号注册
-// http://10.10.10.251/register?account=test11&password=test11
+// http://127.0.0.1/register?account=test11&password=test11
 func (p *Controller) register(c *cherryGin.Context) {
 	done := metrics.TrackRequest("/register")
 	defer done(false)
@@ -54,7 +54,7 @@ func (p *Controller) register(c *cherryGin.Context) {
 }
 
 // login 根据pid获取sdkConfig，与第三方进行帐号登陆效验
-// http://10.10.10.251/login?pid=2126001&account=test1&password=test1
+// http://127.0.0.1/login?pid=2126001&account=test1&password=test1
 func (p *Controller) login(c *cherryGin.Context) {
 	done := metrics.TrackRequest("/login")
 	// 平台id，产品 ID、项目 ID 或 包 ID
@@ -115,7 +115,7 @@ func (p *Controller) login(c *cherryGin.Context) {
 }
 
 // severList 区服列表（带负载均衡）
-// http://10.10.10.251/server/list/2126001
+// http://127.0.0.1/server/list/2126001
 func (p *Controller) serverList(c *cherryGin.Context) {
 	startTime := time.Now()
 	pid := c.GetInt32("pid", 2126001)
@@ -159,10 +159,8 @@ func (p *Controller) serverList(c *cherryGin.Context) {
 
 		// 如果获取失败，使用默认地址
 		if bestGateAddr == "" {
-			if areaRow.DefaultGate != "" {
-				bestGateAddr = areaRow.DefaultGate
-			} else if areaRow.Gate != "" {
-				bestGateAddr = areaRow.Gate
+			if areaRow.DefaultTcpAddress != "" {
+				bestGateAddr = areaRow.DefaultTcpAddress
 			}
 		}
 
