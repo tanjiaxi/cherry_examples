@@ -1073,7 +1073,9 @@ proto.pb.SpinResult.toObject = function(includeInstance, msg) {
     common_define_pb.Int32Array2.toObject, includeInstance),
     wininfoList: jspb.Message.toObjectList(msg.getWininfoList(),
     proto.pb.SpinResult.WinInfo.toObject, includeInstance),
-    fixedbet: jspb.Message.getFieldWithDefault(msg, 8, 0)
+    fixedbet: jspb.Message.getFieldWithDefault(msg, 8, 0),
+    allwin: jspb.Message.getFieldWithDefault(msg, 9, 0),
+    bet: jspb.Message.getFieldWithDefault(msg, 10, 0)
   };
 
   if (includeInstance) {
@@ -1149,6 +1151,14 @@ proto.pb.SpinResult.deserializeBinaryFromReader = function(msg, reader) {
     case 8:
       var value = /** @type {number} */ (reader.readInt64());
       msg.setFixedbet(value);
+      break;
+    case 9:
+      var value = /** @type {number} */ (reader.readInt64());
+      msg.setAllwin(value);
+      break;
+    case 10:
+      var value = /** @type {number} */ (reader.readInt64());
+      msg.setBet(value);
       break;
     default:
       reader.skipField();
@@ -1238,6 +1248,20 @@ proto.pb.SpinResult.serializeBinaryToWriter = function(message, writer) {
   if (f !== 0) {
     writer.writeInt64(
       8,
+      f
+    );
+  }
+  f = message.getAllwin();
+  if (f !== 0) {
+    writer.writeInt64(
+      9,
+      f
+    );
+  }
+  f = message.getBet();
+  if (f !== 0) {
+    writer.writeInt64(
+      10,
       f
     );
   }
@@ -2024,6 +2048,42 @@ proto.pb.SpinResult.prototype.getFixedbet = function() {
  */
 proto.pb.SpinResult.prototype.setFixedbet = function(value) {
   return jspb.Message.setProto3IntField(this, 8, value);
+};
+
+
+/**
+ * optional int64 AllWin = 9;
+ * @return {number}
+ */
+proto.pb.SpinResult.prototype.getAllwin = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 9, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.pb.SpinResult} returns this
+ */
+proto.pb.SpinResult.prototype.setAllwin = function(value) {
+  return jspb.Message.setProto3IntField(this, 9, value);
+};
+
+
+/**
+ * optional int64 Bet = 10;
+ * @return {number}
+ */
+proto.pb.SpinResult.prototype.getBet = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 10, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.pb.SpinResult} returns this
+ */
+proto.pb.SpinResult.prototype.setBet = function(value) {
+  return jspb.Message.setProto3IntField(this, 10, value);
 };
 
 

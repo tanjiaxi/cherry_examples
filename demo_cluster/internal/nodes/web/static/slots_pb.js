@@ -1314,7 +1314,8 @@ proto.pb.SpinResponse.toObject = function(includeInstance, msg) {
     jackpotList: jspb.Message.toObjectList(msg.getJackpotList(),
     slots_define_pb.JackPot.toObject, includeInstance),
     multinfo: (f = msg.getMultinfo()) && slots_define_pb.BigWinMult.toObject(includeInstance, f),
-    spinuserinfo: (f = msg.getSpinuserinfo()) && slots_define_pb.SpinUserInfo.toObject(includeInstance, f)
+    spinuserinfo: (f = msg.getSpinuserinfo()) && slots_define_pb.SpinUserInfo.toObject(includeInstance, f),
+    balance: jspb.Message.getFieldWithDefault(msg, 11, 0)
   };
 
   if (includeInstance) {
@@ -1398,6 +1399,10 @@ proto.pb.SpinResponse.deserializeBinaryFromReader = function(msg, reader) {
       var value = new slots_define_pb.SpinUserInfo;
       reader.readMessage(value,slots_define_pb.SpinUserInfo.deserializeBinaryFromReader);
       msg.setSpinuserinfo(value);
+      break;
+    case 11:
+      var value = /** @type {number} */ (reader.readInt64());
+      msg.setBalance(value);
       break;
     default:
       reader.skipField();
@@ -1504,6 +1509,13 @@ proto.pb.SpinResponse.serializeBinaryToWriter = function(message, writer) {
       10,
       f,
       slots_define_pb.SpinUserInfo.serializeBinaryToWriter
+    );
+  }
+  f = message.getBalance();
+  if (f !== 0) {
+    writer.writeInt64(
+      11,
+      f
     );
   }
 };
@@ -1999,6 +2011,24 @@ proto.pb.SpinResponse.prototype.clearSpinuserinfo = function() {
  */
 proto.pb.SpinResponse.prototype.hasSpinuserinfo = function() {
   return jspb.Message.getField(this, 10) != null;
+};
+
+
+/**
+ * optional int64 balance = 11;
+ * @return {number}
+ */
+proto.pb.SpinResponse.prototype.getBalance = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 11, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.pb.SpinResponse} returns this
+ */
+proto.pb.SpinResponse.prototype.setBalance = function(value) {
+  return jspb.Message.setProto3IntField(this, 11, value);
 };
 
 

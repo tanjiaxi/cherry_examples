@@ -455,7 +455,8 @@ func (g *GenResultBase) ConvertToPbSpinResult(data *SpinResultData) *pb.SpinResu
 
 	// 转换 WinInfo
 	result.WinInfo = g.convertWinInfo(data.WinInfoAll)
-
+	result.AllWin = g.convertAllWin(data.WinInfoAll)
+	result.Bet = int64(g.bet)
 	return result
 }
 
@@ -570,6 +571,13 @@ func (g *GenResultBase) convertWinInfo(winInfoAll []winsInfo) []*pb.SpinResult_W
 		result[i] = pbWinInfo
 	}
 	return result
+}
+func (g *GenResultBase) convertAllWin(winInfoAll []winsInfo) int64 {
+	var totalWin int64
+	for _, v := range winInfoAll {
+		totalWin += int64(v.win)
+	}
+	return totalWin
 }
 
 // convertWinType 转换中奖类型

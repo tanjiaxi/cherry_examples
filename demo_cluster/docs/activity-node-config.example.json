@@ -1,0 +1,36 @@
+{
+  "node": {
+    "activity": [{
+      "node_id": "gc-activity-1",
+      "address": "",
+      "__settings__": {
+        "ref_logger": "activity_log",
+        "activity": {
+          "activity_id": "summer_2026",
+          "durable": "activity-summer-2026-v1",
+          "coin_per_spin": 1,
+          "ack_wait_seconds": 30,
+          "max_ack_pending": 256,
+          "inbox_ttl_hours": 2160,
+          "dynamodb_endpoint": "https://dynamodb.ap-southeast-1.amazonaws.com",
+          "dynamodb_region": "ap-southeast-1",
+          "dynamodb_table": "player_activity_state",
+          "dynamodb_sign_requests": true,
+          "dynamodb_access_key": "${AWS_ACCESS_KEY_ID}",
+          "dynamodb_secret_key": "${AWS_SECRET_ACCESS_KEY}",
+          "dynamodb_timeout_ms": 3000
+        }
+      },
+      "enable": true
+    }]
+  },
+  "logger": {
+    "activity_log": {
+      "level": "info",
+      "enable_console": true,
+      "enable_write_file": true,
+      "file_link_path": "logs/activity.log",
+      "file_path_format": "logs/activity_%Y%m%d%H%M.log"
+    }
+  }
+}

@@ -154,6 +154,8 @@ func (s *RoomDataManager) SaveSnapshot(ctx context.Context, roomID int32) bool {
     return s.dbQueueComp.SubmitTask(&dbQueue.DbWriteTask{
         Table:      tableName,
         ExtraKeyId: strconv.FormatInt(int64(data.RoomId), 10),
+        // DbWriteTask.PlayerID 是现有写后队列组件固定的分片字段名；
+        // 传入的业务主键仍然是 SlotsUser.UserID。
         PlayerID:   data.UserId,
         OpType:     dbQueue.OpUpdate,
         Data:       payload,
@@ -173,43 +175,31 @@ queue.SubmitTask(&Task{Data: state})
 
 正确方式是交付不可变值：`json.Marshal(state)`、明确的深拷贝，或 immutable event struct。
 
-## 5. 金币不能继续以 float64 结算
+## 5. 金币采用现有 SlotsUser.Money int64
 
-当前 `SlotsUser.Money float64` 适合展示兼容，不能作为结算余额。浮点数无法精确表示大量十进制小数，连续加减后会出现误差。
+当前项目的 `SlotsUser.Money` 已经是 `int64`，对应 PostgreSQL 的整数列，因此本项目不需要再增加 `money_units`。后文统一使用现有 `money` 列作为 Gold 权威余额。
 
-采用最小单位整数：
-
-```sql
-ALTER TABLE newsz_2024.slots_user
-    ADD COLUMN IF NOT EXISTS money_units BIGINT NOT NULL DEFAULT 0;
-
--- 一次性迁移；若金币无小数则 1 金币 = 1 unit。
-UPDATE newsz_2024.slots_user
-SET money_units = ROUND(money)::BIGINT
-WHERE money_units = 0;
-```
-
-迁移期可以双写 `Money` 做兼容展示，但只有 `money_units` 能参与余额校验、扣除和对账。最终删除旧的 float 结算路径。
+需要保持一条不变量：所有入口都必须以整数最小单位修改 `Money`，不能在结算链路中临时转成 `float64`。如果策划倍率需要小数，应先用定点数/有理数计算出最终整数 Gold，再进入资产事务。
 
 ### 5.1 最小账本表
 
 ```sql
 CREATE TABLE IF NOT EXISTS asset_operation (
     operation_id UUID PRIMARY KEY,
-    player_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
     operation_type TEXT NOT NULL,
     request_id TEXT NOT NULL,
     status TEXT NOT NULL,
     response_payload BYTEA,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     completed_at TIMESTAMPTZ,
-    UNIQUE (player_id, operation_type, request_id)
+    UNIQUE (user_id, operation_type, request_id)
 );
 
 CREATE TABLE IF NOT EXISTS asset_ledger (
     ledger_id BIGSERIAL PRIMARY KEY,
     operation_id UUID NOT NULL REFERENCES asset_operation(operation_id),
-    player_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
     asset_kind TEXT NOT NULL,
     delta BIGINT NOT NULL CHECK (delta <> 0),
     balance_after BIGINT NOT NULL,
@@ -221,7 +211,7 @@ CREATE TABLE IF NOT EXISTS asset_ledger (
 );
 
 CREATE INDEX IF NOT EXISTS idx_asset_ledger_player_time
-    ON asset_ledger (player_id, created_at DESC);
+    ON asset_ledger (user_id, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS domain_outbox (
     event_id UUID PRIMARY KEY,
@@ -310,10 +300,77 @@ request_id 相同
   -> 原样返回第一次持久化的 SpinResponse
 ```
 
-下面是一个职责较小、方便单测的 PG Repository。示例使用 `database/sql`，避免让领域逻辑依赖 GORM 的魔法行为。
+下面是一个职责较小、方便单测的 PG Repository。项目已经由 `internal/component/pg_gorm` 初始化 GORM，并通过 `internal/component/db.GetDB()` 暴露 `*gorm.DB`，所以 Repository 继续使用 GORM，不再引入另一套 `database/sql` 访问风格。
 
 ```go
 package settlement
+
+import (
+    "context"
+    "errors"
+    "fmt"
+    "strconv"
+    "time"
+
+    "github.com/jackc/pgconn"
+    "github.com/google/uuid"
+    gameModel "github.com/cherry-game/examples/demo_cluster/internal/model"
+    "gorm.io/gorm"
+)
+
+// Repository 是资产结算对 PostgreSQL 的访问边界。
+//
+// 它只依赖根 *gorm.DB，而不保存某一次事务 tx：
+// - 根 *gorm.DB 包装了并发安全的连接池，可作为 Game 组件/Service 的长生命周期依赖；
+// - Transaction 回调里的 tx 只能属于一次命令；
+// - 把 tx 存入 Repository 字段会让多个玩家 Actor 错误共享事务。
+type Repository struct {
+    db *gorm.DB
+}
+
+func NewRepository(db *gorm.DB) (*Repository, error) {
+    if db == nil {
+        return nil, errors.New("settlement repository: nil db")
+    }
+    return &Repository{db: db}, nil
+}
+
+// 以下错误由上层 Actor 映射为业务错误码；
+// 不要用字符串比较 PostgreSQL 错误信息。
+var (
+    ErrInvalidCommand  = errors.New("invalid settlement command")
+    ErrInsufficientGold = errors.New("insufficient gold")
+    ErrInProgress      = errors.New("operation is processing")
+)
+
+// isUniqueViolation 只负责识别 PG 唯一索引冲突（SQLSTATE 23505）。
+// 例如 (user_id, operation_type, request_id) 冲突，通常代表客户端重试。
+func isUniqueViolation(err error) bool {
+    var pgErr *pgconn.PgError
+    return errors.As(err, &pgErr) && pgErr.Code == "23505"
+}
+
+// loadExistingSpin 是唯一冲突后的统一处理：
+// 已完成则回放；处理中则交给客户端短暂重试或轮询。
+func (r *Repository) loadExistingSpin(
+    ctx context.Context, userID int64, requestID string,
+) (SettleSpinResult, error) {
+    op, err := r.FindSpinOperation(ctx, userID, requestID)
+    if err != nil {
+        return SettleSpinResult{}, err
+    }
+    if op == nil {
+        // 唯一冲突后理论上必定能查到；查不到说明事务可见性或数据异常，不能继续扣款。
+        return SettleSpinResult{}, fmt.Errorf("duplicate spin operation not found: user=%d request=%s", userID, requestID)
+    }
+    if op.Status != "COMPLETED" {
+        return SettleSpinResult{}, ErrInProgress
+    }
+    return SettleSpinResult{
+        Replay:   true,
+        Response: op.Response,
+    }, nil
+}
 
 type SpinOperation struct {
     OperationID string
@@ -321,18 +378,54 @@ type SpinOperation struct {
     Response []byte
 }
 
-func (r *Repository) FindSpinOperation(
-    ctx context.Context, playerID int64, requestID string,
-) (*SpinOperation, error) {
-    const q = `
-        SELECT operation_id, status, response_payload
-        FROM asset_operation
-        WHERE player_id = $1 AND operation_type = 'spin' AND request_id = $2`
+// 以下三个 Model 对应手动维护的资产表，不应放入 gorm/gen 自动生成的 SlotsUser 文件。
+// 资产表的字段与索引属于结算领域，需要由 migration 严格控制。
+type AssetOperation struct {
+    OperationID     string     `gorm:"column:operation_id;primaryKey"`
+    UserID          int64      `gorm:"column:user_id"`
+    OperationType   string     `gorm:"column:operation_type"`
+    RequestID       string     `gorm:"column:request_id"`
+    Status          string     `gorm:"column:status"`
+    ResponsePayload []byte     `gorm:"column:response_payload"`
+    CompletedAt     *time.Time `gorm:"column:completed_at"`
+}
+func (AssetOperation) TableName() string { return "asset_operation" }
 
+type AssetLedger struct {
+    LedgerID     int64  `gorm:"column:ledger_id;primaryKey"`
+    OperationID  string `gorm:"column:operation_id"`
+    UserID       int64  `gorm:"column:user_id"`
+    AssetKind    string `gorm:"column:asset_kind"`
+    Delta        int64  `gorm:"column:delta"`
+    BalanceAfter int64  `gorm:"column:balance_after"`
+    Reason       string `gorm:"column:reason"`
+    SourceType   string `gorm:"column:source_type"`
+    SourceID     string `gorm:"column:source_id"`
+}
+func (AssetLedger) TableName() string { return "asset_ledger" }
+
+type OutboxEvent struct {
+    EventID       string `gorm:"column:event_id;primaryKey"`
+    AggregateType string `gorm:"column:aggregate_type"`
+    AggregateID   string `gorm:"column:aggregate_id"`
+    EventType     string `gorm:"column:event_type"`
+    // Payload 是已经 json.Marshal 完成的领域事件；列类型为 jsonb。
+    Payload       []byte `gorm:"column:payload;type:jsonb"`
+    Status        string `gorm:"column:status"`
+}
+func (OutboxEvent) TableName() string { return "domain_outbox" }
+
+func (r *Repository) FindSpinOperation(
+    ctx context.Context, userID int64, requestID string,
+) (*SpinOperation, error) {
     var op SpinOperation
-    err := r.db.QueryRowContext(ctx, q, playerID, requestID).
-        Scan(&op.OperationID, &op.Status, &op.Response)
-    if errors.Is(err, sql.ErrNoRows) {
+    err := r.db.WithContext(ctx).
+        Table("asset_operation").
+        Select("operation_id, status, response_payload").
+        Where("user_id = ? AND operation_type = ? AND request_id = ?",
+            userID, "spin", requestID).
+        Take(&op).Error
+    if errors.Is(err, gorm.ErrRecordNotFound) {
         return nil, nil
     }
     if err != nil {
@@ -345,7 +438,7 @@ func (r *Repository) FindSpinOperation(
 Actor 中的使用：
 
 ```go
-op, err := repo.FindSpinOperation(ctx, playerID, req.GetRequestId())
+op, err := repo.FindSpinOperation(ctx, userID, req.GetRequestId())
 if err != nil {
     return internalError(err)
 }
@@ -368,7 +461,7 @@ if op != nil && op.Status == "COMPLETED" {
 ```go
 type SettleSpinCommand struct {
     OperationID string
-    PlayerID    int64
+    UserID      int64
     RequestID   string
     Bet         int64
     Win         int64
@@ -385,121 +478,108 @@ type SettleSpinResult struct {
 func (r *Repository) SettleSpin(
     ctx context.Context, cmd SettleSpinCommand,
 ) (SettleSpinResult, error) {
-    if cmd.PlayerID <= 0 || cmd.RequestID == "" || cmd.Bet <= 0 || cmd.Win < 0 {
+    if cmd.UserID <= 0 || cmd.RequestID == "" || cmd.Bet <= 0 || cmd.Win < 0 {
         return SettleSpinResult{}, ErrInvalidCommand
     }
 
-    tx, err := r.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
-    if err != nil {
-        return SettleSpinResult{}, err
-    }
-    defer func() { _ = tx.Rollback() }() // Commit 成功后 Rollback 返回 sql.ErrTxDone，可忽略
-
-    // 1) 占据业务唯一键。并发重试时，只有一个请求可插入。
-    _, err = tx.ExecContext(ctx, `
-        INSERT INTO asset_operation
-          (operation_id, player_id, operation_type, request_id, status)
-        VALUES ($1, $2, 'spin', $3, 'PROCESSING')`,
-        cmd.OperationID, cmd.PlayerID, cmd.RequestID,
-    )
-    if err != nil {
-        if isUniqueViolation(err) {
-            // 不要在事务内自旋。回滚后查询已有结果并回放。
-            return r.loadExistingSpin(ctx, cmd.PlayerID, cmd.RequestID)
+    var result SettleSpinResult
+    err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+        // 1) 尽早占据业务唯一键。并发重试时只有一个请求可插入。
+        //
+        // 注意：这一行与后面的余额、账本、Outbox 在同一个 PG 事务中。
+        // 所以别的连接在 commit 前完全看不到这条记录；commit 后它和所有
+        // 资产事实同时可见。这里直接写 COMPLETED 是正确的，不能被理解为
+        // "金币尚未提交就已完成"。
+        //
+        // 把唯一键插入放在事务开头的目的，是让并发重复请求尽早因唯一约束失败，
+        // 避免它继续执行扣款、写账本等无效工作。
+        completedAt := time.Now()
+        op := AssetOperation{
+            OperationID: cmd.OperationID, UserID: cmd.UserID,
+            OperationType: "spin", RequestID: cmd.RequestID, Status: "COMPLETED",
+            ResponsePayload: cmd.Response, CompletedAt: &completedAt,
         }
-        return SettleSpinResult{}, err
-    }
+        if err := tx.Create(&op).Error; err != nil {
+            return err
+        }
 
-    // 2) 原子条件扣款。RowsAffected=0 同时覆盖"玩家不存在"和"余额不足"；
-    // 生产中可再查玩家是否存在，将两类业务错误区分开。
-    debit, err := tx.ExecContext(ctx, `
-        UPDATE newsz_2024.slots_user
-        SET money_units = money_units - $1
-        WHERE user_id = $2 AND money_units >= $1`,
-        cmd.Bet, cmd.PlayerID,
-    )
-    if err != nil {
-        return SettleSpinResult{}, err
-    }
-    affected, err := debit.RowsAffected()
-    if err != nil {
-        return SettleSpinResult{}, err
-    }
-    if affected != 1 {
-        return SettleSpinResult{}, ErrInsufficientGold
-    }
+        // 2) 原子条件扣款。不能先 SELECT 余额再 UPDATE，后者会产生竞态。
+        debit := tx.Model(&gameModel.SlotsUser{}).
+            Where("user_id = ? AND money >= ?", cmd.UserID, cmd.Bet).
+            UpdateColumn("money", gorm.Expr("money - ?", cmd.Bet))
+        if debit.Error != nil {
+            return debit.Error
+        }
+        if debit.RowsAffected != 1 {
+            return ErrInsufficientGold
+        }
 
-    var afterDebit int64
-    if err := tx.QueryRowContext(ctx,
-        `SELECT money_units FROM newsz_2024.slots_user WHERE user_id = $1`, cmd.PlayerID,
-    ).Scan(&afterDebit); err != nil {
-        return SettleSpinResult{}, err
-    }
+        var user gameModel.SlotsUser
+        if err := tx.Select("user_id, money").
+            Where("user_id = ?", cmd.UserID).Take(&user).Error; err != nil {
+            return err
+        }
+        afterDebit := user.Money
 
     // 3) 下注账本。账本是 append-only，不允许 UPDATE/DELETE。
-    if _, err := tx.ExecContext(ctx, `
-        INSERT INTO asset_ledger
-          (operation_id, player_id, asset_kind, delta, balance_after, reason, source_type, source_id)
-        VALUES ($1, $2, 'core.gold', $3, $4, 'spin_bet', 'spin', $1)`,
-        cmd.OperationID, cmd.PlayerID, -cmd.Bet, afterDebit,
-    ); err != nil {
-        return SettleSpinResult{}, err
-    }
+        if err := tx.Create(&AssetLedger{
+            OperationID: cmd.OperationID, UserID: cmd.UserID, AssetKind: "core.gold",
+            Delta: -cmd.Bet, BalanceAfter: afterDebit, Reason: "spin_bet",
+            SourceType: "spin", SourceID: cmd.OperationID,
+        }).Error; err != nil {
+            return err
+        }
 
-    finalBalance := afterDebit
-    if cmd.Win > 0 {
+        finalBalance := afterDebit
+        if cmd.Win > 0 {
         // 4) 中奖入账。这里无需余额条件，仍必须在同一事务中。
-        if _, err := tx.ExecContext(ctx, `
-            UPDATE newsz_2024.slots_user
-            SET money_units = money_units + $1
-            WHERE user_id = $2`, cmd.Win, cmd.PlayerID,
-        ); err != nil {
-            return SettleSpinResult{}, err
-        }
-        finalBalance += cmd.Win
+            credit := tx.Model(&gameModel.SlotsUser{}).
+                Where("user_id = ?", cmd.UserID).
+                UpdateColumn("money", gorm.Expr("money + ?", cmd.Win))
+            if credit.Error != nil {
+                return credit.Error
+            }
+            if credit.RowsAffected != 1 {
+                return gorm.ErrRecordNotFound
+            }
+            finalBalance += cmd.Win
 
-        if _, err := tx.ExecContext(ctx, `
-            INSERT INTO asset_ledger
-              (operation_id, player_id, asset_kind, delta, balance_after, reason, source_type, source_id)
-            VALUES ($1, $2, 'core.gold', $3, $4, 'spin_win', 'spin', $1)`,
-            cmd.OperationID, cmd.PlayerID, cmd.Win, finalBalance,
-        ); err != nil {
-            return SettleSpinResult{}, err
+            if err := tx.Create(&AssetLedger{
+                OperationID: cmd.OperationID, UserID: cmd.UserID, AssetKind: "core.gold",
+                Delta: cmd.Win, BalanceAfter: finalBalance, Reason: "spin_win",
+                SourceType: "spin", SourceID: cmd.OperationID,
+            }).Error; err != nil {
+                return err
+            }
         }
-    }
 
     // 5) Outbox 先于 Commit 写入。不能先 Commit 再 Publish NATS。
-    eventID := uuid.NewString()
-    if _, err := tx.ExecContext(ctx, `
-        INSERT INTO domain_outbox
-          (event_id, aggregate_type, aggregate_id, event_type, payload, status)
-        VALUES ($1, 'player', $2, 'game.spin.completed.v1', $3::jsonb, 'PENDING')`,
-        eventID, strconv.FormatInt(cmd.PlayerID, 10), string(cmd.OutboxJSON),
-    ); err != nil {
+        eventID := uuid.NewString()
+        if err := tx.Create(&OutboxEvent{
+            EventID: eventID, AggregateType: "user",
+            AggregateID: strconv.FormatInt(cmd.UserID, 10),
+            EventType: "game.spin.completed.v1", Payload: cmd.OutboxJSON, Status: "PENDING",
+        }).Error; err != nil {
+            return err
+        }
+
+        result = SettleSpinResult{Balance: finalBalance, Response: cmd.Response}
+        return nil
+    })
+    if isUniqueViolation(err) {
+        // GORM Transaction 回调返回后已经回滚，再用根 DB 查询旧结果。
+        return r.loadExistingSpin(ctx, cmd.UserID, cmd.RequestID)
+    }
+    if err != nil {
         return SettleSpinResult{}, err
     }
-
-    // 6) 只有本事务所有事实都写成功后，才把响应标记为可重放。
-    if _, err := tx.ExecContext(ctx, `
-        UPDATE asset_operation
-        SET status = 'COMPLETED', response_payload = $1, completed_at = now()
-        WHERE operation_id = $2`,
-        cmd.Response, cmd.OperationID,
-    ); err != nil {
-        return SettleSpinResult{}, err
-    }
-
-    if err := tx.Commit(); err != nil {
-        return SettleSpinResult{}, err
-    }
-
-    return SettleSpinResult{Balance: finalBalance, Response: cmd.Response}, nil
+    return result, nil
 }
 ```
 
 ### 8.1 关于死锁、唯一冲突与 context
 
-- `context.Context` 必须从 Actor handler 一路传到 SQL；不要在 Repository 内替换成 `context.Background()`。否则连接断开或服务超时后 SQL 还会继续跑。
+- `context.Context` 必须从 Actor handler 一路传到 GORM 的 `WithContext(ctx)`；不要在 Repository 内替换成 `context.Background()`。否则连接断开或服务超时后 SQL 还会继续跑。
 - PostgreSQL 在热点玩家上可能报 `40P01 deadlock_detected` 或 `40001 serialization_failure`。对**同一个 operation_id**做有限次数退避重试是安全的；不能重试时生成新 operation_id。
 - 唯一冲突是正常并发场景，不应只记录 error。应查询已有操作：完成则回放，处理中则返回 `IN_PROGRESS` 或短暂等待。
 - 余额行的写入不能依赖 Actor 串行，因为充值回调、GM、跨节点命令可能不经过该 Actor。SQL 的条件更新才是最终余额保护。
@@ -515,10 +595,10 @@ func (r *ActorRoom) Spin(ctx context.Context, session *cproto.Session, req *pb.S
         return
     }
 
-    playerID := session.Uid
+    userID := session.Uid
 
     // A. 首先回放，不能在这里之后重新跑 RNG。
-    old, err := r.settlement.FindSpinOperation(ctx, playerID, req.GetRequestId())
+    old, err := r.settlement.FindSpinOperation(ctx, userID, req.GetRequestId())
     if err != nil {
         r.ResponseCode(session, code.AssetSettleFailed)
         return
@@ -534,7 +614,7 @@ func (r *ActorRoom) Spin(ctx context.Context, session *cproto.Session, req *pb.S
     }
 
     // B. 读取 Actor 私有状态，构造副本。
-    current := r.roomDataManager.GetData(ctx, int32(playerID), req.GetId())
+    current := r.roomDataManager.GetData(ctx, int32(userID), req.GetId())
     if current == nil {
         r.ResponseCode(session, code.NoRoomPlayerData)
         return
@@ -560,7 +640,7 @@ func (r *ActorRoom) Spin(ctx context.Context, session *cproto.Session, req *pb.S
         return
     }
 
-    eventBytes, err := json.Marshal(buildSpinCompletedEvent(playerID, result, next))
+    eventBytes, err := json.Marshal(buildSpinCompletedEvent(userID, result, next))
     if err != nil {
         r.ResponseCode(session, code.AssetSettleFailed)
         return
@@ -569,7 +649,7 @@ func (r *ActorRoom) Spin(ctx context.Context, session *cproto.Session, req *pb.S
     // D. PG 成功是唯一可提交点。
     settled, err := r.settlement.SettleSpin(ctx, SettleSpinCommand{
         OperationID: uuid.NewString(),
-        PlayerID: playerID,
+        UserID: userID,
         RequestID: req.GetRequestId(),
         Bet: result.Bet,
         Win: result.Win,
@@ -590,7 +670,7 @@ func (r *ActorRoom) Spin(ctx context.Context, session *cproto.Session, req *pb.S
 
     // F. 快照入队失败只告警；Outbox 事件仍可恢复 DDB。
     if ok := r.roomDataManager.SaveSnapshot(ctx, req.GetId()); !ok {
-        clog.Warnf("room snapshot enqueue failed player=%d room=%d", playerID, req.GetId())
+        clog.Warnf("room snapshot enqueue failed user=%d room=%d", userID, req.GetId())
     }
 
     // G. 用事务返回的余额填充响应，不能继续相信旧 Actor 缓存。
@@ -642,15 +722,395 @@ func (r *Relay) publishOne(ctx context.Context, e OutboxEvent) error {
         return err
     }
 
-    _, err = r.db.ExecContext(ctx, `
-        UPDATE domain_outbox
-        SET status = 'PUBLISHED', published_at = now()
-        WHERE event_id = $1 AND status = 'PENDING'`, e.EventID)
-    return err
+    return r.db.WithContext(ctx).Model(&OutboxEvent{}).
+        Where("event_id = ? AND status = ?", e.EventID, "PENDING").
+        Updates(map[string]any{
+            "status": "PUBLISHED",
+            "published_at": time.Now(),
+        }).Error
 }
 ```
 
 注意：JetStream 的 `MsgId` 是窗口去重，消费者仍必须按 `event_id` 做业务幂等。分布式系统的正确目标是 at-least-once transport + idempotent processing，而不是幻想网络层真正 exactly-once。
+
+### 10.1 当前缺失的四块实现，以及它们如何组成闭环
+
+目前文档中的 `SettleSpin` 只覆盖了 **Slots 本次下注与本次中奖 Gold**：
+
+```text
+Spin bet / win
+  -> PG 同步事务
+  -> 余额、账本、Spin 操作、Outbox 一起提交
+```
+
+它还没有自动拥有以下能力，必须分别补上：
+
+1. 通用的活动资产变更命令；
+2. 持续扫描 PG Outbox 并发布 JetStream 的 Relay；
+3. 订阅 `game.spin.completed.v1` 的活动消费者；
+4. 活动成功更新 DDB 后对 PG 事件处理状态的确认。
+
+第四点尤其重要。**不应要求 Spin 的 PG 事务等待 DDB 成功**；PG 与 DDB 没有共同事务，强行做同步双写会出现部分成功且拖慢 Spin。正确模型是“PG 先记录可恢复的待办事实，活动消费者最终把待办推进到完成”。
+
+完整状态机：
+
+```text
+                 同一 PG 事务
+Spin ------> asset_operation = COMPLETED
+              asset_ledger   = 已记账
+              domain_outbox  = PENDING
+                         |
+                         | Relay 发布 JetStream
+                         v
+              domain_outbox  = PUBLISHED
+                         |
+                         | Activity Consumer 收到 eventId
+                         v
+              DDB 活动状态 + 活动 inbox 幂等记录 原子提交
+                         |
+                         | Consumer ACK，写 PG consumer checkpoint
+                         v
+              activity_inbox = APPLIED
+```
+
+发生故障时：
+
+```text
+PG 已提交、Relay 未发布
+  -> domain_outbox 仍为 PENDING；下次扫描继续发布。
+
+JetStream 已发布、Relay 未标 PUBLISHED
+  -> Relay 重发同 eventId；消费者幂等，因此无副作用。
+
+活动 Worker 已收到、DDB 未成功
+  -> 不 ACK；JetStream 重投。
+
+DDB 已成功、Worker 在 ACK 前崩溃
+  -> JetStream 重投；DDB inbox eventId 已存在，识别为重复后 ACK。
+
+DDB 已成功、PG checkpoint 未成功
+  -> 重投时 DDB 幂等命中；补写 checkpoint 后 ACK。
+```
+
+所以“PG 成功后如何保证活动 DDB 成功”的准确回答是：
+
+> 不做跨库同步原子提交；通过永久保存的 Outbox、持久消息流、消费者幂等 Inbox、无限/受控重试和可观测的未完成状态，保证活动 DDB **最终必达且不会重复应用**。
+
+若活动尚未完成，Spin 依然已经完成。客户端查询活动时允许看到稍旧的进度；这就是此处明确选择的最终一致性。
+
+### 10.2 Outbox Relay：真正的扫描与发布代码
+
+Relay 不属于某个玩家 Actor。它是 Game/独立 worker 的后台组件；它只处理 PG 中已经提交的不可变 Outbox 记录，不修改任何玩家 Actor 内存。
+
+先为 Outbox 增加租约字段，避免多个 Relay 实例同时无限重复扫描：
+
+```sql
+ALTER TABLE domain_outbox
+    ADD COLUMN IF NOT EXISTS locked_until TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS locked_by TEXT,
+    ADD COLUMN IF NOT EXISTS last_error TEXT;
+
+CREATE INDEX IF NOT EXISTS idx_domain_outbox_dispatch
+    ON domain_outbox(status, locked_until, created_at);
+```
+
+下面的 PostgreSQL 查询使用 `FOR UPDATE SKIP LOCKED`。多台 Relay 可安全并行；每台只领到自己的一批事件。
+
+```go
+package outbox
+
+type Event struct {
+    EventID   string
+    EventType string
+    Payload   []byte
+}
+
+type Relay struct {
+    db       *gorm.DB
+    js       nats.JetStreamContext
+    workerID string
+}
+
+func (r *Relay) Run(ctx context.Context) {
+    ticker := time.NewTicker(100 * time.Millisecond)
+    defer ticker.Stop()
+
+    for {
+        select {
+        case <-ctx.Done():
+            return
+        case <-ticker.C:
+            if err := r.dispatchBatch(ctx, 100); err != nil {
+                slog.Error("outbox dispatch failed", "err", err)
+            }
+        }
+    }
+}
+
+func (r *Relay) dispatchBatch(ctx context.Context, batchSize int) error {
+    events, err := r.claim(ctx, batchSize)
+    if err != nil {
+        return err
+    }
+
+    for _, e := range events {
+        // Nats-Msg-Id 让 Relay 的重复 Publish 在 JetStream 去重窗口内不新增消息。
+        _, err := r.js.Publish(e.EventType, e.Payload, nats.MsgId(e.EventID))
+        if err != nil {
+            _ = r.releaseWithError(ctx, e.EventID, err)
+            continue
+        }
+        if err := r.markPublished(ctx, e.EventID); err != nil {
+            // 此处失败也不能重新执行业务；eventId 会保护后续重发。
+            slog.Error("outbox publish mark failed", "event_id", e.EventID, "err", err)
+        }
+    }
+    return nil
+}
+
+func (r *Relay) claim(ctx context.Context, limit int) ([]Event, error) {
+    events := make([]Event, 0, limit)
+    err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+        // GORM 仍可执行 PostgreSQL 特有的领取 SQL；Scan 会把 RETURNING 结果映射到 Event。
+        return tx.Raw(`
+            WITH claimed AS (
+                SELECT event_id
+                FROM domain_outbox
+                WHERE status = 'PENDING'
+                  AND (locked_until IS NULL OR locked_until < now())
+                ORDER BY created_at
+                FOR UPDATE SKIP LOCKED
+                LIMIT ?
+            )
+            UPDATE domain_outbox o
+            SET locked_by = ?, locked_until = now() + interval '30 seconds'
+            FROM claimed
+            WHERE o.event_id = claimed.event_id
+            RETURNING o.event_id, o.event_type, o.payload`, limit, r.workerID).
+            Scan(&events).Error
+    })
+    return events, err
+}
+
+func (r *Relay) markPublished(ctx context.Context, eventID string) error {
+    return r.db.WithContext(ctx).Model(&OutboxEvent{}).
+        Where("event_id = ? AND status = ?", eventID, "PENDING").
+        Updates(map[string]any{
+            "status": "PUBLISHED", "published_at": time.Now(),
+            "locked_by": nil, "locked_until": nil,
+        }).Error
+}
+
+func (r *Relay) releaseWithError(ctx context.Context, eventID string, cause error) error {
+    return r.db.WithContext(ctx).Model(&OutboxEvent{}).
+        Where("event_id = ?", eventID).
+        Updates(map[string]any{
+            "retry_count": gorm.Expr("retry_count + 1"),
+            "last_error": cause.Error(), "locked_by": nil, "locked_until": nil,
+        }).Error
+}
+```
+
+Go 注意事项：不要在领取 Outbox 的 SQL transaction 中调用 `js.Publish`。领任务的事务应很短，只负责锁定/租约；网络发布在事务外完成，否则 NATS 延迟会长期占用 PG 行锁。
+
+### 10.3 通用活动资产变动：先定义命令，不让每个活动直接改 JSON
+
+活动资产不应复用 `SettleSpin`。`SettleSpin` 的职责是 Slots 核心 Gold 结算；活动层需要一个通用、可扩展的命令。
+
+```go
+package activityasset
+
+type AssetKind string
+
+type Change struct {
+    Kind  AssetKind `json:"kind"`
+    Delta int64     `json:"delta"` // 正加负减；禁止零值
+}
+
+type Command struct {
+    // OperationID 是本次业务操作的全局幂等键。
+    // Spin 触发奖励时使用：activity:<activityID>:<spinEventID>:<rewardCode>。
+    OperationID string `json:"operationId"`
+    EventID     string `json:"eventId"`
+    UserID      int64  `json:"userId"`
+    ActivityID  string `json:"activityId"`
+    Reason      string `json:"reason"`
+    Changes     []Change `json:"changes"`
+}
+
+func (c Command) Validate() error {
+    if c.OperationID == "" || c.EventID == "" || c.UserID <= 0 || c.ActivityID == "" {
+        return errors.New("missing activity asset identity")
+    }
+    if len(c.Changes) == 0 {
+        return errors.New("empty activity asset changes")
+    }
+    for _, one := range c.Changes {
+        if one.Kind == "" || one.Delta == 0 {
+            return errors.New("invalid activity asset change")
+        }
+        if !strings.HasPrefix(string(one.Kind), "event."+c.ActivityID+".") {
+            return errors.New("asset does not belong to activity")
+        }
+    }
+    return nil
+}
+```
+
+活动 handler 只根据 Spin 事件计算命令，不直接写 DDB：
+
+```go
+func (h *SummerHandler) OnSpin(e SpinCompletedEvent) ([]activityasset.Command, error) {
+    if !h.isEligible(e) {
+        return nil, nil
+    }
+
+    return []activityasset.Command{{
+        OperationID: fmt.Sprintf("activity:summer_2026:%s:spin_coin", e.EventID),
+        EventID: e.EventID,
+        UserID: e.UserID,
+        ActivityID: "summer_2026",
+        Reason: "spin_completed",
+        Changes: []activityasset.Change{{
+            Kind: "event.summer_2026.coin",
+            Delta: 2,
+        }},
+    }}, nil
+}
+```
+
+这样 GiftType `EventCoin=6` 只是策划输入；解析后变成明确的 `event.summer_2026.coin`。新增活动只新增 handler 与 schema，不改 Spin。
+
+### 10.4 活动需要额外奖励 Gold 时
+
+活动 DDB Worker **不能直接写 `SlotsUser.Money`**。
+
+```text
+活动发现奖励 core.gold
+  -> 生成 GrantCoreAsset Command
+  -> 资产 PG 模块事务：operation 去重 + asset_ledger + slots_user.money + outbox
+  -> 返回/投递 player.asset.changed.v1
+```
+
+这里与 `SettleSpin` 共用的是底层的 `asset_operation + asset_ledger` 模式，不是让活动调用 `SettleSpin`。可抽取通用 `GrantCoreAsset`：
+
+```go
+type GrantCoreAssetCommand struct {
+    OperationID string
+    UserID      int64
+    Kind        string // 仅允许 core.gold / core.diamond 等 PG 权威资产
+    Amount      int64  // 必须大于 0
+    Reason      string
+    SourceID    string // 例如 activity:<id>:<eventId>
+}
+
+// 实现结构与 SettleSpin 相同：
+// 1. asset_operation 的 operation_id 唯一；
+// 2. GORM 原子更新 slots_user.money = money + amount；
+// 3. INSERT asset_ledger；
+// 4. INSERT domain_outbox；
+// 5. COMMIT。
+```
+
+这笔 Gold 允许异步到达，意味着 SpinResponse 可能先显示 Slots 自身中奖后的余额，随后通过推送或下一次拉取余额看到活动赠送金币。这是低延迟与跨库最终一致性的正常语义。
+
+### 10.5 活动 Consumer：DDB Inbox、状态更新与 ACK
+
+每个活动可有独立 Durable Consumer，例如：
+
+```text
+stream: GAME_EVENTS
+subject: game.spin.completed.v1
+durable: activity-summer-2026-v1
+```
+
+消费者的正确顺序是：解析 -> 计算奖励命令 -> DDB 条件/事务写 -> ACK。不要先 ACK 再写 DDB。
+
+```go
+func (c *Consumer) Handle(ctx context.Context, msg *nats.Msg) {
+    var event SpinCompletedEvent
+    if err := json.Unmarshal(msg.Data, &event); err != nil {
+        // 不可解析的毒消息：记录到 DLQ 后 ACK，避免无限阻塞整条消费流。
+        c.toDLQ(ctx, msg, err)
+        _ = msg.Ack()
+        return
+    }
+
+    commands, err := c.handler.OnSpin(event)
+    if err != nil {
+        // 规则错误/依赖故障，暂不 ACK，等待重投；需配置 MaxDeliver + DLQ。
+        c.log.Error("activity rule failed", "event_id", event.EventID, "err", err)
+        return
+    }
+
+    for _, cmd := range commands {
+        if err := c.store.Apply(ctx, cmd); err != nil {
+            // 网络故障或 DDB 节流：不 ACK。
+            return
+        }
+    }
+
+    // 只有所有命令都已幂等成功才确认 JetStream。
+    _ = msg.Ack()
+}
+```
+
+`Apply` 的责任是一次 DynamoDB `TransactWriteItems` 中同时完成：
+
+1. 检查并创建 `OP#<operationId>` Inbox 项；
+2. 更新 `ACTIVITY#<activityId>` 的 JSON 状态与 revision；
+3. 可选写活动资产日志。
+
+```go
+func (s *Store) Apply(ctx context.Context, cmd activityasset.Command) error {
+    if err := cmd.Validate(); err != nil {
+        return err
+    }
+
+    // 实际项目建议将 document 读出、按 schema 迁移、计算 next JSON，
+    // 再带 expected revision 写回。这里省略 AttributeValue 转换细节。
+    _, err := s.ddb.TransactWriteItems(ctx, &dynamodb.TransactWriteItemsInput{
+        TransactItems: []types.TransactWriteItem{
+            {Put: &types.Put{
+                TableName: aws.String(s.table),
+                Item: map[string]types.AttributeValue{
+                    "pk":  &types.AttributeValueMemberS{Value: fmt.Sprintf("USER#%d", cmd.UserID)},
+                    "sk":  &types.AttributeValueMemberS{Value: "OP#" + cmd.OperationID},
+                    "ttl": &types.AttributeValueMemberN{Value: strconv.FormatInt(time.Now().Add(90*24*time.Hour).Unix(), 10)},
+                },
+                ConditionExpression: aws.String("attribute_not_exists(pk)"),
+            }},
+            {Update: &types.Update{
+                TableName: aws.String(s.table),
+                Key: map[string]types.AttributeValue{
+                    "pk": &types.AttributeValueMemberS{Value: fmt.Sprintf("USER#%d", cmd.UserID)},
+                    "sk": &types.AttributeValueMemberS{Value: "ACTIVITY#" + cmd.ActivityID},
+                },
+                // 真实代码不要把多个活动字段铺成通用列；
+                // 使用 data JSON/document，handler 负责理解自己的 schema。
+                UpdateExpression: aws.String("SET #data = :next, #revision = if_not_exists(#revision, :zero) + :one, #updatedAt = :now"),
+                ExpressionAttributeNames: map[string]string{
+                    "#data": "data", "#revision": "revision", "#updatedAt": "updatedAt",
+                },
+                ExpressionAttributeValues: map[string]types.AttributeValue{
+                    ":next": &types.AttributeValueMemberS{Value: string(nextJSON)},
+                    ":zero": &types.AttributeValueMemberN{Value: "0"},
+                    ":one": &types.AttributeValueMemberN{Value: "1"},
+                    ":now": &types.AttributeValueMemberN{Value: strconv.FormatInt(time.Now().Unix(), 10)},
+                },
+            }},
+        },
+    })
+
+    if isTransactionCanceledBecauseDuplicateOperation(err) {
+        // OP 已存在表示先前成功；按成功处理，让 Consumer ACK。
+        return nil
+    }
+    return err
+}
+```
+
+上例的 `nextJSON` 必须来自当前活动 schema 的纯函数计算。若多个事件可能并发改同一活动文档，则要将 `revision` 加到 `ConditionExpression` 并发生冲突时重新读取、重算、重试；不能盲目 Last Write Wins。
 
 ## 11. DynamoDB：房间快照与活动状态都需要版本和幂等键
 
@@ -658,10 +1118,10 @@ func (r *Relay) publishOne(ctx context.Context, e OutboxEvent) error {
 
 ```text
 PK                 SK
-PLAYER#10001       ROOM#86001
-PLAYER#10001       ACTIVITY#summer_2026
-PLAYER#10001       ACTIVITY#witch_2026
-PLAYER#10001       EVENT#<eventId>
+USER#10001         ROOM#86001
+USER#10001         ACTIVITY#summer_2026
+USER#10001         ACTIVITY#witch_2026
+USER#10001         EVENT#<eventId>
 ```
 
 每个活动仍可拥有独立 Go 模块、JSON schema、奖励逻辑和迁移函数；物理表不必随着活动数量无限膨胀。
@@ -813,7 +1273,7 @@ Actor 内存 `playerData.Money` 可以加速展示，但不能作为最后余额
 
 1. 修正 `RoomDataManager` 初始化，并明确它只被所属玩家 Actor 使用。
 2. 给 Spin 增加 `request_id`，接入 `asset_operation` 的回放查询。
-3. 增加 `money_units BIGINT`，建立账本和 Outbox 表；先只改普通 Spin。
+3. 确认 `SlotsUser.Money int64` 对应 PG 整数列，建立账本和 Outbox 表；先只改普通 Spin。
 4. 把 SpinEngine 改为输出 `SpinPlan`，确保 PG 失败不污染真实 RoomDataInfo。
 5. 接入 PG 事务；成功后更新 Actor 内存，失败丢弃 `next`。
 6. 启用 NATS JetStream，部署 Outbox Relay。普通 NATS Actor RPC 继续用于即时通信，领域事件使用 JetStream。

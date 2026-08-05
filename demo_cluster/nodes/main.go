@@ -11,6 +11,7 @@ import (
 	"time"
 
 	cherryConst "github.com/cherry-game/cherry/const"
+	"github.com/cherry-game/examples/demo_cluster/nodes/activity"
 	"github.com/cherry-game/examples/demo_cluster/nodes/center"
 	"github.com/cherry-game/examples/demo_cluster/nodes/game"
 	"github.com/cherry-game/examples/demo_cluster/nodes/gate"
@@ -27,11 +28,12 @@ func redirectStderr(f *os.File) error {
 
 // pprof 端口映射：每个节点类型使用不同端口
 var pprofPorts = map[string]string{
-	"game":   ":6060",
-	"gate":   ":6061",
-	"web":    ":6062",
-	"center": ":6063",
-	"master": ":6064",
+	"game":     ":6060",
+	"activity": ":6065",
+	"gate":     ":6061",
+	"web":      ":6062",
+	"center":   ":6063",
+	"master":   ":6064",
 }
 
 func main() {
@@ -44,10 +46,26 @@ func main() {
 			centerCommand(),
 			webCommand(),
 			gateCommand(),
+			activityCommand(),
 			gameCommand(),
 		},
 	}
 	_ = app.Run(os.Args)
+}
+
+func activityCommand() *cli.Command {
+	return &cli.Command{
+		Name:      "activity",
+		Usage:     "run activity worker",
+		UsageText: "node activity --path=../../config/demo-cluster.json --node=gc-activity-1",
+		Flags:     getFlag(),
+		Action: func(c *cli.Context) error {
+			path, node := getParameters(c)
+			setupGCLog("activity", node)
+			activity.Run(path, node)
+			return nil
+		},
+	}
 }
 
 // startPprofServer 为指定节点类型启动 pprof 服务器

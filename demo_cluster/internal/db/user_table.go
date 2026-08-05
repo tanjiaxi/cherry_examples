@@ -9,15 +9,27 @@
 package db
 
 import (
+	"context"
+
 	"github.com/cherry-game/examples/demo_cluster/internal/component/db"
 	gameModel "github.com/cherry-game/examples/demo_cluster/internal/model"
 )
 
-func GetUserAllInfo(userId int32) *gameModel.SlotsUser {
+// GetUserAllInfo 查询用户完整信息。
+//
+// 使用 First 而不是 Find：First 在没有记录时会返回
+// gorm.ErrRecordNotFound；Find 则会返回一个 UserID=0 的零值对象，
+// 上层无法区分“用户不存在”和“查询成功但数据为空”。
+// context 从 Actor handler 向下传递，使请求取消和超时能够终止 SQL。
+func GetUserAllInfo(ctx context.Context, userID int32) (*gameModel.SlotsUser, error) {
 	var user gameModel.SlotsUser
-	result := db.GetDB().Where("user_id = ?", userId).Find(&user)
+	result := db.GetDB().
+		WithContext(ctx).
+		Where("user_id = ?", userID).
+		First(&user)
 	if result.Error != nil {
-		return nil
+		return nil, result.Error
 	}
-	return &user
+
+	return &user, nil
 }

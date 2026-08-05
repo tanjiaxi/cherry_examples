@@ -51,8 +51,8 @@ func Response(iActor cfacade.IActor, agentPath, sid string, mid uint32, v any) {
 		Mid:  mid,
 		Data: data,
 	}
-
-	iActor.Call(agentPath, ResponseFuncName, "", rsp)
+	traceId := generateTraceID(agentPath, uint(mid))
+	iActor.Call(agentPath, ResponseFuncName, traceId, rsp)
 }
 
 // 根据request的mid找到agent，返回消息给客户端

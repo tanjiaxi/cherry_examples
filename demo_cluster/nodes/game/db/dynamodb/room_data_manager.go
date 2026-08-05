@@ -46,7 +46,8 @@ func NewRoomDataManager(app cfacade.IApplication) *RoomDataManager {
 
 	return &RoomDataManager{
 		// cacheEntity: cacheEntity,
-		dbQueueComp: dbQueueComp,
+		dbQueueComp:  dbQueueComp,
+		roomDataInfo: make(map[int32]*slotsModel.RoomDataInfo),
 		// persistenceBackend: redisBackend,
 	}
 }
@@ -85,7 +86,7 @@ func (s *RoomDataManager) GetData(ctx context.Context, userID, roomId int32) *sl
 	// return nil
 }
 
-func (s *RoomDataManager) SaveData(ctx context.Context,roomId int32) error {
+func (s *RoomDataManager) SaveData(ctx context.Context, roomId int32) error {
 	if s.roomDataInfo[roomId] == nil {
 		return fmt.Errorf("no roomDataInfo")
 	}

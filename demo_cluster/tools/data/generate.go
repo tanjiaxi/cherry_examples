@@ -24,10 +24,14 @@ func main() {
 		ModelPkgPath: "model",                                                            // 生成 model 的包名
 		Mode:         gen.WithoutContext | gen.WithDefaultQuery | gen.WithQueryInterface, // 生成模式
 	})
-
+	// 🔴 显式配置：让所有生成的表名都在数据库底层自动补齐 schema 前缀
+	g.WithTableNameStrategy(func(tableName string) string {
+		// 假设这些表在物理上必须加上 "game_records."
+		return "newsz_2024." + tableName
+	})
 	// ------------------- 连接到数据库 -------------------
 	// 替换为你自己的数据库连接字符串 (DSN)
-	dsn := "host=localhost user=postgres password=123456 dbname=classic_slots port=5432 sslmode=disable TimeZone=Asia/Shanghai"
+	dsn := "host=10.10.10.251 user=postgres password=postgres dbname=classic_slots port=5432 sslmode=disable TimeZone=Asia/Shanghai search_path=newsz_2024"
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic(err)
@@ -52,19 +56,21 @@ func main() {
 	// g.GenerateModel("slots_user")
 	// g.GenerateModel("user_bind")
 	// g.GenerateModel("n2_cfg_level")
-	g.GenerateModel("lines3x3")
-	g.GenerateModel("lines3x4")
-	g.GenerateModel("lines3x5")
-	g.GenerateModel("lines3x6")
-	g.GenerateModel("lines4x3")
-	g.GenerateModel("lines4x5")
-	g.GenerateModel("lines4x6")
-	g.GenerateModel("lines5x5")
-	g.GenerateModel("lines_ids")
+	// g.GenerateModel("lines3x3")
+	// g.GenerateModel("lines3x4")
+	// g.GenerateModel("lines3x5")
+	// g.GenerateModel("lines3x6")
+	// g.GenerateModel("lines4x3")
+	// g.GenerateModel("lines4x5")
+	// g.GenerateModel("lines4x6")
+	// g.GenerateModel("lines5x5")
+	// g.GenerateModel("lines_ids")
+	g.GenerateModel("asset_ledger")
+	g.GenerateModel("asset_operation")
+	g.GenerateModel("domain_outbox")
 
 	// 或者，为数据库中的所有表生成模型
 	// g.ApplyBasic(g.GenerateAllTable()...)
-
-	// ------------------- 执行生成 -------------------
+	// -------------------执行生成 -------------------
 	g.Execute()
 }

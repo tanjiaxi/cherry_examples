@@ -35,8 +35,8 @@ func NewSystem() *System {
 		remoteInvokeFunc: InvokeRemoteFunc,
 		wg:               &sync.WaitGroup{},
 		callTimeout:      3 * time.Second,
-		arrivalTimeOut:   100,
-		executionTimeout: 100,
+		arrivalTimeOut:   1000,
+		executionTimeout: 1000,
 	}
 
 	return system

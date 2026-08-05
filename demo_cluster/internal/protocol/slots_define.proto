@@ -52,6 +52,8 @@ message SpinResult {
 
   int64 fixedBet =
       8; // 关卡固定倍率，如果有当前字段，玩家升级时锁定倍率，不做调整。
+  int64 AllWin = 9;
+  int64 Bet = 10;
 }
 // 赔率信息
 message PayInfo {

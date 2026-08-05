@@ -157,6 +157,7 @@ func (p *Cluster) localProcess() {
 		// )
 		clog.ErrorContext(context.Background(), "[localProcess] create subscribe fail", zap.String("subject", p.localSubject), zap.Error(err))
 	}
+	// clog.ErrorContext(context.Background(), "[localProcess] create subscribe", zap.String("subject", p.localSubject), zap.String("nodeType", p.app.NodeType()), zap.String("nodeID", p.app.NodeID()))
 }
 
 func (p *Cluster) remoteProcess() {
@@ -205,27 +206,27 @@ func (p *Cluster) remoteProcess() {
 			zap.String("conID", message.Header.Get("conID")), zap.String("reqID", message.Header.Get("reqID")))
 		p.app.ActorSystem().PostRemote(&message)
 	}
-	logicPoolSize := 10
-	for i := 0; i < logicPoolSize; i++ {
-		conn := cnats.GetConnect()
-		err := conn.QueueSubscribe(p.remoteSubject, "service-group", process)
-		if err != nil {
-			// clog.Errorf("[remoteProcess] Create subscribe fail. [subject = %s, err = %v]",
-			// 	p.remoteSubject,
-			// 	err,
-			// )
-			clog.ErrorContext(context.Background(), "[remoteProcess] create subscribe fail", zap.String("subject", p.remoteSubject), zap.Error(err))
-		}
-	}
-	// conn := cnats.GetConnect()
-	// err := conn.Subscribe(p.remoteSubject, process)
-	// if err != nil {
-	// 	// clog.Errorf("[remoteProcess] Create subscribe fail. [subject = %s, err = %v]",
-	// 	// 	p.remoteSubject,
-	// 	// 	err,
-	// 	// )
-	// 	clog.ErrorContext(context.Background(), "[remoteProcess] create subscribe fail", zap.String("subject", p.remoteSubject), zap.Error(err))
+	// logicPoolSize := 10
+	// for i := 0; i < logicPoolSize; i++ {
+	// 	conn := cnats.GetConnect()
+	// 	err := conn.QueueSubscribe(p.remoteSubject, "service-group", process)
+	// 	if err != nil {
+	// 		// clog.Errorf("[remoteProcess] Create subscribe fail. [subject = %s, err = %v]",
+	// 		// 	p.remoteSubject,
+	// 		// 	err,
+	// 		// )
+	// 		clog.ErrorContext(context.Background(), "[remoteProcess] create subscribe fail", zap.String("subject", p.remoteSubject), zap.Error(err))
+	// 	}
 	// }
+	conn := cnats.GetConnect()
+	err := conn.Subscribe(p.remoteSubject, process)
+	if err != nil {
+		// clog.Errorf("[remoteProcess] Create subscribe fail. [subject = %s, err = %v]",
+		// 	p.remoteSubject,
+		// 	err,
+		// )
+		clog.ErrorContext(context.Background(), "[remoteProcess] create subscribe fail", zap.String("subject", p.remoteSubject), zap.Error(err))
+	}
 }
 
 // handleConcurrent 并发处理请求

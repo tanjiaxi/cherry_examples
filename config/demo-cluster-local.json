@@ -1,7 +1,7 @@
 {
   "env": "gc",
-  "debug": true,
-  "print_level": "Debug",
+  "WARN": true,
+  "print_level": "WARN",
   "cluster": {
     "discovery": {
       "mode": "etcd",
@@ -107,53 +107,89 @@
         "db_id_list": {
           "game_db_id": "game_db_1"
         },
-        "ref_logger": "game_log"
+        "ref_logger": "game_log",
+        "outbox": {
+          "batch_size": 100,
+          "publish_workers": 16,
+          "poll_interval_ms": 1000,
+          "lease_seconds": 30
+        }
+      },
+      "enable": true
+    }],
+    "activity": [{
+      "node_id": "gc-activity-1",
+      "address": "",
+      "__settings__": {
+        "ref_logger": "activity_log",
+        "activity": {
+          "storage": "log",
+          "log_every": 100,
+          "activity_id": "summer_2026",
+          "durable": "activity-summer-2026-v1",
+          "coin_per_spin": 1,
+          "ack_wait_seconds": 30,
+          "max_ack_pending": 256,
+          "inbox_ttl_hours": 2160,
+          "dynamodb_endpoint": "",
+          "dynamodb_region": "ap-southeast-1",
+          "dynamodb_table": "player_activity_state",
+          "dynamodb_sign_requests": true,
+          "dynamodb_timeout_ms": 3000
+        }
       },
       "enable": true
     }]
   },
   "logger": {
     "master_log": {
-      "level": "Debug",
+      "level": "WARN",
       "enable_console": true,
       "enable_write_file": true,
-      "file_link_path": "logs/debug.log",
-      "file_path_format": "logs/debug_%Y%m%d%H%M.log"
+      "file_link_path": "logs/WARN.log",
+      "file_path_format": "logs/WARN_%Y%m%d%H%M.log"
     },
     "web_log": {
-      "level": "Debug",
+      "level": "WARN",
       "enable_console": true,
       "enable_write_file": true,
-      "file_link_path": "logs/debug.log",
-      "file_path_format": "logs/debug_%Y%m%d%H%M.log"
+      "file_link_path": "logs/WARN.log",
+      "file_path_format": "logs/WARN_%Y%m%d%H%M.log"
     },
     "center_log": {
-      "level": "Debug",
+      "level": "WARN",
       "enable_console": true,
       "enable_write_file": true,
-      "file_link_path": "logs/debug.log",
-      "file_path_format": "logs/debug_%Y%m%d%H%M.log"
+      "file_link_path": "logs/WARN.log",
+      "file_path_format": "logs/WARN_%Y%m%d%H%M.log"
     },
     "gate_log": {
-      "level": "Debug",
+      "level": "WARN",
       "enable_console": true,
       "enable_write_file": true,
-      "file_link_path": "logs/debug.log",
-      "file_path_format": "logs/debug_%Y%m%d%H%M.log"
+      "file_link_path": "logs/WARN.log",
+      "file_path_format": "logs/WARN_%Y%m%d%H%M.log"
     },
     "game_log": {
-      "level": "Debug",
+      "level": "WARN",
       "enable_console": true,
       "enable_write_file": true,
-      "file_link_path": "logs/debug.log",
-      "file_path_format": "logs/debug_%Y%m%d%H%M.log"
+      "file_link_path": "logs/WARN.log",
+      "file_path_format": "logs/WARN_%Y%m%d%H%M.log"
+    },
+    "activity_log": {
+      "level": "WARN",
+      "enable_console": true,
+      "enable_write_file": true,
+      "file_link_path": "logs/activity.log",
+      "file_path_format": "logs/activity_%Y%m%d%H%M.log"
     },
     "cross_log": {
-      "level": "Debug",
+      "level": "WARN",
       "enable_console": true,
       "enable_write_file": true,
-      "file_link_path": "logs/debug.log",
-      "file_path_format": "logs/debug_%Y%m%d%H%M.log"
+      "file_link_path": "logs/WARN.log",
+      "file_path_format": "logs/WARN_%Y%m%d%H%M.log"
     }
   },
   "data_config": {

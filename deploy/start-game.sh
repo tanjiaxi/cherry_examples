@@ -64,6 +64,10 @@ sleep 1
 
 start_node "game" "10001"
 
+sleep 1
+
+start_node "activity" "gc-activity-1"
+
 echo ""
 echo "✅ 所有节点已启动！"
 echo ""

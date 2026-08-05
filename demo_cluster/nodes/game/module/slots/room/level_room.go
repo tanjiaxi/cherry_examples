@@ -10,22 +10,28 @@ package room
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
+	"github.com/bytedance/sonic"
 	ccontext "github.com/cherry-game/cherry/extend/context"
 	cfacade "github.com/cherry-game/cherry/facade"
 	clog "github.com/cherry-game/cherry/logger"
 	"github.com/cherry-game/cherry/net/parser/pomelo"
 	cproto "github.com/cherry-game/cherry/net/proto"
+	asset "github.com/cherry-game/examples/demo_cluster/internal/asset"
 	"github.com/cherry-game/examples/demo_cluster/internal/code"
 	"github.com/cherry-game/examples/demo_cluster/internal/component/metrics"
+	"github.com/cherry-game/examples/demo_cluster/internal/component/outbox"
 	configCacheSlots "github.com/cherry-game/examples/demo_cluster/internal/config_cache/slots"
 	"github.com/cherry-game/examples/demo_cluster/internal/pb"
 	rpcGame "github.com/cherry-game/examples/demo_cluster/internal/rpc/game"
+	"github.com/cherry-game/examples/demo_cluster/nodes/game/db"
 	"github.com/cherry-game/examples/demo_cluster/nodes/game/db/dynamodb"
 	spinEngine "github.com/cherry-game/examples/demo_cluster/nodes/game/server/slots/spin_engine/machine"
 	spinManager "github.com/cherry-game/examples/demo_cluster/nodes/game/server/slots/spin_manager"
+	"github.com/google/uuid"
 )
 
 // 关卡房间 cactor
@@ -38,8 +44,9 @@ type (
 		roomDataManager *dynamodb.RoomDataManager
 		levelMutex      *sync.RWMutex
 		// 同步控制
-		syncTimer *time.Timer
-		spinCount int
+		syncTimer  *time.Timer
+		spinCount  int
+		settlement *asset.Repository
 	}
 )
 
@@ -47,19 +54,20 @@ func NewActorRoom(app cfacade.IApplication) *ActorRoom {
 	a := &ActorRoom{}
 	a.levelMutex = &sync.RWMutex{}
 	a.roomDataManager = dynamodb.NewRoomDataManager(app)
+	a.settlement, _ = asset.NewRepository(db.GetDB())
 	return a
 }
 
 func (r *ActorRoom) OnInit() {
-	// r.Remote().Register("sessionClose", r.sessionClose)
+	r.Remote().Register("sessionClose", r.sessionClose)
 	// r.Remote().Register("dbQriteQueue", r.HandleSaveMsg)
 	// clog.Debugf("[actorRoom] path = %s init!", r.PathString())
 	// 处理gate的节点actor消息
-	// r.Local().Register("entermachine", r.enterMachine) // 进入关卡
-	// r.Local().Register("machineinfo", r.machineinfo)   // 初始化关卡数据
-	// r.Local().Register("spin", r.spin)                 // 关卡spin
-	// r.Local().Register("bonus", r.bonus)               // 关卡bonus请求
-	// r.Local().Register("collect", r.collect)           // 关卡collect 请求
+	r.Local().Register("enterMachine", r.enterMachine) // 进入关卡
+	r.Local().Register("machineInfo", r.machineinfo)   // 初始化关卡数据
+	r.Local().Register("spin", r.spin)                 // 关卡spin
+	r.Local().Register("bonus", r.bonus)               // 关卡bonus请求
+	r.Local().Register("collect", r.collect)           // 关卡collect 请求
 
 	// 初始化玩家定时落地，使用时间轮 (5 分钟定时间隔，并加入随机扰动错开波峰)
 	// delay := time.Duration(rand.Intn(20)) * time.Second
@@ -85,8 +93,8 @@ func (r *ActorRoom) sessionClose(ctx context.Context) {
 	clog.Debugf("[actorPlayer] exit! uis = %d", 10)
 }
 
-func (r *ActorRoom) EnterMachine(ctx context.Context, session *cproto.Session, req *pb.EnterMachine) {
-	done := metrics.TrackRequest("game.slots.entermachine")
+func (r *ActorRoom) enterMachine(ctx context.Context, session *cproto.Session, req *pb.EnterMachine) {
+	done := metrics.TrackRequest("game.slots.enterMachine")
 	defer done(false)
 
 	roomId := req.Id
@@ -103,7 +111,7 @@ func (r *ActorRoom) EnterMachine(ctx context.Context, session *cproto.Session, r
 	r.Response(session, response)
 }
 
-func (r *ActorRoom) Machineinfo(ctx context.Context, session *cproto.Session, req *pb.MachineInfo) {
+func (r *ActorRoom) machineinfo(ctx context.Context, session *cproto.Session, req *pb.MachineInfo) {
 	done := metrics.TrackRequest("game.slots.machineinfo")
 	hasError := false
 	defer func() { done(hasError) }()
@@ -203,7 +211,8 @@ func (r *ActorRoom) Machineinfo(ctx context.Context, session *cproto.Session, re
 	r.Response(session, response)
 }
 
-func (r *ActorRoom) Spin(ctx context.Context, session *cproto.Session, req *pb.Spin) {
+func (r *ActorRoom) spin(ctx context.Context, session *cproto.Session, req *pb.Spin) {
+	startTime := time.Now()
 	if req.GetRequestId() == "" {
 		r.ResponseCode(session, code.InvalidRequest)
 		return
@@ -211,7 +220,22 @@ func (r *ActorRoom) Spin(ctx context.Context, session *cproto.Session, req *pb.S
 	done := metrics.TrackRequest("game.slots.spin")
 	hasError := false
 	defer func() { done(hasError) }()
-
+	userID := session.Uid
+	// A. 首先回放，不能在这里之后重新跑 RNG。
+	old, err := r.settlement.FindSpinOperation(ctx, userID, req.GetRequestId())
+	if err != nil {
+		r.ResponseCode(session, code.AssetSettleFailed)
+		return
+	}
+	if old != nil && old.Status == "COMPLETED" {
+		response := new(pb.SpinResponse)
+		if err := r.App().Serializer().Unmarshal(old.ResponsePayload, response); err != nil {
+			r.ResponseCode(session, code.AssetSettleFailed)
+			return
+		}
+		r.Response(session, response)
+		return
+	}
 	roomId := req.Id
 	ruleId := roomId / 1000
 	curBet := 10000 // req.CurBet
@@ -247,20 +271,6 @@ func (r *ActorRoom) Spin(ctx context.Context, session *cproto.Session, req *pb.S
 		r.Response(session, response)
 		return
 	}
-	// roomDataInfo.SpinNum++
-	// err = r.roomDataManager.UpdateLevelSessionData(roomDataInfo)
-	// cost := time.Since(start)
-
-	// clog.Infof("执行耗时: %v", cost)
-	// if err != nil {
-	// 	hasError = true
-	// 	response := &pb.ErrorResponse{
-	// 		Code:    code.UpdateRoomPlayerDataFial,
-	// 		Message: "no room data info",
-	// 	}
-	// 	r.Response(session, response)
-	// 	return
-	// }
 	// 1. 验证房间配置
 	n2CfgRoomlist, error := configCacheSlots.GetInstance().GetRoomConfig(roomId)
 	if error != nil || n2CfgRoomlist == nil {
@@ -283,6 +293,55 @@ func (r *ActorRoom) Spin(ctx context.Context, session *cproto.Session, req *pb.S
 		return
 	}
 	roomDataInfo.Version++
+
+	SpinResponse := &pb.SpinResponse{
+		SpinResult:   SpinResult,
+		Id:           roomId,
+		SeedInfo:     nil,
+		UserBet:      int64(curBet),
+		Jackpot:      nil,
+		MultInfo:     nil,
+		SpinUserInfo: nil,
+	}
+	responseBytes, err := r.App().Serializer().Marshal(SpinResponse)
+	if err != nil {
+		r.ResponseCode(session, code.AssetSettleFailed)
+		return
+	}
+	if err != nil {
+		r.ResponseCode(session, code.AssetSettleFailed)
+		return
+	}
+	eventID := uuid.NewString()
+	eventBytes, err := sonic.Marshal(asset.BuildSpinCompletedEvent(eventID, userID, roomId, SpinResult.Bet, SpinResult.AllWin))
+	if err != nil {
+		r.ResponseCode(session, code.AssetSettleFailed)
+		return
+	}
+	// // D. PG 成功是唯一可提交点。
+	settled, err := r.settlement.SettleSpin(ctx, asset.SettleSpinCommand{
+		OperationID: uuid.NewString(),
+		EventID:     eventID,
+		UserID:      userID,
+		RequestID:   req.GetRequestId(),
+		Bet:         SpinResult.Bet,
+		Win:         SpinResult.AllWin,
+		Response:    responseBytes,
+		OutboxJSON:  eventBytes,
+	})
+	if errors.Is(err, asset.ErrInsufficientGold) {
+		r.ResponseCode(session, code.NotEnoughMoney)
+		return
+	}
+	if err != nil {
+		r.ResponseCode(session, code.AssetSettleFailed)
+		return
+	}
+	// This only places a token in a buffered channel.  It neither sends NATS
+	// nor waits for any IO, so it is safe on the latency-sensitive Spin path.
+	if component := r.App().Find(outbox.ComponentName); component != nil {
+		component.(*outbox.Component).Wake()
+	}
 	//保存数据
 	if err := r.roomDataManager.SaveData(ctx, roomId); err != nil {
 		hasError = true
@@ -293,22 +352,16 @@ func (r *ActorRoom) Spin(ctx context.Context, session *cproto.Session, req *pb.S
 		r.Response(session, response)
 		return
 	}
+	SpinResponse.Balance = settled.Balance
 	clog.Infof("spin: userId=%d, roomId=%d, version=%d ,feature=%v",
 		userInfo.UserId, roomId, roomDataInfo.Version, roomDataInfo)
-	SpinResponse := &pb.SpinResponse{
-		SpinResult:   SpinResult,
-		Id:           roomId,
-		SeedInfo:     nil,
-		UserBet:      int64(curBet),
-		Jackpot:      nil,
-		MultInfo:     nil,
-		SpinUserInfo: nil,
-	}
+	elapsed := time.Since(startTime)
+	clog.Warnf("[spin] 代码执行耗时: %v", elapsed)
 	r.Response(session, SpinResponse)
 }
 
-func (r *ActorRoom) Bonus(ctx context.Context, session *cproto.Session, _ *pb.Bonus) {
+func (r *ActorRoom) bonus(ctx context.Context, session *cproto.Session, _ *pb.Bonus) {
 }
 
-func (r *ActorRoom) Collect(ctx context.Context, session *cproto.Session, _ *pb.CollectDone) {
+func (r *ActorRoom) collect(ctx context.Context, session *cproto.Session, _ *pb.CollectDone) {
 }

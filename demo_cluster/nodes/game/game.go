@@ -22,6 +22,7 @@ import (
 	checkConfigVersion "github.com/cherry-game/examples/demo_cluster/internal/component/check_config_version"
 	commonDb "github.com/cherry-game/examples/demo_cluster/internal/component/db"
 	"github.com/cherry-game/examples/demo_cluster/internal/component/metrics"
+	"github.com/cherry-game/examples/demo_cluster/internal/component/outbox"
 	"github.com/cherry-game/examples/demo_cluster/internal/component/runtime_monitor"
 	configCacheSlots "github.com/cherry-game/examples/demo_cluster/internal/config_cache/slots"
 	"github.com/cherry-game/examples/demo_cluster/internal/data"
@@ -64,6 +65,9 @@ func Run(profileFilePath, nodeID string) {
 	app.Register(db.New())
 	// 注册公共db组件
 	app.Register(commonDb.New())
+	// Must be registered after GORM/common DB.  The relay runs outside actors
+	// and only dispatches already committed Outbox rows.
+	app.Register(outbox.NewComponent())
 
 	// 注册服务端 QPS 统计组件
 	metricsComponent := metrics.New()

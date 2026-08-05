@@ -21,7 +21,6 @@ import (
 	sessionKey "github.com/cherry-game/examples/demo_cluster/internal/session_key"
 	"github.com/cherry-game/examples/demo_cluster/nodes/game/db"
 	"github.com/cherry-game/examples/demo_cluster/nodes/game/module/online"
-	slotsRoom "github.com/cherry-game/examples/demo_cluster/nodes/game/module/slots/room"
 )
 
 type (
@@ -35,7 +34,6 @@ type (
 
 		// 玩家核心数据（从数据库加载，内存缓存）
 		playerData *PlayerData
-		slotsRoom  *slotsRoom.ActorRoom
 	}
 
 	// PlayerData 玩家核心数据
@@ -46,11 +44,11 @@ type (
 
 func NewActorPlayer(app cfacade.IApplication) *actorPlayer {
 	return &actorPlayer{
-		slotsRoom: slotsRoom.NewActorRoom(app),
-		isOnline:  false,
+		isOnline: false,
 	}
 }
 func (p *actorPlayer) OnInit() {
+
 	clog.Debugf("[actorPlayer] path = %s init!", p.PathString())
 
 	// 注册 session关闭的remote函数(网关触发连接断开后，会调用RPC发送该消息)
@@ -68,11 +66,11 @@ func (p *actorPlayer) OnInit() {
 	// p.Remote().Register("getLevel", p.GetLevel)
 
 	// 处理gate的节点actor消息
-	p.Local().Register("entermachine", p.slotsRoom.EnterMachine) // 进入关卡
-	p.Local().Register("machineinfo", p.slotsRoom.Machineinfo)   // 初始化关卡数据
-	p.Local().Register("spin", p.slotsRoom.Spin)                 // 关卡spin
-	p.Local().Register("bonus", p.slotsRoom.Bonus)               // 关卡bonus请求
-	p.Local().Register("collect", p.slotsRoom.Collect)           // 关卡collect 请求
+	// p.Local().Register("entermachine", p.slotsRoom.EnterMachine) // 进入关卡
+	// p.Local().Register("machineinfo", p.slotsRoom.Machineinfo)   // 初始化关卡数据
+	// p.Local().Register("spin", p.slotsRoom.Spin)                 // 关卡spin
+	// p.Local().Register("bonus", p.slotsRoom.Bonus)               // 关卡bonus请求
+	// p.Local().Register("collect", p.slotsRoom.Collect)           // 关卡collect 请求
 }
 
 // sessionClose 接收角色session关闭处理
@@ -100,7 +98,6 @@ func (p *actorPlayer) playerSelect(ctx context.Context, session *cproto.Session,
 			response.List = append(response.List, &playerInfo)
 		}
 	}
-
 	p.Response(session, response)
 }
 
@@ -209,7 +206,7 @@ func (p *actorPlayer) playerEnter(ctx context.Context, session *cproto.Session, 
 	//module.Mail.ListPush(session, userId)
 
 	//查找游戏玩家数据
-	err := p.loadPlayerData(int32(userId))
+	err := p.loadPlayerData(ctx, int32(userId))
 	if err != nil {
 		clog.Errorf("user info is nil")
 		hasError = true
@@ -223,7 +220,7 @@ func (p *actorPlayer) playerEnter(ctx context.Context, session *cproto.Session, 
 
 	p.Response(session, response)
 	elapsed := time.Since(startTime)
-	clog.Warnf("[playerEnter] 代码执行耗时: %s ", elapsed)
+	clog.Infof("[playerEnter] 代码执行耗时: %s ", elapsed)
 	// 角色登录事件
 	loginEvent := event.NewPlayerLogin(p.ActorID(), userId)
 	p.PostEvent(&loginEvent)
@@ -243,12 +240,12 @@ func buildPBPlayer(playerTable *db.PlayerTable) pb.Player {
 // ========== 玩家数据访问方法 ==========
 
 // loadPlayerData 从数据库加载玩家数据到内存
-func (p *actorPlayer) loadPlayerData(userId int32) error {
+func (p *actorPlayer) loadPlayerData(ctx context.Context, userID int32) error {
 	//查找游戏玩家数据
-	userInfo := commonDb.GetUserAllInfo(userId)
-	if userInfo == nil {
-		clog.Errorf("user info is nil")
-		return fmt.Errorf("user info is nil")
+	userInfo, err := commonDb.GetUserAllInfo(ctx, userID)
+	if err != nil {
+		clog.Errorf("[actorPlayer] 查询玩家数据失败: userID=%d, err=%v", userID, err)
+		return fmt.Errorf("get user info: %w", err)
 	}
 	//这里是指针copy
 	p.playerData = &PlayerData{}
@@ -261,7 +258,7 @@ func (p *actorPlayer) loadPlayerData(userId int32) error {
 // GetPlayerData 获取玩家数据（Remote方法，供其他Actor调用）
 func (p *actorPlayer) getPlayerData(ctx context.Context, msg *pb.Int32) (*pb.GetUserInfoResponse, int32) {
 	if p.playerData == nil || p.playerData.UserID == 0 {
-		err := p.loadPlayerData(msg.Value)
+		err := p.loadPlayerData(ctx, msg.Value)
 		if err != nil {
 			clog.Errorf("[actorPlayer] 加载玩家数据失败: %v", err)
 			return nil, code.PlayerIDError

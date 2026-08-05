@@ -51,79 +51,79 @@ message SpinResponse {
   repeated JackPot jackpot = 8;   // jackpot的数据
   BigWinMult multInfo = 9;        // bigwin的翻倍信息
   SpinUserInfo spinUserInfo = 10; // 用户信息
+  int64 balance = 11;             // 用户金币余额
 }
 
-
 message EnterMachine {
-	int32 id = 1;
-	int64 selectBet = 2;
+  int32 id = 1;
+  int64 selectBet = 2;
 }
 
 message EnterMachineResponse {
-	int32 id = 1;
-	bool succeed = 2;
+  int32 id = 1;
+  bool succeed = 2;
 }
 message Bonus {
-	int32 id = 1;		//老虎机ID
-	int32 selectId = 2; //选择
-	int32 selectType = 3; //类型 1bonus 2 freespin
-	string token = 4;											// 登录Token
-	bool isCasinoQuest = 5;											// 是否在冒险任务关卡
+  int32 id = 1;           // 老虎机ID
+  int32 selectId = 2;     // 选择
+  int32 selectType = 3;   // 类型 1bonus 2 freespin
+  string token = 4;       // 登录Token
+  bool isCasinoQuest = 5; // 是否在冒险任务关卡
 }
 
 message BonusResponse {
-	Amazing777Bonus amazingBonusInfo = 1;
-	Firebonus777Bonus firebonus777BonusInfo = 2;
-	BigbucksBonus bigBucksBonusInfo = 3;
-	Winninghit777Bonus winninghit777BonusInfo = 4;
-	GreedyBonus greedyBonusInfo = 5;
-	Big10xBonus big10xBonusInfo = 6;
-	GoldwheelBonus goldwheelBonusInfo = 8;
-	Enormous7Bonus enormous7BonusInfo = 9;
-	GoldfortuneBonus goldfortuneBonusInfo = 10;
-	JackpotfrenzyBonus jackpotfrenzyBonusInfo = 11;
-	SpinwinBonus spinWinBonusInfo = 12;
-	PinballBonus pinballBonusInfo = 13;
-	FirerouletteBonus fireRouletteBonusInfo = 14;
-	RoyalcashBonus royalcashBonusInfo = 15;
-	LuckywheelBonus luckywheelBonusInfo = 16;
-	CrazyfireballBonus crazyfireballBonusInfo = 17;
-	LibertylBonus libertylBonusInfo = 18;
-	DiamondfreespinsBetInfo diamondfreespinsBetInfo = 19;
-	GoldfortunewheelBonus goldfortunewheelBonusInfo = 20;
-	Redf21Bonus redf21BonusInfo = 21;
-	HotWheel777Bonus hotwheel777Bonus = 23;
-	FudaoleBonus fudaoleBonusInfo = 24;
-	BravospinBonus bravospinBonusInfo = 25;
-	GoldwinnerBonus goldwinnerBonusInfo = 26;
-	GoldWheel2Bonus goldwheel2BonusInfo = 27;
-	MegacashBonus megacashBonusInfo = 28;
-	DragonfBonus dragonfBonusInfo = 29;
-	CrazyxtraBonus crazyxtraBonus = 30;
-	MontecBonus montecBonusInfo = 31;
-	WinningsBonus winningsBonus = 32;
-	AnythingbutBonus anythingbutBonusInfo = 33;
-	BurninggoldBonus burninggoldBonus = 34;
-	WildjpBonus wildjpBonusInfo = 35;
-	RunmoneyBonus runmoneyBonus = 36;
-	GoldmachinejackpotBonus goldmachinejackpotBonusInfo = 37;
-	BurningtripleBonus burningtripleBonus = 38;
-	Br89Bonus br89BonusInfo = 39;
-	Bravoball92Bonus bravoball92BonusInfo = 40;
-	Party999Bonus party999BonusInfo = 41;
-	Fortune7sBonus fortune7sBonus = 42;
-	Crystal97Bonus crystal97BonusInfo = 43;
-	MagicalgenieBonus magicalgenieBonusInfo = 44;
+  Amazing777Bonus amazingBonusInfo = 1;
+  Firebonus777Bonus firebonus777BonusInfo = 2;
+  BigbucksBonus bigBucksBonusInfo = 3;
+  Winninghit777Bonus winninghit777BonusInfo = 4;
+  GreedyBonus greedyBonusInfo = 5;
+  Big10xBonus big10xBonusInfo = 6;
+  GoldwheelBonus goldwheelBonusInfo = 8;
+  Enormous7Bonus enormous7BonusInfo = 9;
+  GoldfortuneBonus goldfortuneBonusInfo = 10;
+  JackpotfrenzyBonus jackpotfrenzyBonusInfo = 11;
+  SpinwinBonus spinWinBonusInfo = 12;
+  PinballBonus pinballBonusInfo = 13;
+  FirerouletteBonus fireRouletteBonusInfo = 14;
+  RoyalcashBonus royalcashBonusInfo = 15;
+  LuckywheelBonus luckywheelBonusInfo = 16;
+  CrazyfireballBonus crazyfireballBonusInfo = 17;
+  LibertylBonus libertylBonusInfo = 18;
+  DiamondfreespinsBetInfo diamondfreespinsBetInfo = 19;
+  GoldfortunewheelBonus goldfortunewheelBonusInfo = 20;
+  Redf21Bonus redf21BonusInfo = 21;
+  HotWheel777Bonus hotwheel777Bonus = 23;
+  FudaoleBonus fudaoleBonusInfo = 24;
+  BravospinBonus bravospinBonusInfo = 25;
+  GoldwinnerBonus goldwinnerBonusInfo = 26;
+  GoldWheel2Bonus goldwheel2BonusInfo = 27;
+  MegacashBonus megacashBonusInfo = 28;
+  DragonfBonus dragonfBonusInfo = 29;
+  CrazyxtraBonus crazyxtraBonus = 30;
+  MontecBonus montecBonusInfo = 31;
+  WinningsBonus winningsBonus = 32;
+  AnythingbutBonus anythingbutBonusInfo = 33;
+  BurninggoldBonus burninggoldBonus = 34;
+  WildjpBonus wildjpBonusInfo = 35;
+  RunmoneyBonus runmoneyBonus = 36;
+  GoldmachinejackpotBonus goldmachinejackpotBonusInfo = 37;
+  BurningtripleBonus burningtripleBonus = 38;
+  Br89Bonus br89BonusInfo = 39;
+  Bravoball92Bonus bravoball92BonusInfo = 40;
+  Party999Bonus party999BonusInfo = 41;
+  Fortune7sBonus fortune7sBonus = 42;
+  Crystal97Bonus crystal97BonusInfo = 43;
+  MagicalgenieBonus magicalgenieBonusInfo = 44;
 }
 
 message CollectDone {
-	int32 id = 1;		//老虎机ID
-	CollectType type = 2; 	//领取类型
-	string token = 3;											// 登录Token
+  int32 id = 1;         // 老虎机ID
+  CollectType type = 2; // 领取类型
+  string token = 3;     // 登录Token
 }
 
 message CollectDoneResponse {
-	int32 id = 1;			//老虎机ID
-	CollectType type = 2; 		//领取类型
-	int64 balance = 3;		//金币余额 校验
+  int32 id = 1;         // 老虎机ID
+  CollectType type = 2; // 领取类型
+  int64 balance = 3;    // 金币余额 校验
 }

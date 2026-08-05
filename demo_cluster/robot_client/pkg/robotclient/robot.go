@@ -13,6 +13,7 @@ import (
 	cherryClient "github.com/cherry-game/cherry/net/parser/pomelo/client"
 	"github.com/cherry-game/examples/demo_cluster/internal/code"
 	"github.com/cherry-game/examples/demo_cluster/internal/pb"
+	"github.com/google/uuid"
 	jsoniter "github.com/json-iterator/go"
 )
 
@@ -338,7 +339,7 @@ func (p *Robot) ActorEnter() error {
 
 // ActorEnterEnterMachine 角色进入机台
 func (p *Robot) ActorEnterEnterMachine() error {
-	route := "game.player.entermachine"
+	route := "game.slots.enterMachine"
 	req := &pb.EnterMachine{
 		Id:        86001,
 		SelectBet: 100000,
@@ -361,7 +362,7 @@ func (p *Robot) ActorEnterEnterMachine() error {
 
 // ActorMachine 角色机台信息
 func (p *Robot) ActorMachine() error {
-	route := "game.player.machineinfo"
+	route := "game.slots.machineInfo"
 	req := &pb.MachineInfo{
 		Id: 86001,
 	}
@@ -383,11 +384,12 @@ func (p *Robot) ActorMachine() error {
 
 // ActorSpin 角色进入机台spin
 func (p *Robot) ActorSpin() error {
-	route := "game.player.spin"
+	route := "game.slots.spin"
 	req := &pb.Spin{
-		Id:      86001,
-		CurBet:  100000,
-		CurCost: 10000000,
+		Id:        86001,
+		CurBet:    100000,
+		CurCost:   10000000,
+		RequestId: fmt.Sprintf("%d-%s", p.UID, uuid.NewString()),
 	}
 
 	msg, err := p.Request(route, req)

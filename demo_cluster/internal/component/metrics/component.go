@@ -224,7 +224,7 @@ type Component struct {
 // New 创建 Metrics 组件
 func New() *Component {
 	return &Component{
-		printInterval: 100 * time.Second,
+		printInterval: 10 * time.Second,
 		stopChan:      make(chan struct{}),
 	}
 }

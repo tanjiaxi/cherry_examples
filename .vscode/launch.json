@@ -141,6 +141,19 @@
             "program": "${workspaceFolder}/test_nats/replystrem/main.go",
             "console" :"integratedTerminal",
             "args": []
+        },
+        {
+            "name": "gc-activity-1",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/demo_cluster/nodes/main.go",
+            "console" :"integratedTerminal",
+            "args": [
+                "activity",
+                "--path=../../config/demo-cluster-local.json",
+                "--node=gc-activity-1"
+            ]
         }
     ],
     "compounds": [
@@ -153,7 +166,8 @@
                 "gc-gate-2",
                 "gc-gate-3",
                 "gc-game-10001",
-                "gc-game-10002"
+                "gc-game-10002",
+                "gc-activity-1",
             ],
             "stopAll": true,
             "presentation": {
@@ -169,6 +183,7 @@
                 "gc-web-1",
                 "gc-gate-1",
                 "gc-game-10001",
+                "gc-activity-1",
             ],
             "stopAll": true,
             "presentation": {
@@ -184,7 +199,8 @@
                 "gc-center",
                 "gc-web-1",
                 "gc-gate-1",
-                "gc-game-10001"
+                "gc-game-10001",
+                "gc-activity-1",
             ],
             "stopAll": true,
             "presentation": {
@@ -200,7 +216,8 @@
                 "gc-web-1",
                 "gc-gate-1",
                 "gc-gate-2",
-                "gc-game-10001"
+                "gc-game-10001",
+                "gc-activity-1",
             ],
             "stopAll": true,
             "presentation": {
