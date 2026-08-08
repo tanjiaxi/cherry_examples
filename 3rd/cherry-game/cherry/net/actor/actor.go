@@ -3,6 +3,7 @@ package cherryActor
 import (
 	"context"
 	"strings"
+	"sync/atomic"
 
 	ctime "github.com/cherry-game/cherry/extend/time"
 	cutils "github.com/cherry-game/cherry/extend/utils"
@@ -39,9 +40,19 @@ type (
 	State int
 
 	Actor struct {
-		system           *System               // actor system
-		path             *cfacade.ActorPath    // actor path
-		state            State                 // actor state
+		system *System            // actor system
+		path   *cfacade.ActorPath // actor path
+		// state 用 atomic.Int32 存储：会被创建者goroutine(onInit/loop写入)与
+		// 任意调用方goroutine(System.PostRemote/PostLocal/PostEvent等读取)
+		// 并发访问。此前是裸的 State(int) 字段，属于教科书级别的数据竞争——
+		// `go test -race` 一跑就能抓到（本次修复系统性排查时通过
+		// TestSystem_CallWait_* 回归测试意外触发并确认）。
+		// 数据竞争在 Go 内存模型下不只是"理论上的未定义行为"：没有同步的写入
+		// 对其他goroutine的可见性没有任何保证，可能导致其他actor把这个
+		// 刚创建完成、其实已经 WorkerState 的actor长期误判为非WorkerState，
+		// 从而让 PostRemote/PostLocal 静默丢弃消息（见下方状态判断处的
+		// 关联问题：即使消息被丢弃，PostRemote仍返回true视为"已投递"）。
+		state            atomic.Int32          // actor state (State)
 		close            chan struct{}         // close flag
 		handler          cfacade.IActorHandler // actor handler
 		localMail        *mailbox              // local message mailbox
@@ -67,7 +78,7 @@ func (p *Actor) run() {
 }
 
 func (p *Actor) loop() bool {
-	if p.state == StopState {
+	if State(p.state.Load()) == StopState {
 		if p.localMail.Count() < 1 &&
 			p.remoteMail.Count() < 1 &&
 			p.event.Count() < 1 {
@@ -90,7 +101,7 @@ func (p *Actor) loop() bool {
 		}
 	case <-p.close:
 		{
-			p.state = StopState
+			p.state.Store(int32(StopState))
 		}
 	}
 
@@ -274,7 +285,7 @@ func (p *Actor) findChildActor(m *cfacade.Message) (*Actor, bool) {
 }
 
 func (p *Actor) onInit() {
-	p.state = WorkerState
+	p.state.Store(int32(WorkerState))
 	//这里注册函数
 	p.handler.OnInit()
 }
@@ -306,7 +317,7 @@ func (p *Actor) onStop() {
 }
 
 func (p *Actor) State() State {
-	return p.state
+	return State(p.state.Load())
 }
 
 func (p *Actor) App() cfacade.IApplication {
@@ -404,7 +415,8 @@ func newActor(actorID, childID string, handler cfacade.IActorHandler, c *System)
 			ActorID: actorID,
 			ChildID: childID,
 		},
-		state:   InitState,
+		// state 字段类型是 atomic.Int32，其零值(0)恰好等于 InitState，
+		// 不需要（也不能，两者类型不同）在此显式赋值。
 		system:  c,
 		close:   make(chan struct{}, 1),
 		handler: handler,

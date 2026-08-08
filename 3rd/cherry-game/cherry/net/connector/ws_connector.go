@@ -1,6 +1,7 @@
 package cherryConnector
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"time"
@@ -15,7 +16,8 @@ type (
 		cfacade.Component
 		Connector
 		Options
-		upgrade *websocket.Upgrader
+		upgrade    *websocket.Upgrader
+		httpServer *http.Server
 	}
 
 	// WSConn is an adapter to t.INetConn, which implements all INetConn
@@ -46,14 +48,20 @@ func NewWS(address string, opts ...Option) *WSConnector {
 
 	ws := &WSConnector{
 		Options: Options{
-			address:  address,
-			certFile: "",
-			keyFile:  "",
-			chanSize: 256,
+			address:           address,
+			certFile:          "",
+			keyFile:           "",
+			chanSize:          256,
+			readHeaderTimeout: 5 * time.Second,
+			readTimeout:       10 * time.Second,
+			writeTimeout:      10 * time.Second,
+			idleTimeout:       60 * time.Second,
 		},
 		upgrade: &websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
+			// 游戏客户端多为原生 App/非浏览器；若对浏览器开放，请用 SetCheckOrigin 收紧来源校验，
+			// 否则任意站点可借用户浏览器连到你的 WS（CSRF 类风险）。
 			CheckOrigin: func(_ *http.Request) bool {
 				return true
 			},
@@ -82,16 +90,46 @@ func (w *WSConnector) Start() {
 
 	w.Connector.Start()
 
-	http.Serve(listener, w)
+	// 使用显式 http.Server，而不是 http.Serve(listener, handler)：
+	// 后者超时全是 0，恶意客户端可以慢速滴灌请求头占满连接（Slowloris）。
+	// ReadHeaderTimeout 专门限制“读完 HTTP 头”的时间，是 WS 握手前最关键的防护。
+	// Read/WriteTimeout 只约束握手阶段；gorilla Upgrade 成功后会清空 conn deadline，
+	// 不会把长连接 WebSocket 误杀。升级后的空闲检测应靠业务层 SetReadDeadline + Ping/Pong。
+	w.httpServer = &http.Server{
+		Handler:           w,
+		ReadHeaderTimeout: w.readHeaderTimeout,
+		ReadTimeout:       w.readTimeout,
+		WriteTimeout:      w.writeTimeout,
+		IdleTimeout:       w.idleTimeout,
+	}
+
+	if err := w.httpServer.Serve(listener); err != nil && err != http.ErrServerClosed {
+		clog.Errorf("Websocket connector serve error: %s", err)
+	}
 }
 
 func (w *WSConnector) Stop() {
+	if w.httpServer != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		if err := w.httpServer.Shutdown(ctx); err != nil {
+			clog.Warnf("Websocket connector shutdown error: %s", err)
+			_ = w.httpServer.Close()
+		}
+	}
 	w.Connector.Stop()
 }
 
 func (w *WSConnector) SetUpgrade(upgrade *websocket.Upgrader) {
 	if upgrade != nil {
 		w.upgrade = upgrade
+	}
+}
+
+// SetCheckOrigin 设置浏览器 Origin 校验；对网页客户端开放时不应无条件 return true。
+func (w *WSConnector) SetCheckOrigin(fn func(*http.Request) bool) {
+	if fn != nil && w.upgrade != nil {
+		w.upgrade.CheckOrigin = fn
 	}
 }
 

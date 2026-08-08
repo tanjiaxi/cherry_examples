@@ -91,28 +91,28 @@ func (p *Connect) Close() {
 }
 
 func (p *Connect) statistics() {
-	for {
-		ticker := time.NewTicker(30 * time.Second)
-		for range ticker.C {
-			for _, sub := range p.subs {
-				if dropped, err := sub.Dropped(); err != nil {
-					clog.Errorf("Dropped messages. [subject = %s, dropped = %d, err = %v]",
-						sub.Subject,
-						dropped,
-						err,
-					)
-				}
-			}
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
 
-			stats := p.Stats()
-			clog.Debugf("[Statistics] InMsgs = %d, OutMsgs = %d, InBytes = %d, OutBytes = %d, Reconnects = %d",
-				stats.InMsgs,
-				stats.OutMsgs,
-				stats.InBytes,
-				stats.OutBytes,
-				stats.Reconnects,
-			)
+	for range ticker.C {
+		for _, sub := range p.subs {
+			if dropped, err := sub.Dropped(); err != nil {
+				clog.Errorf("Dropped messages. [subject = %s, dropped = %d, err = %v]",
+					sub.Subject,
+					dropped,
+					err,
+				)
+			}
 		}
+
+		stats := p.Stats()
+		clog.Debugf("[Statistics] InMsgs = %d, OutMsgs = %d, InBytes = %d, OutBytes = %d, Reconnects = %d",
+			stats.InMsgs,
+			stats.OutMsgs,
+			stats.InBytes,
+			stats.OutBytes,
+			stats.Reconnects,
+		)
 	}
 }
 
@@ -178,6 +178,13 @@ func (p *Connect) RequestSync(subject string, data []byte, tod ...time.Duration)
 		close(ch)
 		return nil, time.Time{}, err
 	}
+
+	// 用 NewTimer + Stop，避免 time.After 在“成功先返回”时把 Timer 挂在运行时堆里直到 timeout。
+	// 超时与 reply 回调可能并发争用同一个 waiter：两边都必须用 LoadAndDelete 抢所有权，
+	// 只有抢到的一方才能 close(ch)，否则会 double-close panic。
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
 	select {
 	case resp, ok := <-ch:
 		replyAt := time.Now()
@@ -187,10 +194,11 @@ func (p *Connect) RequestSync(subject string, data []byte, tod ...time.Duration)
 		// replyAt is the local timestamp at which the reply woke the waiter.
 		// Callers use it to distinguish NATS request/reply time from post-reply work.
 		return resp.Data, replyAt, nil
-	case <-time.After(timeout):
-		p.waiters.Delete(reqID)
+	case <-timer.C:
+		if _, loaded := p.waiters.LoadAndDelete(reqID); loaded {
+			close(ch)
+		}
 		clog.Warnf("NatsResSync timeout id = %d, reqID = %s", p.id, reqID)
-		close(ch)
 		return nil, time.Time{}, cerror.ClusterRequestTimeout
 	}
 }

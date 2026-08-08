@@ -234,17 +234,32 @@ func (p *Cluster) handleConcurrent(natsMsg *nats.Msg, packet *cproto.ClusterPack
 	t0 := time.Now()
 	defer packet.Recycle()
 
-	// 获取 worker（带超时）
+	// 获取 worker（带超时）。
+	// 该函数是每一条跨节点RPC消息都会经过的最热路径：99%以上的请求在worker池未被打满时，
+	// 第一个非阻塞的 case 就能立刻拿到令牌返回。旧实现无条件调用 time.After(3*time.Second)，
+	// 即使走的是"立刻成功"分支，也会在每次调用上白白 new 出一个 3 秒后才触发的 runtimeTimer，
+	// 在高QPS下造成大量存活 Timer 对象常驻 P 的计时器堆，增加 GC 标记扫描与调度器维护开销
+	// （可用 go tool pprof 的 heap profile 观察 runtime.(*timer) 数量）。
+	// 这里先做一次无分配的非阻塞尝试，只有在真正拿不到令牌（池已满）时才降级去创建计时器等待，
+	// 把 Timer 分配从"每请求必付"变成"仅拥堵时才付"。
 	select {
 	case workerPool <- struct{}{}:
 		defer func() { <-workerPool }()
-	case <-time.After(3 * time.Second):
-		// clog.Warnf("[handleConcurrent] worker pool exhausted, timeout. target=%s, func=%s",
-		// 	packet.TargetPath, packet.FuncName)
-		clog.WarnContext(context.Background(), "[handleConcurrent] worker pool exhausted", zap.String("target", packet.TargetPath),
-			zap.String("func", packet.FuncName))
-		p.sendErrorResponse(natsMsg, ccode.RPCRemoteExecuteError)
-		return
+	default:
+		timer := time.NewTimer(3 * time.Second)
+		defer timer.Stop()
+
+		select {
+		case workerPool <- struct{}{}:
+			defer func() { <-workerPool }()
+		case <-timer.C:
+			// clog.Warnf("[handleConcurrent] worker pool exhausted, timeout. target=%s, func=%s",
+			// 	packet.TargetPath, packet.FuncName)
+			clog.WarnContext(context.Background(), "[handleConcurrent] worker pool exhausted", zap.String("target", packet.TargetPath),
+				zap.String("func", packet.FuncName))
+			p.sendErrorResponse(natsMsg, ccode.RPCRemoteExecuteError)
+			return
+		}
 	}
 	t1 := time.Now()
 	startTime := time.Now()

@@ -275,7 +275,10 @@ func (p *System) CallWait(source, target, funcName, traceId string, arg, reply a
 		message.Target = target
 		message.FuncName = funcName
 		message.Args = arg
-		message.ChanResult = make(chan interface{})
+		// 容量为1的缓冲channel：即使本次调用因超时先返回，
+		// 目标actor执行完毕后的回写(m.ChanResult <- rsp)也能立即写入缓冲区并返回，
+		// 不会永久阻塞在无接收者的channel上，避免目标actor所在goroutine被"冻死"。
+		message.ChanResult = make(chan interface{}, 1)
 		message.TraceId = traceId
 
 		var result interface{}
@@ -298,6 +301,13 @@ func (p *System) CallWait(source, target, funcName, traceId string, arg, reply a
 				return ccode.ActorCallFail
 			}
 		}
+
+		// 使用 time.NewTimer + Stop 替代 time.After：
+		// time.After 创建的 Timer 在未被触发的分支不会被回收，会一直挂在运行时的计时器堆里
+		// 直到 callTimeout 到期才释放，高并发 CallWait 场景下会造成大量存活 Timer 常驻内存，
+		// 加重 GC 标记阶段的扫描负担；命中正常分支后立即 Stop() 可以让 Timer 立刻可被回收。
+		timer := time.NewTimer(p.callTimeout)
+		defer timer.Stop()
 
 		select {
 		case result = <-message.ChanResult:
@@ -329,7 +339,7 @@ func (p *System) CallWait(source, target, funcName, traceId string, arg, reply a
 					}
 				}
 			}
-		case <-time.After(p.callTimeout):
+		case <-timer.C:
 			return ccode.ActorCallTimeout
 		}
 	}
@@ -392,10 +402,17 @@ func (p *System) PostRemote(m *cfacade.Message) bool {
 	}
 
 	if targetActor, found := p.GetActor(m.TargetPath().ActorID); found {
-		if targetActor.state == WorkerState {
+		if State(targetActor.state.Load()) == WorkerState {
 			targetActor.PostRemote(m)
+			return true
 		}
-		return true
+		// 附带修复：actor存在但不处于WorkerState时，此前会直接 `return true`，
+		// 消息被静默丢弃却对调用方报告"投递成功"。CallWait依赖这个返回值
+		// 判断要不要走select等待分支；一旦被静默吞掉，调用方只能傻等到
+		// callTimeout才超时返回，白白多付一次完整的超时等待时长。
+		clog.Warnf("[PostRemote] actor not in WorkerState, message dropped. [source = %s, target = %s -> %s, state = %d]",
+			m.Source, m.Target, m.FuncName, targetActor.state.Load())
+		return false
 	}
 
 	clog.Warnf("[PostRemote] actor not found. [source = %s, target = %s -> %s]", m.Source, m.Target, m.FuncName)
@@ -410,10 +427,13 @@ func (p *System) PostLocal(m *cfacade.Message) bool {
 	}
 
 	if targetActor, found := p.GetActor(m.TargetPath().ActorID); found {
-		if targetActor.state == WorkerState {
+		if State(targetActor.state.Load()) == WorkerState {
 			targetActor.PostLocal(m)
+			return true
 		}
-		return true
+		clog.Warnf("[PostLocal] actor not in WorkerState, message dropped. [source = %s, target = %s -> %s, state = %d]",
+			m.Source, m.Target, m.FuncName, targetActor.state.Load())
+		return false
 	}
 
 	clog.Warnf("[PostLocal] actor not found. [source = %s, target = %s -> %s]", m.Source, m.Target, m.FuncName)
@@ -431,7 +451,7 @@ func (p *System) PostEvent(data cfacade.IEventData) {
 	// range root actor
 	p.actorMap.Range(func(key, value any) bool {
 		if thisActor, found := value.(*Actor); found {
-			if thisActor.state == WorkerState {
+			if State(thisActor.state.Load()) == WorkerState {
 				thisActor.event.Push(data)
 			}
 

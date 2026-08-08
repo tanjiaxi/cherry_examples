@@ -60,6 +60,7 @@ type Component struct {
 	promMetrics *PrometheusMetrics
 	registry    *prometheus.Registry
 	alertEngine *AlertEngine
+	profileDump *ProfileDumper
 	httpServer  *http.Server
 	stopChan    chan struct{}
 	nodeName    string
@@ -106,6 +107,9 @@ func (c *Component) OnAfterInit() {
 	// 初始化告警引擎
 	if c.config.EnableAlert {
 		c.alertEngine = NewAlertEngine(c.collector)
+		// 生产可用的动态采样埋点：告警触发的那一刻自动抓取 heap/goroutine/cpu/trace，
+		// 而不是等运维人工登录服务器时现场已经消失（尤其是CPU飙高/GC暂停这类瞬时问题）。
+		c.profileDump = NewProfileDumper(fmt.Sprintf("logs/pprof/%s", c.nodeName), 5*time.Minute)
 	}
 
 	// 启动定时任务
@@ -182,7 +186,22 @@ func (c *Component) alertLoop() {
 		case <-c.stopChan:
 			return
 		case <-ticker.C:
-			c.alertEngine.Check()
+			alerts := c.alertEngine.Check()
+			c.maybeDumpProfiles(alerts)
+		}
+	}
+}
+
+// maybeDumpProfiles 命中 Critical 级别告警时，自动落盘 pprof/trace 快照。
+// 具体的抓取频率限流交给 ProfileDumper 的 cooldown 处理，这里只负责"发信号"。
+func (c *Component) maybeDumpProfiles(alerts []Alert) {
+	if c.profileDump == nil {
+		return
+	}
+	for _, alert := range alerts {
+		if alert.Level == AlertLevelCritical {
+			c.profileDump.TriggerOnAlert(alert.Rule)
+			return
 		}
 	}
 }
@@ -251,6 +270,7 @@ func (c *Component) startHTTPServer() {
 	mux.HandleFunc("/api/runtime/gc", c.handleGC)
 	mux.HandleFunc("/api/runtime/memory", c.handleMemory)
 	mux.HandleFunc("/api/runtime/alerts", c.handleAlerts)
+	mux.HandleFunc("/api/runtime/dump", c.handleDump)
 
 	addr := fmt.Sprintf(":%d", c.config.MetricsPort)
 	c.httpServer = &http.Server{
@@ -314,4 +334,24 @@ func (c *Component) handleAlerts(w http.ResponseWriter, r *http.Request) {
 	alerts := c.alertEngine.Check()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(alerts)
+}
+
+// handleDump 手动触发一次 heap/goroutine/cpu/trace 抓取，用于线上人工排查
+// （CPU profile 默认采样10秒，接口会立即返回，抓取在后台完成）。
+// curl -X POST http://<node>:<metrics_port>/api/runtime/dump?reason=manual
+func (c *Component) handleDump(w http.ResponseWriter, r *http.Request) {
+	if c.profileDump == nil {
+		http.Error(w, "profile dumper not enabled", http.StatusServiceUnavailable)
+		return
+	}
+	reason := r.URL.Query().Get("reason")
+	if reason == "" {
+		reason = "manual"
+	}
+	c.profileDump.TriggerOnAlert(reason)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "accepted",
+		"note":   "capture running in background (cpu profile ~10s, trace ~5s), check logs/pprof/<node>/ dir",
+	})
 }

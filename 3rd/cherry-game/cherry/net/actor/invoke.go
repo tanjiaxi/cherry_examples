@@ -132,12 +132,11 @@ func InvokeRemoteFunc(app cfacade.IApplication, fi *creflect.FuncInfo, m *cfacad
 				// clog.Debugf("[BIZ-RPC-OUT-DETAIL] source=%s, target=%s->%s, code=%d, data=%s",
 				// 	m.Source, m.Target, m.FuncName, rsp.Code, protoToJSON(rsp))
 				clog.DebugContext(withCtx, "InvokeRemoteFunc response", zap.String("Source", m.Source), zap.String("Target", m.Target), zap.String("FuncName", m.FuncName), zap.Int32("Code", rsp.Code), zap.String("Rsp", protoToJSON(rsp)))
-
-				m.ChanResult <- rsp
+				sendChanResult(m.ChanResult, rsp)
 			}
 		}, func(errString string) {
 			if m.ChanResult != nil {
-				m.ChanResult <- nil
+				sendChanResult(m.ChanResult, nil)
 			}
 
 			// clog.Errorf("[InvokeRemoteFunc] invoke error.[source = %s, target = %s -> %s, funcType = %v, err = %+v]",
@@ -230,6 +229,24 @@ func retValue(serializer cfacade.ISerializer, rets []reflect.Value) *cproto.Resp
 	}
 
 	return rsp
+}
+
+// sendChanResult 以非阻塞方式回写 CallWait 的结果。
+//
+// 为什么必须是非阻塞的：ChanResult 目前是容量为1的缓冲channel（见 system.go
+// CallWait），这只能保证"迟到一次"的回复不会卡住发送方。但只要业务的
+// OnLocalReceived/OnRemoteReceived 返回的 (next, invoke) 组合被误用成同时
+// 为 true（框架里这只是两个裸bool，没有任何编译期约束防止误用），就会对
+// 同一条Message触发两次invokeFunc，从而产生两次发送——第二次发送时缓冲区
+// 已满且CallWait早已经放弃等待，同样会把当前actor的串行处理协程永久卡死。
+// 用 select+default 的非阻塞发送，把"发送失败"退化成"静默丢弃"，
+// 无论是超时晚到、还是重复invoke，都不可能再阻塞 actor 自身的goroutine。
+func sendChanResult(ch chan interface{}, v interface{}) {
+	select {
+	case ch <- v:
+	default:
+		clog.Warnf("[sendChanResult] receiver gone or duplicate invoke, result dropped")
+	}
 }
 
 func retResponse(m *cfacade.Message, rsp *cproto.Response) {

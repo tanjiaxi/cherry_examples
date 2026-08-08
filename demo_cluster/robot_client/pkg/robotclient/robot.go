@@ -179,6 +179,24 @@ func (p *Robot) ConnectToWebSocket(addr string) error {
 	return nil
 }
 
+// ConnectToTCP 连接到 TCP 网关地址（格式: "host:port"）
+func (p *Robot) ConnectToTCP(addr string) error {
+	p.Debugf("[%s] [ConnectToTCP] connecting to %s", p.TagName, addr)
+	if err := p.Client.ConnectToTCP(addr); err != nil {
+		return cherryError.Errorf("connect to tcp fail: %v", err)
+	}
+	p.GateAddr = addr
+	p.Debugf("[%s] [ConnectToTCP] connected to %s", p.TagName, addr)
+	return nil
+}
+
+// Disconnect 断开与网关的连接
+func (p *Robot) Disconnect() {
+	if p.Client != nil {
+		p.Client.Disconnect()
+	}
+}
+
 // GetToken  http登录获取token对象
 func (p *Robot) GetToken(url string, pid, userName, password string) error {
 	requestURL := fmt.Sprintf("%s/login", url)

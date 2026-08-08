@@ -1,13 +1,16 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"os/signal"
 	"runtime"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	chttp "github.com/cherry-game/cherry/extend/http"
@@ -23,26 +26,50 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// ==================== 配置变量 ====================
-var (
-	maxRobotNum    = 200                        // 最大机器人数
-	batchSize      = 100                        // 每批启动数量
-	batchInterval  = 1 * time.Millisecond       // 批次间隔
-	errorThreshold = 0.1                        // 错误率阈值 (10%)
-	printInterval  = 5 * time.Second            // 状态打印间隔
-	holdDuration   = 60 * time.Second           // 保持连接时间
-	spinInterval   = 500 * time.Millisecond     // Spin 请求间隔
-	url            = "http://10.10.10.251:8081" // web node
+// LoadTestConfig 压测运行时配置，全部通过命令行 flag 注入，避免再改代码重编。
+type LoadTestConfig struct {
+	URL            string
+	PID            string
+	Robots         int
+	BatchSize      int
+	BatchInterval  time.Duration
+	HoldDuration   time.Duration
+	SpinInterval   time.Duration
+	PrintInterval  time.Duration
+	ErrorThreshold float64
+	UseWebSocket   bool
+	UseServerList  bool
+	FallbackAddr   string
+	AreaId         int
+	ServerId       int
+	WarmupSpins    int
+	RunSpin        bool
+	PrintLog       bool
+	RegisterFirst  bool
+}
 
-	pid                   = "2126001" // sdk包id
-	printLog              = false
-	useServerList         = true  // 是否使用 serverList 接口获取地址
-	defaultAreaId   int32 = 1     // 默认区ID
-	defaultServerId int32 = 10001 // 默认服ID（0表示自动选择）
-	useWebSocket          = true  // 使用 WebSocket 连接（serverList返回的是ws地址）
-	// 备用配置（当 useServerList=false 时使用）
-	fallbackAddr = "10.10.10.251:10010" // 备用网关地址（TCP）
-)
+var loadCfg LoadTestConfig
+
+func init() {
+	flag.StringVar(&loadCfg.URL, "url", "http://10.10.10.251:8081", "web node URL")
+	flag.StringVar(&loadCfg.PID, "pid", "2126001", "SDK PID")
+	flag.IntVar(&loadCfg.Robots, "robots", 100, "number of robots")
+	flag.IntVar(&loadCfg.BatchSize, "batch-size", 20, "robots started per batch")
+	flag.DurationVar(&loadCfg.BatchInterval, "batch-interval", time.Second, "interval between batches")
+	flag.DurationVar(&loadCfg.HoldDuration, "duration", 30*time.Minute, "steady-state spin duration")
+	flag.DurationVar(&loadCfg.SpinInterval, "spin-interval", 500*time.Millisecond, "interval between spins per robot")
+	flag.DurationVar(&loadCfg.PrintInterval, "print-interval", 5*time.Second, "status print interval")
+	flag.Float64Var(&loadCfg.ErrorThreshold, "error-threshold", 0.01, "stop spawning when error rate exceeds this value")
+	flag.BoolVar(&loadCfg.UseWebSocket, "websocket", true, "use websocket (true) or TCP (false)")
+	flag.BoolVar(&loadCfg.UseServerList, "server-list", true, "fetch gate/server from /serverList API")
+	flag.StringVar(&loadCfg.FallbackAddr, "gate", "10.10.10.251:10010", "fallback gate address when server-list is disabled or fails")
+	flag.IntVar(&loadCfg.AreaId, "area", 1, "target area id (0 = first available)")
+	flag.IntVar(&loadCfg.ServerId, "server", 10001, "target server id (0 = first available in area)")
+	flag.IntVar(&loadCfg.WarmupSpins, "warmup-spins", 0, "extra ActorSpin calls during login steps")
+	flag.BoolVar(&loadCfg.RunSpin, "spin", true, "run continuous spin after all robots connect")
+	flag.BoolVar(&loadCfg.PrintLog, "verbose", false, "print per-robot debug logs")
+	flag.BoolVar(&loadCfg.RegisterFirst, "register", false, "pre-register accounts via /register before load test")
+}
 
 // 服务器节点 pprof 地址
 var serverPprofAddrs = map[string]string{
@@ -366,47 +393,103 @@ func initLogger() {
 }
 
 func main() {
-	// 初始化日志：同时输出到控制台和文件
+	flag.Parse()
 	initLogger()
-
 	testStartTime = time.Now()
-	initAPIMetrics() // 初始化 API 指标
+	initAPIMetrics()
 
-	clog.Info("========== Load Test Starting ==========")
-	clog.Infof("Config: maxRobots=%d, batchSize=%d, holdDuration=%v, spinInterval=%v",
-		maxRobotNum, batchSize, holdDuration, spinInterval)
-	clog.Infof("Connection: useServerList=%v, useWebSocket=%v", useServerList, useWebSocket)
+	clog.Infow("load test started",
+		"url", loadCfg.URL,
+		"pid", loadCfg.PID,
+		"robots", loadCfg.Robots,
+		"batch_size", loadCfg.BatchSize,
+		"batch_interval", loadCfg.BatchInterval,
+		"duration", loadCfg.HoldDuration,
+		"spin_interval", loadCfg.SpinInterval,
+		"print_interval", loadCfg.PrintInterval,
+		"run_spin", loadCfg.RunSpin,
+		"server_list", loadCfg.UseServerList,
+		"websocket", loadCfg.UseWebSocket,
+		"area", loadCfg.AreaId,
+		"server", loadCfg.ServerId,
+		"gate", loadCfg.FallbackAddr,
+	)
 
-	accounts := make(map[string]string)
-	for i := 1; i <= maxRobotNum; i++ {
-		accounts[fmt.Sprintf("loadtest%d", i)] = fmt.Sprintf("loadtest%d", i)
+	// Ctrl+C / SIGTERM：停止拉人与持续 Spin，走统一的断开与汇总路径
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		sig := <-sigCh
+		clog.Warnf("received signal %v, stopping load test...", sig)
+		atomic.StoreInt32(&stopSpawning, 1)
+		atomic.StoreInt32(&stopSpinning, 1)
+	}()
+
+	accounts := buildAccounts(loadCfg.Robots)
+	if loadCfg.RegisterFirst {
+		clog.Infof("pre-registering %d accounts...", len(accounts))
+		RegisterDevAccount(loadCfg.URL, accounts)
 	}
-	// RegisterDevAccount(url, accounts)
-	// return
+
+	if err := prepareServerList(); err != nil {
+		clog.Warnf("prepare server list failed: %v, will use fallback gate=%s server=%d",
+			err, loadCfg.FallbackAddr, loadCfg.ServerId)
+	} else if loadCfg.UseServerList {
+		printServerList()
+	}
+
 	stopPrinting := make(chan struct{})
 	go PrintStatusLoop(stopPrinting)
 
 	RunLoadTest(accounts)
-	clog.Infof("Starting continuous Spin for %v...", holdDuration)
-	// RunContinuousSpin()
+
+	if loadCfg.RunSpin && atomic.LoadInt32(&stopSpinning) == 0 {
+		RunContinuousSpin()
+	}
+
+	DisconnectAllRobots()
 	PrintSummary()
 	close(stopPrinting)
-	time.Sleep(100000 * time.Millisecond)
-	DisconnectAllRobots()
+}
+
+func buildAccounts(robotCount int) map[string]string {
+	if robotCount <= 0 {
+		return map[string]string{}
+	}
+
+	accounts := make(map[string]string, robotCount)
+	for i := 1; i <= robotCount; i++ {
+		account := fmt.Sprintf("loadtest%06d", i)
+		accounts[account] = account
+	}
+	return accounts
+}
+
+// prepareServerList 在压测开始前拉取一次区服列表并缓存。
+// 每个 robot 共用同一份列表，避免 N 个机器人各自打一遍 /server/list。
+func prepareServerList() error {
+	if !loadCfg.UseServerList {
+		return nil
+	}
+
+	cli := robotclient.New(pomeloClient.New(
+		pomeloClient.WithRequestTimeout(10*time.Second),
+		pomeloClient.WithErrorBreak(true),
+	))
+	cli.PrintLog = loadCfg.PrintLog
+	return fetchServerList(cli)
 }
 
 // fetchServerList 获取区服列表
 func fetchServerList(cli *robotclient.Robot) error {
-	// cli := robotclient.New(pomeloClient.New())
-	serverList, err := cli.GetServerList(url, pid)
+	serverList, err := cli.GetServerList(loadCfg.URL, loadCfg.PID)
 	if err != nil {
 		return err
 	}
 
-	// serverListMu.Lock()
+	serverListMu.Lock()
 	cachedServerList = serverList
-	// serverListMu.Unlock()
-
+	serverListMu.Unlock()
 	return nil
 }
 
@@ -430,20 +513,27 @@ func printServerList() {
 	clog.Info("=================================")
 }
 
-// getGateAddrAndServerId 获取Gate地址和ServerId
+// getGateAddrAndServerId 获取 Gate 地址和 ServerId。
+// 优先按 -area / -server 从缓存的区服列表选取；列表不可用时回退到 -gate / -server。
 func getGateAddrAndServerId() (gateAddr string, serverId int32) {
-	serverListMu.RLock()
-	defer serverListMu.RUnlock()
-	return fallbackAddr, defaultServerId
-	if cachedServerList == nil || len(cachedServerList.Areas) == 0 {
-		// 使用备用配置
-		return fallbackAddr, defaultServerId
+	fallbackServerId := int32(loadCfg.ServerId)
+	if fallbackServerId == 0 {
+		fallbackServerId = 10001
 	}
 
-	// 查找指定区
+	serverListMu.RLock()
+	defer serverListMu.RUnlock()
+
+	if !loadCfg.UseServerList || cachedServerList == nil || len(cachedServerList.Areas) == 0 {
+		return loadCfg.FallbackAddr, fallbackServerId
+	}
+
+	areaId := int32(loadCfg.AreaId)
+	wantServerId := int32(loadCfg.ServerId)
+
 	var targetArea *robotclient.AreaInfo
 	for _, area := range cachedServerList.Areas {
-		if area.AreaId == defaultAreaId {
+		if areaId == 0 || area.AreaId == areaId {
 			targetArea = area
 			break
 		}
@@ -452,18 +542,17 @@ func getGateAddrAndServerId() (gateAddr string, serverId int32) {
 		targetArea = cachedServerList.Areas[0]
 	}
 
-	// 查找指定服
 	var targetServer *robotclient.ServerInfo
 	for _, server := range cachedServerList.Servers {
-		if server.AreaId == targetArea.AreaId {
-			if defaultServerId == 0 || server.ServerId == defaultServerId {
-				targetServer = server
-				break
-			}
+		if server.AreaId != targetArea.AreaId {
+			continue
+		}
+		if wantServerId == 0 || server.ServerId == wantServerId {
+			targetServer = server
+			break
 		}
 	}
 	if targetServer == nil {
-		// 找该区的第一个服
 		for _, server := range cachedServerList.Servers {
 			if server.AreaId == targetArea.AreaId {
 				targetServer = server
@@ -471,9 +560,10 @@ func getGateAddrAndServerId() (gateAddr string, serverId int32) {
 			}
 		}
 	}
-
 	if targetServer == nil {
-		return fallbackAddr, defaultServerId
+		clog.Warnf("no server found in area=%d, fallback to gate=%s server=%d",
+			targetArea.AreaId, loadCfg.FallbackAddr, fallbackServerId)
+		return loadCfg.FallbackAddr, fallbackServerId
 	}
 
 	return targetArea.Gate, targetServer.ServerId
@@ -485,14 +575,14 @@ func RunLoadTest(accounts map[string]string) {
 	for u, p := range accounts {
 		list = append(list, acc{u, p})
 	}
-	totalBatches := (len(list) + batchSize - 1) / batchSize
+	totalBatches := (len(list) + loadCfg.BatchSize - 1) / loadCfg.BatchSize
 	clog.Infof("Starting: %d robots in %d batches", len(list), totalBatches)
 
 	for batch := 0; batch < totalBatches; batch++ {
 		if atomic.LoadInt32(&stopSpawning) == 1 {
 			break
 		}
-		start, end := batch*batchSize, (batch+1)*batchSize
+		start, end := batch*loadCfg.BatchSize, (batch+1)*loadCfg.BatchSize
 		if end > len(list) {
 			end = len(list)
 		}
@@ -503,7 +593,7 @@ func RunLoadTest(accounts map[string]string) {
 			wg.Add(1)
 			go func(u, p string) {
 				defer wg.Done()
-				if robot := RunRobotWithMetrics(url, pid, u, p, printLog); robot != nil {
+				if robot := RunRobotWithMetrics(loadCfg.URL, loadCfg.PID, u, p, loadCfg.PrintLog); robot != nil {
 					connectedRobotsMu.Lock()
 					connectedRobots = append(connectedRobots, robot)
 					connectedRobotsMu.Unlock()
@@ -512,13 +602,13 @@ func RunLoadTest(accounts map[string]string) {
 		}
 		wg.Wait()
 
-		if t, e := atomic.LoadInt64(&totalRequests), atomic.LoadInt64(&errorCount); t > 0 && float64(e)/float64(t) > errorThreshold {
+		if t, e := atomic.LoadInt64(&totalRequests), atomic.LoadInt64(&errorCount); t > 0 && float64(e)/float64(t) > loadCfg.ErrorThreshold {
 			clog.Warnf("Error rate exceeds threshold, stopping")
 			atomic.StoreInt32(&stopSpawning, 1)
 			break
 		}
 		if batch < totalBatches-1 {
-			time.Sleep(batchInterval)
+			time.Sleep(loadCfg.BatchInterval)
 		}
 	}
 	connectedRobotsMu.Lock()
@@ -536,10 +626,10 @@ func RunContinuousSpin() {
 		clog.Warn("No robots for Spin")
 		return
 	}
-	clog.Infof("Spinning with %d robots for %v", len(robots), holdDuration)
+	clog.Infof("Spinning with %d robots for %v", len(robots), loadCfg.HoldDuration)
 
 	var wg sync.WaitGroup
-	stopTime := time.Now().Add(holdDuration)
+	stopTime := time.Now().Add(loadCfg.HoldDuration)
 	for _, r := range robots {
 		wg.Add(1)
 		go func(robot *robotclient.Robot) {
@@ -554,7 +644,7 @@ func RunContinuousSpin() {
 				} else {
 					recordAPIMetrics("ActorSpin", start, false)
 				}
-				time.Sleep(spinInterval)
+				time.Sleep(loadCfg.SpinInterval)
 			}
 		}(r)
 	}
@@ -590,88 +680,47 @@ func RunRobotWithMetrics(url, pid, userName, password string, printLog bool) *ro
 		pomeloClient.WithErrorBreak(true),
 	))
 	cli.PrintLog = printLog
-	// 如果使用 serverList，先获取区服列表
-	// if useServerList {
-	// 	if err := fetchServerList(cli); err != nil {
-	// 		clog.Errorf("Failed to fetch server list: %v", err)
-	// 		clog.Info("Falling back to default address")
-	// 	} else {
-	// 		//  printServerList()
-	// 	}
-	// }
-	// 获取Gate地址和ServerId
+	cli.TagName = userName
+
 	gateAddr, serverId := getGateAddrAndServerId()
 
-	// 构建步骤列表
-	var steps []struct {
+	type step struct {
 		name string
 		fn   func() error
 	}
+	steps := []step{
+		{"GetToken", func() error { return cli.GetToken(url, pid, userName, password) }},
+	}
 
-	steps = append(steps, struct {
-		name string
-		fn   func() error
-	}{"GetToken", func() error { return cli.GetToken(url, pid, userName, password) }})
-
-	// 根据配置选择连接方式
-	if useServerList && useWebSocket {
-		steps = append(steps, struct {
-			name string
-			fn   func() error
-		}{"ConnectWS", func() error { return cli.ConnectToWebSocket(gateAddr) }})
+	if loadCfg.UseWebSocket {
+		steps = append(steps, step{"ConnectWS", func() error { return cli.ConnectToWebSocket(gateAddr) }})
 	} else {
-		steps = append(steps, struct {
-			name string
-			fn   func() error
-		}{"ConnectTCP", func() error { return cli.ConnectToTCP(gateAddr) }})
+		steps = append(steps, step{"ConnectTCP", func() error { return cli.ConnectToTCP(gateAddr) }})
 	}
 
 	steps = append(steps,
-		struct {
-			name string
-			fn   func() error
-		}{"UserLogin", func() error { return cli.UserLogin(serverId) }},
-		struct {
-			name string
-			fn   func() error
-		}{"PlayerSelect", func() error { return cli.PlayerSelect() }},
-		struct {
-			name string
-			fn   func() error
-		}{"ActorCreate", func() error { return cli.ActorCreate() }},
-		struct {
-			name string
-			fn   func() error
-		}{"ActorEnter", func() error { return cli.ActorEnter() }},
-		struct {
-			name string
-			fn   func() error
-		}{"ActorEnterMachine", func() error { return cli.ActorEnterEnterMachine() }},
-		struct {
-			name string
-			fn   func() error
-		}{"ActorMachine", func() error { return cli.ActorMachine() }},
-		struct {
-			name string
-			fn   func() error
-		}{"ActorSpin", func() error { return cli.ActorSpin() }},
+		step{"UserLogin", func() error { return cli.UserLogin(serverId) }},
+		step{"PlayerSelect", func() error { return cli.PlayerSelect() }},
+		step{"ActorCreate", func() error { return cli.ActorCreate() }},
+		step{"ActorEnter", func() error { return cli.ActorEnter() }},
+		step{"ActorEnterMachine", func() error { return cli.ActorEnterEnterMachine() }},
+		step{"ActorMachine", func() error { return cli.ActorMachine() }},
+		step{"ActorSpin", func() error { return cli.ActorSpin() }},
 	)
-	for i := 0; i < 99; i++ {
-		steps = append(steps, struct {
-			name string
-			fn   func() error
-		}{"ActorSpin", func() error { return cli.ActorSpin() }})
+	for i := 0; i < loadCfg.WarmupSpins; i++ {
+		steps = append(steps, step{"ActorSpin", func() error { return cli.ActorSpin() }})
 	}
 
-	for _, step := range steps {
+	for _, s := range steps {
 		apiStart := time.Now()
-		if err := step.fn(); err != nil {
-			recordAPIMetrics(step.name, apiStart, true)
+		if err := s.fn(); err != nil {
+			recordAPIMetrics(s.name, apiStart, true)
 			recordError(startTime)
-			clog.Errorf("Failed to %s: %v", step.name, err)
+			clog.Errorf("[%s] Failed to %s: %v", userName, s.name, err)
+			cli.Disconnect()
 			return nil
 		}
-		recordAPIMetrics(step.name, apiStart, false)
+		recordAPIMetrics(s.name, apiStart, false)
 	}
 
 	recordSuccess(startTime)
@@ -704,7 +753,7 @@ func recordError(startTime time.Time) {
 }
 
 func PrintStatusLoop(stop chan struct{}) {
-	ticker := time.NewTicker(printInterval)
+	ticker := time.NewTicker(loadCfg.PrintInterval)
 	defer ticker.Stop()
 	for {
 		select {
@@ -772,7 +821,7 @@ func PrintSummary() {
 	clog.Infof("Max Online: %d | Total Logins: %d | Success: %.1f%%", online, total, successRate)
 	clog.Infof("Avg Latency: %dms | Max Latency: %dms | Errors: %d", avgLat, maxLat, errors)
 	clog.Infof("Spins: %d | Spin Success: %.1f%% | Spin Errors: %d", spins, spinSuccessRate, spinErrs)
-	clog.Infof("Duration: %.1fs | Hold: %v", time.Since(testStartTime).Seconds(), holdDuration)
+	clog.Infof("Duration: %.1fs | Hold: %v", time.Since(testStartTime).Seconds(), loadCfg.HoldDuration)
 	clog.Info("----------------------------------------")
 	clog.Infof("Robot: CPU=%.1f%% | Mem=%dMB/%dMB | GR=%d | Heap=%dMB",
 		sm.CPUPercent, sm.MemUsedMB, sm.MemTotalMB, sm.GoRoutines, sm.HeapAllocMB)
@@ -860,7 +909,7 @@ func PrintAPIMetricsRealtime() {
 
 func RegisterDevAccount(url string, accounts map[string]string) {
 	reqURL := fmt.Sprintf("%s/register", url)
-	accountChan := make(chan struct{}, batchSize)
+	accountChan := make(chan struct{}, loadCfg.BatchSize)
 	var registWait sync.WaitGroup
 	for k, v := range accounts {
 		registWait.Add(1)

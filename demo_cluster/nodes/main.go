@@ -3,10 +3,12 @@ package main
 import (
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	_ "net/http/pprof" // 1. 依然需要导入这个包，来自动注册 pprof 路由
 	"os"
 	"path/filepath"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -62,21 +64,57 @@ func activityCommand() *cli.Command {
 		Action: func(c *cli.Context) error {
 			path, node := getParameters(c)
 			setupGCLog("activity", node)
+			// 修复：pprofPorts 中已经预留了 activity:6065，但此前从未调用
+			// startPprofServer("activity")，导致 activity 节点完全没有暴露
+			// pprof/trace端点，线上一旦这个节点出问题(它承载了NATS
+			// JetStream消费、活动结算等CPU/内存敏感逻辑)将完全无法用
+			// go tool pprof 远程抓取诊断。
+			startPprofServer("activity")
 			activity.Run(path, node)
 			return nil
 		},
 	}
 }
 
+// enableContentionProfiling 打开锁/阻塞采样。
+// 默认 rate=0 时 pprof 的 block/mutex profile 永远是空的，线上一旦出现
+// "锁粒度过大导致大量goroutine互相等待"的问题，没有这两个profile基本无法定位。
+// SetMutexProfileFraction(N) 表示大约每 N 次锁竞争事件采样 1 次，
+// 生产环境建议给一个较大的采样分母（如100）而不是1，避免额外开销。
+func enableContentionProfiling() {
+	runtime.SetBlockProfileRate(1000000) // 采样阈值：耗时超过1ms的阻塞事件才计入
+	runtime.SetMutexProfileFraction(100) // 大约1/100的锁竞争事件被采样
+}
+
+// pprofListenAddr 决定 pprof HTTP 服务监听的地址。
+// 生产环境默认只监听 127.0.0.1，避免 /debug/pprof/heap 这类可能包含
+// 敏感数据、且能被用来做资源耗尽攻击(如长时间的 profile/trace 采集)的调试接口
+// 直接暴露在公网/内网所有人可达的地址上；需要远程访问时通过 SSH 隧道
+// (ssh -L 6060:127.0.0.1:6060 user@host) 转发，或显式设置环境变量放开。
+func pprofListenAddr(port string) string {
+	if host := os.Getenv("PPROF_LISTEN_HOST"); host != "" {
+		return host + port
+	}
+	return "127.0.0.1" + port
+}
+
 // startPprofServer 为指定节点类型启动 pprof 服务器
 func startPprofServer(nodeType string) {
+	enableContentionProfiling()
+
 	port, ok := pprofPorts[nodeType]
 	if !ok {
 		port = ":6060" // 默认端口
 	}
-	fmt.Printf("Starting pprof server for %s on %s\n", nodeType, port)
+	addr := pprofListenAddr(port)
+	fmt.Printf("Starting pprof server for %s on %s (set PPROF_LISTEN_HOST=0.0.0.0 to expose externally)\n", nodeType, addr)
 	go func() {
-		if err := http.ListenAndServe(port, nil); err != nil {
+		listener, err := net.Listen("tcp", addr)
+		if err != nil {
+			log.Printf("pprof listen failed: %v", err)
+			return
+		}
+		if err := http.Serve(listener, nil); err != nil {
 			log.Printf("pprof server failed: %v", err)
 		}
 	}()

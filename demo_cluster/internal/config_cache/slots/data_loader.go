@@ -61,7 +61,7 @@ func (d *DataLoader) LoadAllConfig() (*ConfigSnapshot, error) {
 	configWait.Add(1)
 	go func() {
 		if err := d.LoadLevelConfig(&configSnapshot, "public"); err != nil {
-			clog.Panic("load level config failed: %w", err)
+			clog.Errorf("load level config failed: %v", err)
 		}
 		configWait.Done()
 	}()
