@@ -127,7 +127,7 @@ func (p *Controller) serverList(c *cherryGin.Context) {
 	}
 
 	areaGroup, found := data.AreaGroupConfig.Get(pid)
-	if found == false {
+	if !found {
 		code.RenderResult(c, code.PIDError)
 		return
 	}
@@ -142,13 +142,14 @@ func (p *Controller) serverList(c *cherryGin.Context) {
 	// 先得到游戏渠道AreaIdList,再得到区,AreaConfig,
 	// 再根据GateNodes获取最优Gate地址
 	for _, areaId := range areaGroup.AreaIdList {
+		// 获取大区配置
 		areaRow, found := data.AreaConfig.Get(areaId)
-		if found == false {
+		if !found {
 			continue
 		}
 
 		// 根据区的Gate节点列表获取最优Gate
-		var bestGateAddr string
+		bestGateAddr := ""
 		if len(areaRow.GateNodes) > 0 {
 			// 调用Center获取该区最优的Gate节点
 			addr, errCode := rpcCenter.GetBestGateFromNodes(p.App, areaRow.GateNodes, "")
@@ -159,45 +160,40 @@ func (p *Controller) serverList(c *cherryGin.Context) {
 
 		// 如果获取失败，使用默认地址
 		if bestGateAddr == "" {
-			if areaRow.DefaultTcpAddress != "" {
-				bestGateAddr = areaRow.DefaultTcpAddress
-			}
+			bestGateAddr = areaRow.FallbackGateAddr()
 		}
-
-		areaResp := &AreaResponse{
+		dataList.Areas = append(dataList.Areas, &AreaResponse{
 			AreaId:   areaRow.AreaId,
 			AreaName: areaRow.AreaName,
 			Gate:     bestGateAddr,
-		}
-		dataList.Areas = append(dataList.Areas, areaResp)
+		})
 
-		// 获取该区的服务器列表，转换为响应结构（不暴露gameNodes）
+		// 只返回逻辑服；gameNodes 是集群内部概念，不下发
 		serverList := data.AreaServerConfig.ListWithAreaId(areaRow.AreaId)
 		for _, server := range serverList {
-			serverResp := &ServerResponse{
+			dataList.Servers = append(dataList.Servers, &ServerResponse{
 				ServerId:   server.ServerId,
 				ServerName: server.ServerName,
-				AreaId:     server.AreaId,
+				AreaId:     areaRow.AreaId,
 				Status:     server.Status,
-			}
-			dataList.Servers = append(dataList.Servers, serverResp)
+			})
 		}
 	}
-	elapsed := time.Since(startTime)
-	if elapsed.Milliseconds() > 10 {
+
+	if elapsed := time.Since(startTime); elapsed.Milliseconds() > 10 {
 		cherryLogger.Warnf("[serverList] time=%d ms", elapsed.Milliseconds())
 	}
 	code.RenderResult(c, code.OK, dataList)
 }
 
-// AreaResponse 区响应结构（返回给客户端）
+// AreaResponse 大区（含该区推荐 Gate 地址）
 type AreaResponse struct {
 	AreaId   int32  `json:"areaId"`
 	AreaName string `json:"areaName"`
-	Gate     string `json:"gate"`
+	Gate     string `json:"gate"` // host:port
 }
 
-// ServerResponse 服响应结构（返回给客户端，不包含内部节点信息）
+// ServerResponse 逻辑服（玩家选服用）
 type ServerResponse struct {
 	ServerId   int32  `json:"serverId"`
 	ServerName string `json:"serverName"`

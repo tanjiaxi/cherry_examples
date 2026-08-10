@@ -51,10 +51,10 @@ type LoadTestConfig struct {
 var loadCfg LoadTestConfig
 
 func init() {
-	flag.StringVar(&loadCfg.URL, "url", "http://10.10.10.251:8081", "web node URL")
+	flag.StringVar(&loadCfg.URL, "url", "http://127.0.0.1:8081", "web node URL")
 	flag.StringVar(&loadCfg.PID, "pid", "2126001", "SDK PID")
-	flag.IntVar(&loadCfg.Robots, "robots", 100, "number of robots")
-	flag.IntVar(&loadCfg.BatchSize, "batch-size", 20, "robots started per batch")
+	flag.IntVar(&loadCfg.Robots, "robots", 1, "number of robots")
+	flag.IntVar(&loadCfg.BatchSize, "batch-size", 1, "robots started per batch")
 	flag.DurationVar(&loadCfg.BatchInterval, "batch-interval", time.Second, "interval between batches")
 	flag.DurationVar(&loadCfg.HoldDuration, "duration", 30*time.Minute, "steady-state spin duration")
 	flag.DurationVar(&loadCfg.SpinInterval, "spin-interval", 500*time.Millisecond, "interval between spins per robot")
@@ -62,21 +62,21 @@ func init() {
 	flag.Float64Var(&loadCfg.ErrorThreshold, "error-threshold", 0.01, "stop spawning when error rate exceeds this value")
 	flag.BoolVar(&loadCfg.UseWebSocket, "websocket", true, "use websocket (true) or TCP (false)")
 	flag.BoolVar(&loadCfg.UseServerList, "server-list", true, "fetch gate/server from /serverList API")
-	flag.StringVar(&loadCfg.FallbackAddr, "gate", "10.10.10.251:10010", "fallback gate address when server-list is disabled or fails")
+	flag.StringVar(&loadCfg.FallbackAddr, "gate", "127.0.0.1:10010", "fallback gate address when server-list is disabled or fails")
 	flag.IntVar(&loadCfg.AreaId, "area", 1, "target area id (0 = first available)")
 	flag.IntVar(&loadCfg.ServerId, "server", 10001, "target server id (0 = first available in area)")
 	flag.IntVar(&loadCfg.WarmupSpins, "warmup-spins", 0, "extra ActorSpin calls during login steps")
 	flag.BoolVar(&loadCfg.RunSpin, "spin", true, "run continuous spin after all robots connect")
 	flag.BoolVar(&loadCfg.PrintLog, "verbose", false, "print per-robot debug logs")
-	flag.BoolVar(&loadCfg.RegisterFirst, "register", false, "pre-register accounts via /register before load test")
+	flag.BoolVar(&loadCfg.RegisterFirst, "register", true, "pre-register accounts via /register before load test")
 }
 
 // 服务器节点 pprof 地址
 var serverPprofAddrs = map[string]string{
-	"game":   "http://10.10.10.251:6060",
-	"gate":   "http://10.10.10.251:6061",
-	"web":    "http://10.10.10.251:6062",
-	"center": "http://10.10.10.251:6063",
+	"game":   "http://127.0.0.1:6060",
+	"gate":   "http://127.0.0.1:6061",
+	"web":    "http://127.0.0.1:6062",
+	"center": "http://127.0.0.1:6063",
 }
 
 // ==================== 指标计数器 ====================

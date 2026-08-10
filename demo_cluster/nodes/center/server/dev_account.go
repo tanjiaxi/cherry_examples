@@ -89,7 +89,7 @@ func createUser() (*model.SlotsUser, error) {
 		UserLevel:     1,
 		CurExp:        "0",
 		ExpPercent:    0,
-		Money:         10000,
+		Money:         100000000,
 		Diamond:       10000,
 		LogoutTime:    cherryTime.Now().Time,
 		CreateTime:    cherryTime.Now().Time,

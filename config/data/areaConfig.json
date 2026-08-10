@@ -1,16 +1,16 @@
 [
   {
     "areaId": 1,
-    "areaName": "1区",
-    "gateNodes": ["gc-gate-1"],
-    "defaultAddressGate": "0.0.0.0:10010",
-    "defaultTcpAddress":"0.0.0.0:20010"
+    "areaName": "1区-华东",
+    "gateNodes": ["gc-gate-1","gc-gate-2"],
+    "defaultGateWs": "127.0.0.1:10010",
+    "defaultGateTcp":"127.0.0.1:10011"
   },
   {
     "areaId": 2,
-    "areaName": "2区",
-    "gateNodes": ["gc-gate-1"],
-    "defaultAddressGate": "0.0.0.0:10011",
-    "defaultTcpAddress":"0.0.0.0:20011"
+    "areaName": "2区-华北",
+    "gateNodes": ["gc-gate-3"],
+    "defaultGateWs": "127.0.0.1:20010",
+    "defaultGateTcp":"127.0.0.1:20011"
   }
 ]

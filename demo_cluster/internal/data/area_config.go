@@ -14,12 +14,13 @@ import (
 )
 
 type (
+	// AreaRow 大区：选服页的「区」，绑定 Gate 接入池
 	AreaRow struct {
-		AreaId             int32    `json:"areaId"`             // 游戏区id
-		AreaName           string   `json:"areaName"`           // 游戏区名称
-		GateNodes          []string `json:"gateNodes"`          // 该区的Gate节点ID列表
-		DefaultAddressGate string   `json:"defaultAddressGate"` // 默认Gate地址（后备）
-		DefaultTcpAddress  string   `json:"defaultTcpAddress"`  // 兼容旧配置
+		AreaId         int32    `json:"areaId"`             // 游戏区id
+		AreaName       string   `json:"areaName"`           // 游戏区名称
+		GateNodes      []string `json:"gateNodes"`          // Gate 节点ID列表（集群 node_id）
+		DefaultGateWs  string   `json:"defaultAddressGate"` // WS 兜底地址 host:port
+		DefaultGateTcp string   `json:"defaultTcpAddress"`  // TCP 兜底地址 host:port
 	}
 
 	// 游戏区
@@ -71,4 +72,10 @@ func (p *areaConfig) Get(pk int32) (*AreaRow, bool) {
 func (p *areaConfig) Contain(pk int32) bool {
 	_, found := p.Get(pk)
 	return found
+}
+func (r *AreaRow) FallbackGateAddr() string {
+	if r.DefaultGateTcp != "" {
+		return r.DefaultGateTcp
+	}
+	return r.DefaultGateWs
 }

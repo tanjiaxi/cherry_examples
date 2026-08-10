@@ -86,8 +86,8 @@ func gameNodeRoute(agent *pomelo.Agent, session *cproto.Session, route *pmessage
 	}
 
 	// 1. 从session中获取玩家绑定的游戏服务器ID,这里的ServerID，是game节点的，nodeId
-	serverId := session.GetString(sessionKey.ServerID)
-	if serverId == "" {
+	gameNodeId := session.GetString(sessionKey.GameNodeID)
+	if gameNodeId == "" {
 		// 没有可用的游戏服务器，踢掉玩家
 		agent.Kick(&pb.Int32{Value: code.NoAvailableGameServer}, true)
 		clog.Info("player is not bind server")
@@ -95,8 +95,8 @@ func gameNodeRoute(agent *pomelo.Agent, session *cproto.Session, route *pmessage
 	}
 
 	// 2. 检查目标Game节点是否在线
-	if !isGameNodeOnline(agent, serverId) {
-		clog.Warnf("Player %d's bound server %s is offline, reassigning", session.Uid, serverId)
+	if !isGameNodeOnline(agent, gameNodeId) {
+		clog.Warnf("Player %d's bound server %s is offline, reassigning", session.Uid, gameNodeId)
 		handleGameNodeOffline(agent, session)
 		return
 	}
@@ -112,8 +112,8 @@ func gameNodeRoute(agent *pomelo.Agent, session *cproto.Session, route *pmessage
 
 	// 4. 转发消息到目标游戏节点
 	childId := cstring.ToString(session.Uid)
-	targetPath := cfacade.NewChildPath(serverId, route.HandleName(), childId)
-	pomelo.ClusterLocalDataRoute(agent, session, route, msg, serverId, targetPath)
+	targetPath := cfacade.NewChildPath(gameNodeId, route.HandleName(), childId)
+	pomelo.ClusterLocalDataRoute(agent, session, route, msg, gameNodeId, targetPath)
 }
 
 // 检测游戏节点是否在线

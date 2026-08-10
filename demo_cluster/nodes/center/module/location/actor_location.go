@@ -8,6 +8,7 @@ import (
 	clog "github.com/cherry-game/cherry/logger"
 	cactor "github.com/cherry-game/cherry/net/actor"
 	"github.com/cherry-game/examples/demo_cluster/internal/code"
+	"github.com/cherry-game/examples/demo_cluster/internal/data"
 	"github.com/cherry-game/examples/demo_cluster/internal/pb"
 	"github.com/cherry-game/examples/demo_cluster/nodes/center/server"
 )
@@ -107,18 +108,24 @@ func (p *ActorLocation) getHealthyGameNodes() []string {
 
 // allocateNodes 为玩家分配节点
 func (p *ActorLocation) allocateNodes(ctx context.Context, req *pb.AllocateNodesRequest) (*pb.AllocateNodesResponse, int32) {
-	if req.UserId <= 0 || req.GateNodeId == "" {
+	if req.UserId <= 0 || req.GateNodeId == "" || req.ServerId <= 0 {
 		return nil, code.ParamError
 	}
 
+	boundNodes, ok := data.AreaServerConfig.GameNodesOf(req.ServerId)
+	if !ok {
+		clog.Errorf("[ActorLocation] 逻辑服无 gameNodes: serverId=%d", req.ServerId)
+		return nil, code.NoAvailableGame
+	}
+	// 健康节点 ∩ 本服 gameNodes；健康为空则 Discovery 全量 ∩ 本服
+	gameNodes := intersectStrings(p.getHealthyGameNodes(), boundNodes)
 	// 获取可用的Game节点
-	gameNodes := p.getHealthyGameNodes()
 	if len(gameNodes) == 0 {
-		// 如果没有健康节点，尝试使用所有Game节点
-		allGameNodes := p.App().Discovery().ListByType("game")
-		for _, node := range allGameNodes {
-			gameNodes = append(gameNodes, node.GetNodeID())
+		var all []string
+		for _, node := range p.App().Discovery().ListByType("game") {
+			all = append(all, node.GetNodeID())
 		}
+		gameNodes = intersectStrings(all, boundNodes)
 	}
 
 	if len(gameNodes) == 0 {
@@ -139,6 +146,19 @@ func (p *ActorLocation) allocateNodes(ctx context.Context, req *pb.AllocateNodes
 		GameNodeId: loc.GameNodeId,
 		LoginTime:  loc.LoginTime,
 	}, code.OK
+}
+func intersectStrings(a, b []string) []string {
+	set := make(map[string]struct{}, len(b))
+	for _, v := range b {
+		set[v] = struct{}{}
+	}
+	var out []string
+	for _, v := range a {
+		if _, ok := set[v]; ok {
+			out = append(out, v)
+		}
+	}
+	return out
 }
 
 // getLocation 获取玩家位置

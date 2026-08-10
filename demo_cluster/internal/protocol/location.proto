@@ -9,6 +9,8 @@ message AllocateNodesRequest {
   
   // 对应 Go: GateNodeId, tag: gate_node_id
   string gate_node_id = 2 ;
+    // 对应 Go: ServerId, tag: server_id
+  int32 server_id = 5 ;
 }
 
 // AllocateNodesResponse 分配节点响应
@@ -24,6 +26,7 @@ message AllocateNodesResponse {
   
   // 对应 Go: LoginTime, tag: login_time
   int64 login_time = 4 ;
+
 }
 
 // HeartbeatRequest 心跳请求

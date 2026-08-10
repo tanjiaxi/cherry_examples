@@ -123,12 +123,12 @@ func (p *ActorAgent) login(ctx context.Context, session *cproto.Session, req *pb
 	if code.IsFail(errCode) || allocResp == nil {
 		clog.Warnf("[login] 分配节点失败: userId=%d, errCode=%d", userId, errCode)
 		// 如果分配失败，使用请求中的ServerId作为后备
-		agent.Session().Set(sessionKey.ServerID, cstring.ToString(req.ServerId))
-		agent.Session().Set(sessionKey.GameNodeID, cstring.ToString(req.ServerId))
+		agent.Session().Set(sessionKey.AreaServerID, cstring.ToString(req.ServerId)) // 逻辑服 101
+		agent.Session().Set(sessionKey.GameNodeID, allocResp.GameNodeId)             // 进程 10001
 	} else {
 		// 使用Center分配的Game节点
-		agent.Session().Set(sessionKey.ServerID, allocResp.GameNodeId)
-		agent.Session().Set(sessionKey.GameNodeID, allocResp.GameNodeId)
+		agent.Session().Set(sessionKey.AreaServerID, cstring.ToString(req.ServerId)) // 逻辑服 101
+		agent.Session().Set(sessionKey.GameNodeID, allocResp.GameNodeId)             // 进程 10001
 		clog.Infof("[login] 节点分配成功: userId=%d, gameNode=%s", userId, allocResp.GameNodeId)
 	}
 

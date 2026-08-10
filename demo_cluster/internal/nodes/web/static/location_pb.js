@@ -164,7 +164,8 @@ proto.pb.AllocateNodesRequest.prototype.toObject = function(opt_includeInstance)
 proto.pb.AllocateNodesRequest.toObject = function(includeInstance, msg) {
   var f, obj = {
     userId: jspb.Message.getFieldWithDefault(msg, 1, 0),
-    gateNodeId: jspb.Message.getFieldWithDefault(msg, 2, "")
+    gateNodeId: jspb.Message.getFieldWithDefault(msg, 2, ""),
+    serverId: jspb.Message.getFieldWithDefault(msg, 5, 0)
   };
 
   if (includeInstance) {
@@ -209,6 +210,10 @@ proto.pb.AllocateNodesRequest.deserializeBinaryFromReader = function(msg, reader
       var value = /** @type {string} */ (reader.readString());
       msg.setGateNodeId(value);
       break;
+    case 5:
+      var value = /** @type {number} */ (reader.readInt32());
+      msg.setServerId(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -252,6 +257,13 @@ proto.pb.AllocateNodesRequest.serializeBinaryToWriter = function(message, writer
       f
     );
   }
+  f = message.getServerId();
+  if (f !== 0) {
+    writer.writeInt32(
+      5,
+      f
+    );
+  }
 };
 
 
@@ -288,6 +300,24 @@ proto.pb.AllocateNodesRequest.prototype.getGateNodeId = function() {
  */
 proto.pb.AllocateNodesRequest.prototype.setGateNodeId = function(value) {
   return jspb.Message.setProto3StringField(this, 2, value);
+};
+
+
+/**
+ * optional int32 server_id = 5;
+ * @return {number}
+ */
+proto.pb.AllocateNodesRequest.prototype.getServerId = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 5, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.pb.AllocateNodesRequest} returns this
+ */
+proto.pb.AllocateNodesRequest.prototype.setServerId = function(value) {
+  return jspb.Message.setProto3IntField(this, 5, value);
 };
 
 

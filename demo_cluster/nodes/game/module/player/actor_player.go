@@ -133,8 +133,8 @@ func (p *actorPlayer) playerCreate(ctx context.Context, session *cproto.Session,
 	}
 
 	// 创建角色&添加角色初始的资产
-	serverId := session.GetInt32(sessionKey.ServerID)
-	newPlayerTable, errCode := db.CreatePlayer(session, req.PlayerName, serverId, playerInitRow)
+	areaServerId := session.GetInt32(sessionKey.AreaServerID)
+	newPlayerTable, errCode := db.CreatePlayer(session, req.PlayerName, areaServerId, playerInitRow)
 	if code.IsFail(errCode) {
 		p.ResponseCode(session, errCode)
 		return
