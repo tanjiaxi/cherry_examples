@@ -127,10 +127,11 @@ func isGameNodeOnline(agent *pomelo.Agent, nodeID string) bool {
 func handleGameNodeOffline(agent *pomelo.Agent, session *cproto.Session) {
 	userId := session.Uid
 	gateNodeId := agent.NodeID()
+	serverId := session.GetInt32(sessionKey.AreaServerID)
 
 	// 1. 调用Center重新分配Game节点（负载均衡）
 	// agent 嵌入了 IApplication，可以直接作为 app 使用
-	allocResp, errCode := rpcCenter.AllocateNodes(agent, userId, gateNodeId, "")
+	allocResp, errCode := rpcCenter.AllocateNodes(agent, userId, gateNodeId, serverId, "")
 	if code.IsFail(errCode) || allocResp == nil {
 		clog.Warnf("[handleGameNodeOffline] 重新分配节点失败: userId=%d, errCode=%d", userId, errCode)
 		// 尝试本地选择
@@ -139,14 +140,12 @@ func handleGameNodeOffline(agent *pomelo.Agent, session *cproto.Session) {
 			agent.Kick(&pb.Int32{Value: code.ServerMaintenance}, true)
 			return
 		}
-		session.Set(sessionKey.ServerID, newGameNode)
 		session.Set(sessionKey.GameNodeID, newGameNode)
 		clog.Infof("[handleGameNodeOffline] 本地选择新节点: userId=%d, gameNode=%s", userId, newGameNode)
 		return
 	}
 
-	// 2. 更新session中的serverID
-	session.Set(sessionKey.ServerID, allocResp.GameNodeId)
+	// 2. 更新session中的 GameNodeID
 	session.Set(sessionKey.GameNodeID, allocResp.GameNodeId)
 	clog.Infof("[handleGameNodeOffline] 重新分配成功: userId=%d, gameNode=%s", userId, allocResp.GameNodeId)
 }

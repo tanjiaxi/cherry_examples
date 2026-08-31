@@ -1,45 +1,48 @@
-/*
- * @Author: t 921865806@qq.com
- * @Date: 2025-09-15 18:02:10
- * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-11-27 15:42:09
- * @FilePath: /examples/demo_cluster/internal/token/token.go
- * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
- */
 package token
 
 import (
+	"crypto/hmac"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	cherryCrypto "github.com/cherry-game/cherry/extend/crypto"
-	cherryTime "github.com/cherry-game/cherry/extend/time"
 	cherryLogger "github.com/cherry-game/cherry/logger"
 	"github.com/cherry-game/examples/demo_cluster/internal/code"
 )
 
 const (
-	hashFormat      = "pid:%d,openid:%s,timestamp:%d"
-	tokenExpiredDay = 3
+	// 短 TTL：登录票建议 5 分钟（毫秒）
+	tokenTTLMs = int64(5 * 60 * 1000)
+	hashFormat = "pid:%d|openid:%s|tt:%d|jti:%s"
 )
 
 type Token struct {
-	PID        int32  `json:"pid"`
-	OpenID     string `json:"open_id"`
-	Timestamp  int64  `json:"tt"`
-	DeviceName string `json:"device_name"`
-	Hash       string `json:"hash"`
+	PID       int32  `json:"pid"`
+	OpenID    string `json:"open_id"`
+	Timestamp int64  `json:"tt"`  // 签发时间 ms
+	JTI       string `json:"jti"` // 一次性票 ID
+	Hash      string `json:"hash"`
 }
 
 func New(pid int32, openId string, appKey string) *Token {
-	token := &Token{
+	t := &Token{
 		PID:       pid,
 		OpenID:    openId,
-		Timestamp: cherryTime.Now().ToMillisecond(),
+		Timestamp: time.Now().UnixMilli(),
+		JTI:       newJTI(),
 	}
+	t.Hash = BuildHash(t, appKey)
+	return t
+}
 
-	token.Hash = BuildHash(token, appKey)
-	return token
+func newJTI() string {
+	var b [16]byte
+	_, _ = rand.Read(b[:])
+	return hex.EncodeToString(b[:])
 }
 
 func (t *Token) ToBase64() string {
@@ -51,42 +54,45 @@ func DecodeToken(base64Token string) (*Token, bool) {
 	if len(base64Token) < 1 {
 		return nil, false
 	}
-
-	token := &Token{}
-	bytes, err := cherryCrypto.Base64DecodeBytes(base64Token)
+	raw, err := cherryCrypto.Base64DecodeBytes(base64Token)
 	if err != nil {
-		cherryLogger.Warnf("base64Token = %s, validate error = %v", base64Token, err)
+		cherryLogger.Warnf("base64Token decode error = %v", err)
 		return nil, false
 	}
-
-	err = json.Unmarshal(bytes, token)
-	if err != nil {
-		cherryLogger.Warnf("base64Token = %s, unmarshal error = %v", base64Token, err)
+	tok := &Token{}
+	if err := json.Unmarshal(raw, tok); err != nil {
+		cherryLogger.Warnf("token unmarshal error = %v", err)
 		return nil, false
 	}
-
-	return token, true
+	return tok, true
 }
 
+// Validate 验签 + TTL（不消费 jti；消费在 Center/本地 store）
 func Validate(token *Token, appKey string) (int32, bool) {
-	now := cherryTime.Now()
-	now.AddDays(tokenExpiredDay)
-
-	if token.Timestamp > now.ToMillisecond() {
-		cherryLogger.Warnf("token is expired, token = %s", token)
+	if token == nil || token.OpenID == "" || token.JTI == "" || token.Hash == "" {
 		return code.AccountTokenValidateFail, false
 	}
 
-	newHash := BuildHash(token, appKey)
-	if newHash != token.Hash {
-		cherryLogger.Warnf("hash validate fail. newHash = %s, token = %s", token)
+	now := time.Now().UnixMilli()
+	if token.Timestamp > now+60*1000 { // 允许 1 分钟时钟偏差
 		return code.AccountTokenValidateFail, false
 	}
+	if now-token.Timestamp > tokenTTLMs {
+		cherryLogger.Warnf("token expired pid=%d openId=%s ageMs=%d",
+			token.PID, token.OpenID, now-token.Timestamp)
+		return code.AccountTokenExpired, false
+	}
 
+	if BuildHash(token, appKey) != token.Hash {
+		cherryLogger.Warnf("hmac validate fail pid=%d jti=%s", token.PID, token.JTI)
+		return code.AccountTokenValidateFail, false
+	}
 	return code.OK, true
 }
 
 func BuildHash(t *Token, appKey string) string {
-	value := fmt.Sprintf(hashFormat, t.PID, t.OpenID, t.Timestamp)
-	return cherryCrypto.MD5(value + appKey)
+	payload := fmt.Sprintf(hashFormat, t.PID, t.OpenID, t.Timestamp, t.JTI)
+	mac := hmac.New(sha256.New, []byte(appKey))
+	_, _ = mac.Write([]byte(payload))
+	return hex.EncodeToString(mac.Sum(nil))
 }

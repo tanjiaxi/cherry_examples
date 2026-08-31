@@ -1,7 +1,7 @@
 {
   "env": "gc",
-  "WARN": true,
-  "print_level": "WARN",
+  "INFO": true,
+  "print_level": "INFO",
   "cluster": {
     "discovery": {
       "mode": "etcd",
@@ -143,53 +143,53 @@
   },
   "logger": {
     "master_log": {
-      "level": "WARN",
+      "level": "INFO",
       "enable_console": true,
       "enable_write_file": true,
-      "file_link_path": "logs/WARN.log",
-      "file_path_format": "logs/WARN_%Y%m%d%H%M.log"
+      "file_link_path": "logs/INFO.log",
+      "file_path_format": "logs/INFO_%Y%m%d%H%M.log"
     },
     "web_log": {
-      "level": "WARN",
+      "level": "INFO",
       "enable_console": true,
       "enable_write_file": true,
-      "file_link_path": "logs/WARN.log",
-      "file_path_format": "logs/WARN_%Y%m%d%H%M.log"
+      "file_link_path": "logs/INFO.log",
+      "file_path_format": "logs/INFO_%Y%m%d%H%M.log"
     },
     "center_log": {
-      "level": "WARN",
+      "level": "INFO",
       "enable_console": true,
       "enable_write_file": true,
-      "file_link_path": "logs/WARN.log",
-      "file_path_format": "logs/WARN_%Y%m%d%H%M.log"
+      "file_link_path": "logs/INFO.log",
+      "file_path_format": "logs/INFO_%Y%m%d%H%M.log"
     },
     "gate_log": {
-      "level": "WARN",
+      "level": "INFO",
       "enable_console": true,
       "enable_write_file": true,
-      "file_link_path": "logs/WARN.log",
-      "file_path_format": "logs/WARN_%Y%m%d%H%M.log"
+      "file_link_path": "logs/INFO.log",
+      "file_path_format": "logs/INFO_%Y%m%d%H%M.log"
     },
     "game_log": {
-      "level": "WARN",
+      "level": "INFO",
       "enable_console": true,
       "enable_write_file": true,
-      "file_link_path": "logs/WARN.log",
-      "file_path_format": "logs/WARN_%Y%m%d%H%M.log"
+      "file_link_path": "logs/INFO.log",
+      "file_path_format": "logs/INFO_%Y%m%d%H%M.log"
     },
     "activity_log": {
-      "level": "WARN",
+      "level": "INFO",
       "enable_console": true,
       "enable_write_file": true,
       "file_link_path": "logs/activity.log",
       "file_path_format": "logs/activity_%Y%m%d%H%M.log"
     },
     "cross_log": {
-      "level": "WARN",
+      "level": "INFO",
       "enable_console": true,
       "enable_write_file": true,
-      "file_link_path": "logs/WARN.log",
-      "file_path_format": "logs/WARN_%Y%m%d%H%M.log"
+      "file_link_path": "logs/INFO.log",
+      "file_path_format": "logs/INFO_%Y%m%d%H%M.log"
     }
   },
   "data_config": {
@@ -265,7 +265,7 @@
       "history_size": 120,
       "metrics_path": "/metrics",
       "metrics_port": 30010,
-      "enable_alert": true
+      "enable_alert": false
     },
     "gc-center": {
       "enabled": false,
@@ -274,7 +274,7 @@
       "history_size": 120,
       "metrics_path": "/metrics",
       "metrics_port": 30011,
-      "enable_alert": true
+      "enable_alert": false
     },
     "gc-gate-1": {
       "enabled": false,
@@ -283,7 +283,7 @@
       "history_size": 120,
       "metrics_path": "/metrics",
       "metrics_port": 30012,
-      "enable_alert": true
+      "enable_alert": false
     },
     "10001": {
       "enabled": false,
@@ -292,7 +292,7 @@
       "history_size": 120,
       "metrics_path": "/metrics",
       "metrics_port": 30013,
-      "enable_alert": true
+      "enable_alert": false
     },
     "gc-web-1": {
       "enabled": false,
@@ -301,7 +301,7 @@
       "history_size": 120,
       "metrics_path": "/metrics",
       "metrics_port": 30014,
-      "enable_alert": true
+      "enable_alert": false
     }
   }
 }

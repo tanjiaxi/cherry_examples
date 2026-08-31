@@ -24,10 +24,12 @@ const (
 )
 
 // AllocateNodes 为玩家分配Gate和Game节点
-func AllocateNodes(app cfacade.IApplication, playerId int64, gateNodeId, traceId string) (*pb.AllocateNodesResponse, int32) {
+// serverId: 逻辑服 ID（areaServerConfig.serverId）
+func AllocateNodes(app cfacade.IApplication, playerId int64, gateNodeId string, serverId int32, traceId string) (*pb.AllocateNodesResponse, int32) {
 	req := &pb.AllocateNodesRequest{
 		UserId:     playerId,
 		GateNodeId: gateNodeId,
+		ServerId:   serverId,
 	}
 
 	targetPath := GetTargetPath(app, locationActor)
@@ -68,6 +70,16 @@ func RemoveLocation(app cfacade.IApplication, playerId int64, traceId string) in
 		return errCode
 	}
 
+	return rsp.Value
+}
+func RemoveLocationIfGate(app cfacade.IApplication, userId int64, gateNodeId, traceId string) int32 {
+	req := &pb.RemoveLocationIfGateRequest{UserId: userId, GateNodeId: gateNodeId}
+	rsp := &pb.Int32{}
+	targetPath := GetTargetPath(app, locationActor)
+	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, "removeLocationIfGate", traceId, req, rsp)
+	if code.IsFail(errCode) {
+		return errCode
+	}
 	return rsp.Value
 }
 

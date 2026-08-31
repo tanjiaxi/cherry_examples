@@ -9,6 +9,7 @@
 package account
 
 import (
+	"context"
 	"strings"
 	"time"
 
@@ -18,13 +19,15 @@ import (
 	"github.com/cherry-game/examples/demo_cluster/internal/code"
 	"github.com/cherry-game/examples/demo_cluster/internal/component/metrics"
 	"github.com/cherry-game/examples/demo_cluster/internal/pb"
+	"github.com/cherry-game/examples/demo_cluster/internal/token"
 	"github.com/cherry-game/examples/demo_cluster/nodes/center/server"
 )
 
 type (
 	ActorAccount struct {
 		cactor.Base
-		count int
+		count    int
+		jtiStore *token.JTIStore
 	}
 )
 
@@ -37,10 +40,26 @@ func (p *ActorAccount) OnInit() {
 	// p.Remote().Register("registerDevAccount", p.registerDevAccount)
 	// p.Remote().Register("getDevAccount", p.getDevAccount)
 	// p.Remote().Register("getUID", p.getUID)
+	p.jtiStore = token.NewJTIStore()
 
 	nats_cluster.RegisterConcurrentHandler(p.AliasID(), "registerDevAccount", p.registerDevAccount)
 	nats_cluster.RegisterConcurrentHandler(p.AliasID(), "getDevAccount", p.getDevAccount)
 	nats_cluster.RegisterConcurrentHandler(p.AliasID(), "getUID", p.getUID)
+
+	// 一次性票必须走 Actor 单线程或加锁 store；这里用 Remote + 内存 store（已自带锁）
+	p.Remote().Register("consumeTokenJti", p.consumeTokenJti)
+}
+
+// consumeTokenJti req.Value = jti
+func (p *ActorAccount) consumeTokenJti(ctx context.Context, req *pb.String) int32 {
+	if req == nil || req.Value == "" {
+		return code.ParamError
+	}
+	// TTL 与 token 一致：5 分钟
+	if !p.jtiStore.Consume(req.Value, 5*60*1000) {
+		return code.AccountTokenReplay
+	}
+	return code.OK
 }
 
 // registerDevAccount 注册开发者帐号
@@ -81,7 +100,7 @@ func (p *ActorAccount) getDevAccount(req *pb.DevRegister) (*pb.String, int32) {
 	return &pb.String{Value: devAccount.DeviceName}, code.OK
 }
 
-// getUID 获取uid
+// getUserID 获取uid
 func (p *ActorAccount) getUID(req *pb.User) (*pb.Int64, int32) {
 	//req.OpenId 其实就是deviceName
 	// 3. 计算并打印执行时间
@@ -97,6 +116,6 @@ func (p *ActorAccount) getUID(req *pb.User) (*pb.Int64, int32) {
 	}
 
 	elapsed := time.Since(startTime)
-	clog.Debugf("getUID代码执行耗时: %s ,id: %s ,count: %d ", elapsed, req.OpenId, p.count)
+	clog.Debugf("getUserID代码执行耗时: %s ,id: %s ,count: %d ", elapsed, req.OpenId, p.count)
 	return &pb.Int64{Value: int64(userId)}, code.OK
 }

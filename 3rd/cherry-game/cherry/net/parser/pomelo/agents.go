@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	sidAgentMap = sync.Map{} // make(map[cfacade.SID]*Agent)      // sid -> Agent
-	uidMap      = sync.Map{} // make(map[cfacade.UID]cfacade.SID) // uid -> sid
+	sidAgentMap = sync.Map{} // sid -> Agent
+	uidMap      = sync.Map{} // uid -> sid
 )
 
 func BindSID(agent *Agent) {
@@ -26,13 +26,11 @@ func Bind(sid cfacade.SID, uid cfacade.UID) (*Agent, error) {
 		return nil, cerr.Errorf("[uid = %d] less than 1.", uid)
 	}
 
-	// sid不存在，可能在执行该函数前已经断开连接
 	agent, found := GetAgentWithSID(sid)
 	if !found {
 		return nil, cerr.Errorf("[sid = %s] does not exist.", sid)
 	}
 
-	// 先查找uid是否有旧的agent
 	var oldAgent *Agent
 	if oldSID, found := GetSID(uid); found && oldSID != sid {
 		if agent, exists := GetAgentWithSID(oldSID); exists {
@@ -40,11 +38,9 @@ func Bind(sid cfacade.SID, uid cfacade.UID) (*Agent, error) {
 		}
 	}
 
-	// 再绑定uid
 	agent.session.Uid = uid
 	uidMap.Store(uid, sid)
 
-	// 返回oldAgent(如果没有则为空，可自行处理，比如踢下线)
 	return oldAgent, nil
 }
 
@@ -54,7 +50,6 @@ func Unbind(sid cfacade.SID) {
 		return
 	}
 
-	// sid是自己，则删除uidmap
 	if nowSID, ok := GetSID(agent.UID()); ok && nowSID == sid {
 		uidMap.Delete(agent.UID())
 	}

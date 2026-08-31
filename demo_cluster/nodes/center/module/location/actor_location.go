@@ -49,6 +49,7 @@ func (p *ActorLocation) OnInit() {
 	p.Remote().Register("getBestGameFromNodes", p.getBestGameFromNodes)
 	p.Remote().Register("getBestGame", p.getBestGame)
 	p.Remote().Register("getNodeOnlineCount", p.getNodeOnlineCount)
+	p.Remote().Register("removeLocationIfGate", p.removeLocationIfGate) // 移除玩家位置（仅当玩家仍绑定在指定 Gate 时删除）
 
 	// 启动健康检查
 	p.startHealthCheck()
@@ -361,4 +362,13 @@ func (p *ActorLocation) GetHealthChecker() *server.NodeHealthChecker {
 // GetApp 获取应用实例
 func (p *ActorLocation) GetApp() cfacade.IApplication {
 	return p.App()
+}
+func (p *ActorLocation) removeLocationIfGate(ctx context.Context, req *pb.RemoveLocationIfGateRequest) int32 {
+	if req == nil || req.UserId <= 0 || req.GateNodeId == "" {
+		return code.ParamError
+	}
+	if err := p.locationMgr.RemoveLocationIfGate(req.UserId, req.GateNodeId); err != nil {
+		return code.RemoveLocationFail
+	}
+	return code.OK
 }

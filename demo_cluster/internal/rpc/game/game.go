@@ -33,7 +33,7 @@ const (
 
 // SessionClose 如果session已登录，则调用rpcGame.SessionClose() 告知游戏服
 func SessionClose(app cfacade.IApplication, session *cproto.Session, traceId string) {
-	nodeID := session.GetString(sessionKey.ServerID)
+	nodeID := session.GetString(sessionKey.GameNodeID)
 	if nodeID == "" {
 		clog.Warnf("Get server id fail. session = %s", session.Sid)
 		return

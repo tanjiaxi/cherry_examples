@@ -75,8 +75,8 @@ func (p *SyncSpinData) getDevAccount(req *pb.DevRegister) (*pb.String, int32) {
 	return &pb.String{Value: devAccount.DeviceName}, code.OK
 }
 
-// getUID 获取uid
-func (p *SyncSpinData) getUID(req *pb.User) (*pb.Int64, int32) {
+// getUserID 获取uid
+func (p *SyncSpinData) getUserID(req *pb.User) (*pb.Int64, int32) {
 	//req.OpenId 其实就是deviceName
 	// 3. 计算并打印执行时间
 	p.count++
@@ -91,6 +91,6 @@ func (p *SyncSpinData) getUID(req *pb.User) (*pb.Int64, int32) {
 	}
 
 	elapsed := time.Since(startTime)
-	clog.Debugf("getUID代码执行耗时: %s ,id: %s ,count: %d ", elapsed, req.OpenId, p.count)
+	clog.Debugf("getUserID代码执行耗时: %s ,id: %s ,count: %d ", elapsed, req.OpenId, p.count)
 	return &pb.Int64{Value: int64(userId)}, code.OK
 }

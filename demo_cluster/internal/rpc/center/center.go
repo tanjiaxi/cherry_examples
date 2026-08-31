@@ -26,7 +26,7 @@ const (
 	ping               = "ping"
 	registerDevAccount = "registerDevAccount"
 	getDevAccount      = "getDevAccount"
-	getUID             = "getUID"
+	getUID = "getUID"
 )
 
 const (
@@ -103,7 +103,7 @@ func GetUID1(app cfacade.IApplication, sdkId, pid int32, openId string) (cfacade
 	}
 
 	elapsed := time.Since(startTime)
-	clog.Debugf("getUID代码执行耗时: %s ,id: %s ,count: %d ", elapsed, openId)
+	clog.Debugf("getUserID代码执行耗时: %s ,id: %s ,count: %d ", elapsed, openId)
 	return int64(userId), code.OK
 }
 
@@ -137,4 +137,25 @@ func GetCenterNodeID(app cfacade.IApplication) string {
 func GetTargetPath(app cfacade.IApplication, actorID string) string {
 	nodeID := GetCenterNodeID(app)
 	return nodeID + actorID
+}
+
+const consumeTokenJti = "consumeTokenJti"
+
+// ConsumeTokenJTI 消费一次性登录票（多 Gate 共享）
+func ConsumeTokenJTI(app cfacade.IApplication, jti, traceId string) int32 {
+	if jti == "" {
+		return code.AccountTokenValidateFail
+	}
+	req := &pb.String{Value: jti}
+	rsp := &pb.Int32{}
+	targetPath := GetTargetPath(app, accountActor)
+	errCode := app.ActorSystem().CallWait(sourcePath, targetPath, consumeTokenJti, traceId, req, rsp)
+	if code.IsFail(errCode) {
+		clog.Warnf("[ConsumeTokenJTI] jti=%s errCode=%v", jti, errCode)
+		return errCode
+	}
+	if rsp.Value != 0 {
+		return rsp.Value
+	}
+	return code.OK
 }

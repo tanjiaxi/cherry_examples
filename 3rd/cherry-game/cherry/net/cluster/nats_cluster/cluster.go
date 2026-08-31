@@ -162,7 +162,6 @@ func (p *Cluster) localProcess() {
 
 func (p *Cluster) remoteProcess() {
 	process := func(natsMsg *nats.Msg) {
-		recvTime := time.Now() // ← NATS 回调被调用
 		packet, err := cproto.UnmarshalPacket(natsMsg.Data)
 		if err != nil {
 			// clog.Warnf("[remoteProcess] Unmarshal fail. [subject = %s, err = %v]",
@@ -180,11 +179,9 @@ func (p *Cluster) remoteProcess() {
 			if handlerInfo, ok := isConcurrentHandler(targetPath.ActorID, packet.FuncName); ok {
 				// 并发处理：直接开 goroutine，绕过 Actor mailbox
 				go func() {
-					scheduleTime := time.Now()
-					clog.Infof(
-						"concurrent dispatch delay: natsCallbackToSchedule=%v traceId=%s",
-						scheduleTime.Sub(recvTime), packet.TraceId,
-					)
+					clog.DebugContext(context.Background(), "[remoteProcess] concurrent receive message", zap.String("subject", natsMsg.Reply),
+						zap.String("conID", natsMsg.Header.Get("conID")), zap.String("reqID", natsMsg.Header.Get("reqID")))
+
 					p.handleConcurrent(natsMsg, packet, handlerInfo)
 				}()
 				return
@@ -204,6 +201,10 @@ func (p *Cluster) remoteProcess() {
 		// 	message.Reply, message.Header.Get("conID"), message.Header.Get("reqID"))
 		clog.DebugContext(context.Background(), "[remoteProcess] receive message", zap.String("subject", message.Reply),
 			zap.String("conID", message.Header.Get("conID")), zap.String("reqID", message.Header.Get("reqID")))
+		if packet.FuncName == "consumeTokenJti" {
+			clog.WarnContext(context.Background(), "[remoteProcess] receive message", zap.String("subject", message.Reply), zap.String("funcName", packet.FuncName),
+				zap.String("conID", message.Header.Get("conID")), zap.String("reqID", message.Header.Get("reqID")))
+		}
 		p.app.ActorSystem().PostRemote(&message)
 	}
 	// logicPoolSize := 10

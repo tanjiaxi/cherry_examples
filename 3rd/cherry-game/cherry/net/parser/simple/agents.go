@@ -10,8 +10,8 @@ import (
 
 var (
 	lock        = &sync.RWMutex{}
-	sidAgentMap = make(map[cfacade.SID]*Agent)      // sid -> Agent
-	uidMap      = make(map[cfacade.UID]cfacade.SID) // uid -> sid
+	sidAgentMap = make(map[cfacade.SID]*Agent)
+	uidMap      = make(map[cfacade.UID]cfacade.SID)
 )
 
 func BindSID(agent *Agent) {

@@ -111,6 +111,20 @@ func (m *PlayerLocationManager) RemoveLocation(userId int64) error {
 	return nil
 }
 
+// RemoveLocationIfGate 仅当玩家仍绑定在指定 Gate 时删除
+func (m *PlayerLocationManager) RemoveLocationIfGate(userId int64, gateNodeId string) error {
+	loc, exists := m.cache[userId]
+	if !exists {
+		return nil
+	}
+	if loc.GateNodeId != gateNodeId {
+		clog.Infof("[PlayerLocationManager] skip remove: userId=%d locGate=%s wantGate=%s",
+			userId, loc.GateNodeId, gateNodeId)
+		return nil
+	}
+	return m.RemoveLocation(userId)
+}
+
 // SetOffline 设置玩家离线（但保留位置，用于断线重连）
 func (m *PlayerLocationManager) SetOffline(userId int64) {
 	// m.mu.Lock()

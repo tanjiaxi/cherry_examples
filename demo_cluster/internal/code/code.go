@@ -20,6 +20,9 @@ var (
 	AccountNameIsExist       int32 = 205 // 帐号已存在
 	AccountRegisterError     int32 = 206 //
 	AccountGetFail           int32 = 207 //
+	AccountTokenExpired      int32 = 208 // token 过期
+	AccountTokenReplay       int32 = 209 // token 重放 / jti 已使用
+
 	PlayerDenyLogin          int32 = 301 // 玩家禁止登录
 	PlayerDuplicateLogin     int32 = 302 // 玩家重复登录
 	PlayerNameExist          int32 = 303 // 玩家角色名已存在

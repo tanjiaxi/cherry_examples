@@ -230,28 +230,17 @@ func (p *Actor) invokeFunc(mb *mailbox, app cfacade.IApplication, fn cfacade.Inv
 		}
 
 		if rev := recover(); rev != nil {
-			// clog.Errorf("[%s] Invoke error. [source = %s, target = %s->%s, type = %v],error = %v",
-			// 	mb.name,
-			// 	m.Source,
-			// 	m.Target,
-			// 	m.FuncName,
-			// 	funcInfo.InArgs,
-			// 	rev,
-			// )
-			if rev := recover(); rev != nil {
-				clog.ErrorContext(
-					context.Background(),
-					"Invoke error",
-					zap.String("boxName", mb.name),
-					zap.String("source", m.Source),
-					zap.String("target", m.Target),
-					zap.String("path", m.Target),
-					zap.String("function", m.FuncName),
-					zap.Any("type", funcInfo.InArgs),
-					zap.Any("panic", rev),
-				)
-			}
-			// clog.ErrorContext(context.Background(), "Invoke error", zap.String("boxName", mb.name), zap.String("source", m.Source), zap.String("target", m.Target), zap.String("path", m.Target), zap.String("function", m.FuncName), zap.Any("type", funcInfo.InArgs), zap.Any("panic", rev))
+			clog.ErrorContext(
+				context.Background(),
+				"Invoke error",
+				zap.String("boxName", mb.name),
+				zap.String("source", m.Source),
+				zap.String("target", m.Target),
+				zap.String("path", m.Target),
+				zap.String("function", m.FuncName),
+				zap.Any("type", funcInfo.InArgs),
+				zap.Any("panic", rev),
+			)
 		}
 	}()
 

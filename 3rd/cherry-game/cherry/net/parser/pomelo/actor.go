@@ -112,7 +112,7 @@ func (p *Actor) defaultOnConnectFunc(conn net.Conn) {
 		AgentPath: p.Path().String(),
 		Data:      map[string]string{},
 	}
-
+	//一个连接对应一个agent，对应一个session
 	agent := NewAgent(p.App(), conn, session)
 
 	if p.onNewAgentFunc != nil {

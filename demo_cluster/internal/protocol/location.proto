@@ -52,3 +52,7 @@ message StringList {
   // 对应 Go: Values []string
   repeated string values = 1;
 }
+message RemoveLocationIfGateRequest {
+  int64 user_id = 1;
+  string gate_node_id = 2;
+}

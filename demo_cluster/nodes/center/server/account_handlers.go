@@ -58,7 +58,7 @@ func GetUIDHandler(req *pb.User) (*pb.Int64, int32) {
 	}
 
 	elapsed := time.Since(startTime)
-	clog.Debugf("[ConcurrentHandler] getUID执行耗时: %s, id: %s", elapsed, req.OpenId)
+	clog.Debugf("[ConcurrentHandler] getUserID执行耗时: %s, id: %s", elapsed, req.OpenId)
 
 	return &pb.Int64{Value: int64(userId)}, code.OK
 }

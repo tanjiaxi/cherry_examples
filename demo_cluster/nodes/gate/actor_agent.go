@@ -102,6 +102,8 @@ func (p *ActorAgent) login(ctx context.Context, session *cproto.Session, req *pb
 		agent.ResponseCode(session, code.AccountBindFail, true)
 		return
 	}
+	// 先跨 Gate 挤号，再本机 Bind，减少旧连接 onClose 误删新 Location 的窗口
+	p.checkGateSession(userId)
 
 	oldAgent, err := pomelo.Bind(session.Sid, userId)
 	if err != nil {
@@ -112,28 +114,27 @@ func (p *ActorAgent) login(ctx context.Context, session *cproto.Session, req *pb
 
 	// 挤掉之前的agent
 	if oldAgent != nil {
+		// close=true，关掉旧连接
 		oldAgent.Kick(duplicateLoginCode, true)
 	}
 
-	p.checkGateSession(userId)
-
 	// 调用Center分配Game节点（负载均衡）
 	gateNodeId := p.App().NodeID()
-	allocResp, errCode := rpcCenter.AllocateNodes(p.App(), userId, gateNodeId, traceId)
-	if code.IsFail(errCode) || allocResp == nil {
-		clog.Warnf("[login] 分配节点失败: userId=%d, errCode=%d", userId, errCode)
-		// 如果分配失败，使用请求中的ServerId作为后备
-		agent.Session().Set(sessionKey.AreaServerID, cstring.ToString(req.ServerId)) // 逻辑服 101
-		agent.Session().Set(sessionKey.GameNodeID, allocResp.GameNodeId)             // 进程 10001
-	} else {
-		// 使用Center分配的Game节点
-		agent.Session().Set(sessionKey.AreaServerID, cstring.ToString(req.ServerId)) // 逻辑服 101
-		agent.Session().Set(sessionKey.GameNodeID, allocResp.GameNodeId)             // 进程 10001
-		clog.Infof("[login] 节点分配成功: userId=%d, gameNode=%s", userId, allocResp.GameNodeId)
+	allocResp, errCode := rpcCenter.AllocateNodes(p.App(), userId, gateNodeId, req.ServerId, traceId)
+	if code.IsFail(errCode) || allocResp == nil || allocResp.GameNodeId == "" {
+		clog.Warnf("[login] 分配节点失败: userId=%d, serverId=%d, errCode=%d",
+			userId, req.ServerId, errCode)
+		agent.ResponseCode(session, code.AllocateNodeFail, true)
+		return
 	}
 
+	agent.Session().Set(sessionKey.AreaServerID, cstring.ToString(req.ServerId))
+	agent.Session().Set(sessionKey.GameNodeID, allocResp.GameNodeId)
 	agent.Session().Set(sessionKey.PID, cstring.ToString(userToken.PID))
 	agent.Session().Set(sessionKey.OpenID, userToken.OpenID)
+
+	clog.Infof("[login] 节点分配成功: userId=%d, serverId=%d, gameNode=%s",
+		userId, req.ServerId, allocResp.GameNodeId)
 
 	response := &pb.LoginResponse{
 		UserId: userId,
@@ -160,7 +161,10 @@ func (p *ActorAgent) validateToken(base64Token string) (*token.Token, int32) {
 	if !ok {
 		return nil, statusCode
 	}
-
+	// 一次性票：Center 消费 jti（多 Gate 共享）
+	if errCode := rpcCenter.ConsumeTokenJTI(p.App(), userToken.JTI, ""); code.IsFail(errCode) {
+		return nil, errCode
+	}
 	return userToken, code.OK
 }
 
@@ -168,6 +172,7 @@ func (p *ActorAgent) checkGateSession(uid cfacade.UID) {
 	rsp := &cproto.PomeloKick{
 		Uid:    uid,
 		Reason: duplicateLoginCode,
+		Close:  true,
 	}
 
 	// 遍历其他网关节点，挤掉旧的agent
@@ -182,32 +187,30 @@ func (p *ActorAgent) checkGateSession(uid cfacade.UID) {
 // onSessionClose  当agent断开时，关闭对应的ActorAgent
 func (p *ActorAgent) onSessionClose(agent *pomelo.Agent) {
 	session := agent.Session()
-	serverId := session.GetString(sessionKey.ServerID)
 	userId := session.Uid
-	clog.Infof("[onSessionClose] 移除玩家位置: userId=%d ", userId)
-	// 通知Center移除玩家位置
-	if userId > 0 {
-		errCode := rpcCenter.RemoveLocation(p.App(), userId, "")
+	sid := agent.SID()
+	// 被挤下线：uid 已绑到新连接 → 不要 RemoveLocation（否则删掉新登录的位置）
+	shouldRemoveLoc := userId > 0
+	if shouldRemoveLoc {
+		if cur, ok := pomelo.GetAgentWithUID(userId); ok && cur.SID() != sid {
+			shouldRemoveLoc = false
+			clog.Infof("[onSessionClose] 旧连接被挤下线，跳过 RemoveLocation uid=%d sid=%s", userId, sid)
+		}
+	}
+	if shouldRemoveLoc {
+		// 仅当 Location 仍指向本 Gate 时删除（多 Gate 挤号）
+		errCode := rpcCenter.RemoveLocationIfGate(p.App(), userId, p.App().NodeID(), "")
 		if code.IsFail(errCode) {
-			clog.Infof("[onSessionClose] 移除玩家位置失败: userId=%d, errCode=%d", userId, errCode)
+			clog.Infof("[onSessionClose] RemoveLocationIfGate fail uid=%d err=%d", userId, errCode)
 		}
 	}
 
-	if serverId == "" {
-		p.Exit()
-		return
+	gameNodeId := session.GetString(sessionKey.GameNodeID)
+	if gameNodeId != "" {
+		childId := cstring.ToString(userId)
+		p.Call(cfacade.NewChildPath(gameNodeId, "player", childId), "sessionClose", "", nil)
+		p.Call(cfacade.NewChildPath(gameNodeId, "slots", childId), "sessionClose", "", nil)
 	}
-
-	// 通知game节点关闭session
-	childId := cstring.ToString(session.Uid)
-	if childId != "" {
-		targetPath := cfacade.NewChildPath(serverId, "player", childId)
-		p.Call(targetPath, "sessionClose", "", nil)
-		gameTargetPath := cfacade.NewChildPath(serverId, "slots", childId)
-		p.Call(gameTargetPath, "sessionClose", "", nil)
-	}
-
-	// 自己退出
 	p.Exit()
 	clog.Infof("sessionClose path = %s", p.Path())
 }
