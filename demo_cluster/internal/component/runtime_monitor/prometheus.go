@@ -20,17 +20,23 @@ type PrometheusMetrics struct {
 	gcFrequency prometheus.Gauge
 
 	// 内存指标
-	heapAlloc   prometheus.Gauge
-	heapInuse   prometheus.Gauge
-	heapIdle    prometheus.Gauge
-	heapObjects prometheus.Gauge
-	heapSys     prometheus.Gauge
-	stackInuse  prometheus.Gauge
-	stackSys    prometheus.Gauge
-	sys         prometheus.Gauge
-	mallocs     prometheus.Counter
-	frees       prometheus.Counter
-	liveObjects prometheus.Gauge
+	heapAlloc       prometheus.Gauge
+	heapInuse       prometheus.Gauge
+	heapIdle        prometheus.Gauge
+	heapObjects     prometheus.Gauge
+	heapSys         prometheus.Gauge
+	stackInuse      prometheus.Gauge
+	stackSys        prometheus.Gauge
+	sys             prometheus.Gauge
+	mallocs         prometheus.Counter
+	frees           prometheus.Counter
+	liveObjects     prometheus.Gauge
+	allocBytesTotal prometheus.Counter
+
+	// 进程指标
+	processRSS prometheus.Gauge
+	openFDs    prometheus.Gauge
+	numThread  prometheus.Gauge
 
 	// 线程指标
 	numCPU     prometheus.Gauge
@@ -41,6 +47,13 @@ type PrometheusMetrics struct {
 	goroutineGrowthRate prometheus.Gauge
 	memoryGrowthRate    prometheus.Gauge
 	allocRate           prometheus.Gauge
+
+	// Counter 用增量推送，避免把累计绝对值反复 Add
+	lastMallocs    uint64
+	lastFrees      uint64
+	lastNumGC      uint32
+	lastCgoCall    int64
+	lastTotalAlloc uint64
 }
 
 // NewPrometheusMetrics 创建 Prometheus 指标
@@ -178,6 +191,30 @@ func NewPrometheusMetrics(namespace, subsystem string) *PrometheusMetrics {
 			Name:      "live_objects",
 			Help:      "Number of live objects (mallocs - frees)",
 		}),
+		allocBytesTotal: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: namespace,
+			Subsystem: subsystem,
+			Name:      "alloc_bytes_total",
+			Help:      "Cumulative bytes allocated for heap objects (MemStats.TotalAlloc)",
+		}),
+		processRSS: prometheus.NewGauge(prometheus.GaugeOpts{
+			Namespace: namespace,
+			Subsystem: subsystem,
+			Name:      "process_rss_bytes",
+			Help:      "Resident set size of the process in bytes",
+		}),
+		openFDs: prometheus.NewGauge(prometheus.GaugeOpts{
+			Namespace: namespace,
+			Subsystem: subsystem,
+			Name:      "process_open_fds",
+			Help:      "Number of open file descriptors",
+		}),
+		numThread: prometheus.NewGauge(prometheus.GaugeOpts{
+			Namespace: namespace,
+			Subsystem: subsystem,
+			Name:      "process_threads",
+			Help:      "Number of OS threads in the process",
+		}),
 
 		// 线程指标
 		numCPU: prometheus.NewGauge(prometheus.GaugeOpts{
@@ -216,7 +253,7 @@ func NewPrometheusMetrics(namespace, subsystem string) *PrometheusMetrics {
 			Namespace: namespace,
 			Subsystem: subsystem,
 			Name:      "alloc_rate_mb_per_second",
-			Help:      "Memory allocation rate (MB/s)",
+			Help:      "Heap allocation rate in MB/s derived from TotalAlloc",
 		}),
 	}
 
@@ -246,6 +283,10 @@ func (m *PrometheusMetrics) Register(registry *prometheus.Registry) error {
 		m.mallocs,
 		m.frees,
 		m.liveObjects,
+		m.allocBytesTotal,
+		m.processRSS,
+		m.openFDs,
+		m.numThread,
 		m.numCPU,
 		m.gomaxprocs,
 		m.numCgoCall,
@@ -275,7 +316,7 @@ func (m *PrometheusMetrics) Update(collector *Collector) {
 
 	// 更新 GC 指标
 	gcStats := collector.GetGCStats()
-	m.gcCount.Add(float64(gcStats.NumGC))
+	addUint32Delta(m.gcCount, gcStats.NumGC, &m.lastNumGC)
 	m.gcPauseP50.Set(float64(gcStats.PauseP50Ns) / 1e9)
 	m.gcPauseP90.Set(float64(gcStats.PauseP90Ns) / 1e9)
 	m.gcPauseP95.Set(float64(gcStats.PauseP95Ns) / 1e9)
@@ -293,14 +334,18 @@ func (m *PrometheusMetrics) Update(collector *Collector) {
 	m.stackInuse.Set(float64(current.StackInuse))
 	m.stackSys.Set(float64(current.StackSys))
 	m.sys.Set(float64(current.Sys))
-	m.mallocs.Add(float64(current.Mallocs))
-	m.frees.Add(float64(current.Frees))
+	addUint64Delta(m.mallocs, current.Mallocs, &m.lastMallocs)
+	addUint64Delta(m.frees, current.Frees, &m.lastFrees)
+	addUint64Delta(m.allocBytesTotal, current.TotalAlloc, &m.lastTotalAlloc)
 	m.liveObjects.Set(float64(current.LiveObjects))
+	m.processRSS.Set(float64(current.ProcessRSS))
+	m.openFDs.Set(float64(current.OpenFDs))
+	m.numThread.Set(float64(current.NumThread))
 
 	// 更新线程指标
 	m.numCPU.Set(float64(current.NumCPU))
 	m.gomaxprocs.Set(float64(current.GOMAXPROCS))
-	m.numCgoCall.Add(float64(current.NumCgoCall))
+	addInt64Delta(m.numCgoCall, current.NumCgoCall, &m.lastCgoCall)
 
 	// 更新自定义统计指标
 	goroutineStats := collector.GetGoroutineStats()
@@ -309,4 +354,31 @@ func (m *PrometheusMetrics) Update(collector *Collector) {
 	memoryStats := collector.GetMemoryStats()
 	m.memoryGrowthRate.Set(memoryStats.GrowthRate)
 	m.allocRate.Set(memoryStats.AllocRate)
+}
+
+func addUint64Delta(c prometheus.Counter, current uint64, last *uint64) {
+	if current >= *last {
+		if diff := current - *last; diff > 0 {
+			c.Add(float64(diff))
+		}
+	}
+	*last = current
+}
+
+func addUint32Delta(c prometheus.Counter, current uint32, last *uint32) {
+	if current >= *last {
+		if diff := current - *last; diff > 0 {
+			c.Add(float64(diff))
+		}
+	}
+	*last = current
+}
+
+func addInt64Delta(c prometheus.Counter, current int64, last *int64) {
+	if current >= *last {
+		if diff := current - *last; diff > 0 {
+			c.Add(float64(diff))
+		}
+	}
+	*last = current
 }

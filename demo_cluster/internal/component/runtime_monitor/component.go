@@ -9,6 +9,7 @@ import (
 	cherryFacade "github.com/cherry-game/cherry/facade"
 	cherryLogger "github.com/cherry-game/cherry/logger"
 	cprofile "github.com/cherry-game/cherry/profile"
+	"github.com/cherry-game/examples/demo_cluster/internal/component/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -102,6 +103,12 @@ func (c *Component) OnAfterInit() {
 	c.promMetrics = NewPrometheusMetrics("go", "runtime")
 	if err := c.promMetrics.Register(c.registry); err != nil {
 		cherryLogger.Errorf("[RuntimeMonitor] Failed to register prometheus metrics: %v", err)
+	}
+	if err := metrics.RegisterPrometheus(c.registry); err != nil {
+		cherryLogger.Errorf("[RuntimeMonitor] Failed to register business metrics: %v", err)
+	}
+	if err := c.registry.Register(newExtrasCollector(c)); err != nil {
+		cherryLogger.Errorf("[RuntimeMonitor] Failed to register extras metrics: %v", err)
 	}
 
 	// 初始化告警引擎
@@ -235,6 +242,9 @@ func (c *Component) PrintStats() {
 	cherryLogger.Warnf("  [Memory] Objects: %d | LiveObjects: %d | AllocRate: %.2fMB/s | Growth: %.1f%%",
 		memStats.HeapObjects, memStats.LiveObjects, memStats.AllocRate, memStats.GrowthRate*100)
 
+	cherryLogger.Warnf("  [Process] RSS: %.2fMB | FDs: %d | Threads: %d",
+		float64(current.ProcessRSS)/1024/1024, current.OpenFDs, current.NumThread)
+
 	// 线程统计
 	cherryLogger.Warnf("  [Thread] NumCPU: %d | GOMAXPROCS: %d | CgoCalls: %d",
 		current.NumCPU, current.GOMAXPROCS, current.NumCgoCall)
@@ -294,13 +304,16 @@ func (c *Component) handleStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	stats := map[string]interface{}{
-		"timestamp":  current.Timestamp,
-		"goroutine":  c.collector.GetGoroutineStats(),
-		"gc":         c.collector.GetGCStats(),
-		"memory":     c.collector.GetMemoryStats(),
-		"num_cpu":    current.NumCPU,
-		"gomaxprocs": current.GOMAXPROCS,
-		"cgo_calls":  current.NumCgoCall,
+		"timestamp":   current.Timestamp,
+		"goroutine":   c.collector.GetGoroutineStats(),
+		"gc":          c.collector.GetGCStats(),
+		"memory":      c.collector.GetMemoryStats(),
+		"num_cpu":     current.NumCPU,
+		"gomaxprocs":  current.GOMAXPROCS,
+		"cgo_calls":   current.NumCgoCall,
+		"process_rss": current.ProcessRSS,
+		"open_fds":    current.OpenFDs,
+		"num_thread":  current.NumThread,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

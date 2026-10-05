@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"io"
@@ -8,6 +9,9 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"sort"
+	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -46,37 +50,51 @@ type LoadTestConfig struct {
 	RunSpin        bool
 	PrintLog       bool
 	RegisterFirst  bool
+	Steps          string
+	StepHold       time.Duration
+	SloP99         time.Duration
 }
 
 var loadCfg LoadTestConfig
 
 func init() {
-	flag.StringVar(&loadCfg.URL, "url", "http://127.0.0.1:8081", "web node URL")
+	flag.StringVar(&loadCfg.URL, "url", "http://10.10.10.251:8081", "web node URL")
 	flag.StringVar(&loadCfg.PID, "pid", "2126001", "SDK PID")
-	flag.IntVar(&loadCfg.Robots, "robots", 1, "number of robots")
-	flag.IntVar(&loadCfg.BatchSize, "batch-size", 1, "robots started per batch")
+	flag.IntVar(&loadCfg.Robots, "robots", 100, "number of robots")
+	flag.IntVar(&loadCfg.BatchSize, "batch-size", 100, "robots started per batch")
 	flag.DurationVar(&loadCfg.BatchInterval, "batch-interval", time.Second, "interval between batches")
-	flag.DurationVar(&loadCfg.HoldDuration, "duration", 30*time.Minute, "steady-state spin duration")
-	flag.DurationVar(&loadCfg.SpinInterval, "spin-interval", 500*time.Millisecond, "interval between spins per robot")
+	flag.DurationVar(&loadCfg.HoldDuration, "duration", 5*time.Minute, "steady-state spin duration")
+	flag.DurationVar(&loadCfg.SpinInterval, "spin-interval", 10*time.Millisecond, "interval between spins per robot")
 	flag.DurationVar(&loadCfg.PrintInterval, "print-interval", 5*time.Second, "status print interval")
 	flag.Float64Var(&loadCfg.ErrorThreshold, "error-threshold", 0.01, "stop spawning when error rate exceeds this value")
 	flag.BoolVar(&loadCfg.UseWebSocket, "websocket", true, "use websocket (true) or TCP (false)")
 	flag.BoolVar(&loadCfg.UseServerList, "server-list", true, "fetch gate/server from /serverList API")
-	flag.StringVar(&loadCfg.FallbackAddr, "gate", "127.0.0.1:10010", "fallback gate address when server-list is disabled or fails")
+	flag.StringVar(&loadCfg.FallbackAddr, "gate", "10.10.10.251:10010", "fallback gate address when server-list is disabled or fails")
 	flag.IntVar(&loadCfg.AreaId, "area", 1, "target area id (0 = first available)")
 	flag.IntVar(&loadCfg.ServerId, "server", 10001, "target server id (0 = first available in area)")
 	flag.IntVar(&loadCfg.WarmupSpins, "warmup-spins", 0, "extra ActorSpin calls during login steps")
 	flag.BoolVar(&loadCfg.RunSpin, "spin", true, "run continuous spin after all robots connect")
 	flag.BoolVar(&loadCfg.PrintLog, "verbose", false, "print per-robot debug logs")
 	flag.BoolVar(&loadCfg.RegisterFirst, "register", true, "pre-register accounts via /register before load test")
+	flag.StringVar(&loadCfg.Steps, "steps", "", "阶梯人数，例如 50,100,200,400；空则一次打满 -robots")
+	flag.DurationVar(&loadCfg.StepHold, "step-hold", 90*time.Second, "每一档持续 Spin 的时间")
+	flag.DurationVar(&loadCfg.SloP99, "slo-p99", 500*time.Millisecond, "阶梯测试时 Spin P99 超过则认为打满并停止加档")
 }
 
 // 服务器节点 pprof 地址
 var serverPprofAddrs = map[string]string{
-	"game":   "http://127.0.0.1:6060",
-	"gate":   "http://127.0.0.1:6061",
-	"web":    "http://127.0.0.1:6062",
-	"center": "http://127.0.0.1:6063",
+	"game":   "http://10.10.10.251:6060",
+	"gate":   "http://10.10.10.251:6061",
+	"web":    "http://10.10.10.251:6062",
+	"center": "http://10.10.10.251:6063",
+}
+
+// 与 runtime_monitor 端口对应，用于看堆/RSS；刮不到时退回 pprof goroutine
+var serverMetricsURLs = map[string]string{
+	"game":   "http://10.10.10.251:30013/metrics",
+	"gate":   "http://10.10.10.251:30012/metrics",
+	"web":    "http://10.10.10.251:30014/metrics",
+	"center": "http://10.10.10.251:30011/metrics",
 }
 
 // ==================== 指标计数器 ====================
@@ -85,6 +103,8 @@ var (
 	totalLatencyMs, maxLatencyMs, spinRequests, spinErrors int64
 	testStartTime                                          time.Time
 	stopSpawning, stopSpinning                             int32
+	stopOnce                                               sync.Once
+	stopped                                                = make(chan struct{})
 )
 
 var (
@@ -117,6 +137,10 @@ type APIMetrics struct {
 	windowCounts [60]int64 // 固定 60 秒的环形缓冲区
 	windowSize   int       // 实际使用的窗口大小
 	startSecond  int64     // 起始秒 (Unix 秒)
+
+	latencyRing  [8192]int64
+	latencyIdx   int64
+	latencyCount int64
 }
 
 // NewAPIMetrics 创建新的 API 指标
@@ -177,6 +201,10 @@ func (m *APIMetrics) Record(latencyMs int64, isError bool) {
 		m.startSecond = nowSec
 	}
 	m.windowCounts[idx]++
+
+	ringIdx := atomic.AddInt64(&m.latencyIdx, 1) - 1
+	m.latencyRing[ringIdx%int64(len(m.latencyRing))] = latencyMs
+	atomic.AddInt64(&m.latencyCount, 1)
 }
 
 // GetRealtimeQPS 获取实时 QPS (最近 N 秒的平均，不包含当前秒)
@@ -235,6 +263,44 @@ func (m *APIMetrics) GetStats() (count, totalLatency, maxLatency, errors int64) 
 		atomic.LoadInt64(&m.ErrorCount)
 }
 
+func (m *APIMetrics) Percentiles() (p50, p95, p99, max int64) {
+	count := atomic.LoadInt64(&m.latencyCount)
+	if count <= 0 {
+		return
+	}
+	n := count
+	if n > int64(len(m.latencyRing)) {
+		n = int64(len(m.latencyRing))
+	}
+	samples := make([]int64, n)
+	start := atomic.LoadInt64(&m.latencyIdx) - n
+	if start < 0 {
+		start = 0
+	}
+	for i := int64(0); i < n; i++ {
+		samples[i] = m.latencyRing[(start+i)%int64(len(m.latencyRing))]
+	}
+	sort.Slice(samples, func(i, j int) bool { return samples[i] < samples[j] })
+	p50 = samples[int(float64(n-1)*0.50)]
+	p95 = samples[int(float64(n-1)*0.95)]
+	p99 = samples[int(float64(n-1)*0.99)]
+	max = samples[n-1]
+	return
+}
+
+func (m *APIMetrics) Reset() {
+	atomic.StoreInt64(&m.TotalLatencyMs, 0)
+	atomic.StoreInt64(&m.Count, 0)
+	atomic.StoreInt64(&m.MaxLatencyMs, 0)
+	atomic.StoreInt64(&m.ErrorCount, 0)
+	atomic.StoreInt64(&m.latencyIdx, 0)
+	atomic.StoreInt64(&m.latencyCount, 0)
+	m.windowMu.Lock()
+	m.windowCounts = [60]int64{}
+	m.startSecond = time.Now().Unix()
+	m.windowMu.Unlock()
+}
+
 var (
 	apiMetrics   map[string]*APIMetrics
 	apiMetricsMu sync.RWMutex
@@ -260,9 +326,11 @@ type SystemMetrics struct {
 }
 
 type ServerNodeMetrics struct {
-	Name       string
-	Online     bool
-	Goroutines int64
+	Name        string
+	Online      bool
+	Goroutines  int64
+	HeapAllocMB uint64
+	RSSMB       uint64
 }
 
 func getSystemMetrics() SystemMetrics {
@@ -307,6 +375,16 @@ func getAllServerMetrics() []ServerNodeMetrics {
 		go func(n, a string) {
 			defer wg.Done()
 			m := getServerPprofMetrics(n, a)
+			if url, ok := serverMetricsURLs[n]; ok {
+				if rt, ok := scrapePrometheusRuntime(url); ok {
+					m.Online = true
+					if rt.goroutines > 0 {
+						m.Goroutines = rt.goroutines
+					}
+					m.HeapAllocMB = uint64(rt.heapBytes) / 1024 / 1024
+					m.RSSMB = uint64(rt.rssBytes) / 1024 / 1024
+				}
+			}
 			mu.Lock()
 			metrics = append(metrics, m)
 			mu.Unlock()
@@ -314,6 +392,62 @@ func getAllServerMetrics() []ServerNodeMetrics {
 	}
 	wg.Wait()
 	return metrics
+}
+
+type runtimeSnapshot struct {
+	goroutines int64
+	heapBytes  float64
+	rssBytes   float64
+}
+
+func scrapePrometheusRuntime(metricsURL string) (runtimeSnapshot, bool) {
+	client := &http.Client{Timeout: 2 * time.Second}
+	resp, err := client.Get(metricsURL)
+	if err != nil {
+		return runtimeSnapshot{}, false
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return runtimeSnapshot{}, false
+	}
+	var snap runtimeSnapshot
+	sc := bufio.NewScanner(resp.Body)
+	for sc.Scan() {
+		line := sc.Text()
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+		name := fields[0]
+		if i := strings.IndexByte(name, '{'); i >= 0 {
+			name = name[:i]
+		}
+		val, err := strconv.ParseFloat(fields[1], 64)
+		if err != nil {
+			continue
+		}
+		switch name {
+		case "go_runtime_goroutines":
+			snap.goroutines = int64(val)
+		case "go_runtime_heap_alloc_bytes":
+			snap.heapBytes = val
+		case "go_runtime_process_rss_bytes":
+			snap.rssBytes = val
+		}
+	}
+	return snap, true
+}
+
+func serverMetricByName(list []ServerNodeMetrics, name string) ServerNodeMetrics {
+	for _, m := range list {
+		if m.Name == name {
+			return m
+		}
+	}
+	return ServerNodeMetrics{Name: name}
 }
 
 func recordAPIMetrics(apiName string, startTime time.Time, isError bool) {
@@ -398,10 +532,16 @@ func main() {
 	testStartTime = time.Now()
 	initAPIMetrics()
 
+	steps := parseCapacitySteps(loadCfg.Steps)
+	robotCount := loadCfg.Robots
+	if n := maxStep(steps); n > robotCount {
+		robotCount = n
+	}
+
 	clog.Infow("load test started",
 		"url", loadCfg.URL,
 		"pid", loadCfg.PID,
-		"robots", loadCfg.Robots,
+		"robots", robotCount,
 		"batch_size", loadCfg.BatchSize,
 		"batch_interval", loadCfg.BatchInterval,
 		"duration", loadCfg.HoldDuration,
@@ -413,19 +553,25 @@ func main() {
 		"area", loadCfg.AreaId,
 		"server", loadCfg.ServerId,
 		"gate", loadCfg.FallbackAddr,
+		"steps", loadCfg.Steps,
+		"step_hold", loadCfg.StepHold,
+		"slo_p99", loadCfg.SloP99,
 	)
 
-	// Ctrl+C / SIGTERM：停止拉人与持续 Spin，走统一的断开与汇总路径
-	sigCh := make(chan os.Signal, 1)
+	// Ctrl+C / SIGTERM：第一次优雅停（停拉人/Spin，再断开汇总）；
+	// 第二次强制退出。signal.Notify 会吃掉默认 SIGINT，不处理的话进程不会死。
+	sigCh := make(chan os.Signal, 2)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		sig := <-sigCh
-		clog.Warnf("received signal %v, stopping load test...", sig)
-		atomic.StoreInt32(&stopSpawning, 1)
-		atomic.StoreInt32(&stopSpinning, 1)
+		clog.Warnf("received signal %v, stopping load test (Ctrl+C again to force exit)...", sig)
+		requestStop()
+		sig = <-sigCh
+		clog.Warnf("received signal %v again, force exit", sig)
+		os.Exit(130)
 	}()
 
-	accounts := buildAccounts(loadCfg.Robots)
+	accounts := buildAccounts(robotCount)
 	if loadCfg.RegisterFirst {
 		clog.Infof("pre-registering %d accounts...", len(accounts))
 		RegisterDevAccount(loadCfg.URL, accounts)
@@ -444,12 +590,43 @@ func main() {
 	RunLoadTest(accounts)
 
 	if loadCfg.RunSpin && atomic.LoadInt32(&stopSpinning) == 0 {
-		RunContinuousSpin()
+		if len(steps) > 0 {
+			RunCapacitySteps(steps)
+		} else {
+			RunContinuousSpin()
+		}
 	}
-
 	DisconnectAllRobots()
 	PrintSummary()
 	close(stopPrinting)
+}
+
+func requestStop() {
+	stopOnce.Do(func() {
+		atomic.StoreInt32(&stopSpawning, 1)
+		atomic.StoreInt32(&stopSpinning, 1)
+		close(stopped)
+	})
+}
+
+// interruptibleSleep 可被 Ctrl+C 打断。返回 false 表示已停止。
+func interruptibleSleep(d time.Duration) bool {
+	if d <= 0 {
+		select {
+		case <-stopped:
+			return false
+		default:
+			return true
+		}
+	}
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-stopped:
+		return false
+	case <-timer.C:
+		return true
+	}
 }
 
 func buildAccounts(robotCount int) map[string]string {
@@ -604,11 +781,11 @@ func RunLoadTest(accounts map[string]string) {
 
 		if t, e := atomic.LoadInt64(&totalRequests), atomic.LoadInt64(&errorCount); t > 0 && float64(e)/float64(t) > loadCfg.ErrorThreshold {
 			clog.Warnf("Error rate exceeds threshold, stopping")
-			atomic.StoreInt32(&stopSpawning, 1)
+			requestStop()
 			break
 		}
-		if batch < totalBatches-1 {
-			time.Sleep(loadCfg.BatchInterval)
+		if batch < totalBatches-1 && !interruptibleSleep(loadCfg.BatchInterval) {
+			break
 		}
 	}
 	connectedRobotsMu.Lock()
@@ -616,20 +793,187 @@ func RunLoadTest(accounts map[string]string) {
 	connectedRobotsMu.Unlock()
 }
 
-func RunContinuousSpin() {
+func parseCapacitySteps(raw string) []int {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]int, 0, len(parts))
+	seen := map[int]bool{}
+	for _, p := range parts {
+		n, err := strconv.Atoi(strings.TrimSpace(p))
+		if err != nil || n <= 0 || seen[n] {
+			continue
+		}
+		seen[n] = true
+		out = append(out, n)
+	}
+	sort.Ints(out)
+	return out
+}
+
+func maxStep(steps []int) int {
+	if len(steps) == 0 {
+		return 0
+	}
+	return steps[len(steps)-1]
+}
+
+func snapshotConnectedRobots() []*robotclient.Robot {
 	connectedRobotsMu.Lock()
+	defer connectedRobotsMu.Unlock()
 	robots := make([]*robotclient.Robot, len(connectedRobots))
 	copy(robots, connectedRobots)
-	connectedRobotsMu.Unlock()
+	return robots
+}
 
+func resetSpinMetrics() {
+	apiMetricsMu.RLock()
+	if m := apiMetrics["ActorSpin"]; m != nil {
+		m.Reset()
+	}
+	apiMetricsMu.RUnlock()
+	atomic.StoreInt64(&spinRequests, 0)
+	atomic.StoreInt64(&spinErrors, 0)
+}
+
+func actorSpinStats() (count, errors, p50, p95, p99, maxLat int64) {
+	apiMetricsMu.RLock()
+	m := apiMetrics["ActorSpin"]
+	apiMetricsMu.RUnlock()
+	if m == nil {
+		return
+	}
+	count, _, maxLat, errors = m.GetStats()
+	p50, p95, p99, pMax := m.Percentiles()
+	if pMax > maxLat {
+		maxLat = pMax
+	}
+	return
+}
+
+type capacityStepResult struct {
+	n                 int
+	qps               float64
+	p50, p95, p99     int64
+	max               int64
+	errRate           float64
+	gameOnline        bool
+	gateOnline        bool
+	gameHeap, gameRSS int64
+	gateHeap, gateRSS int64
+	verdict           string
+}
+
+func RunCapacitySteps(steps []int) {
+	all := snapshotConnectedRobots()
+	clog.Infof("[容量测试] 阶梯=%v 每档=%s P99阈值=%s 已登录=%d",
+		steps, loadCfg.StepHold, loadCfg.SloP99, len(all))
+	if len(all) == 0 {
+		clog.Warn("没有机器人登录成功，无法做阶梯压测")
+		return
+	}
+
+	results := make([]capacityStepResult, 0, len(steps))
+	stopReason := "全部档位完成"
+
+	for _, n := range steps {
+		if atomic.LoadInt32(&stopSpinning) == 1 {
+			stopReason = "收到停止信号"
+			break
+		}
+		if n > len(all) {
+			clog.Warnf("[档位 %d] 活跃机器人不足（%d），停止升档", n, len(all))
+			stopReason = "活跃机器人不足"
+			break
+		}
+
+		resetSpinMetrics()
+		stepStart := time.Now()
+		clog.Infof("========== 档位 %d 并发 / 持续 %s ==========", n, loadCfg.StepHold)
+		runContinuousSpin(all[:n], loadCfg.StepHold)
+
+		elapsed := time.Since(stepStart).Seconds()
+		count, errors, p50, p95, p99, maxLat := actorSpinStats()
+		qps := 0.0
+		if elapsed > 0 {
+			qps = float64(count) / elapsed
+		}
+		errRate := 0.0
+		if count > 0 {
+			errRate = float64(errors) / float64(count) * 100
+		}
+		servers := getAllServerMetrics()
+		game := serverMetricByName(servers, "game")
+		gate := serverMetricByName(servers, "gate")
+
+		verdict := "OK"
+		switch {
+		case !game.Online:
+			verdict = "SERVER_DOWN"
+		case count == 0 || errRate >= 5:
+			verdict = "UNSTABLE"
+		case p99 > loadCfg.SloP99.Milliseconds():
+			verdict = "SATURATED"
+		case n >= 50 && qps < float64(n)*1.0:
+			verdict = "CLIENT_BOUND"
+		}
+
+		results = append(results, capacityStepResult{
+			n: n, qps: qps, p50: p50, p95: p95, p99: p99, max: maxLat, errRate: errRate,
+			gameOnline: game.Online, gateOnline: gate.Online,
+			gameHeap: int64(game.HeapAllocMB), gameRSS: int64(game.RSSMB),
+			gateHeap: int64(gate.HeapAllocMB), gateRSS: int64(gate.RSSMB),
+			verdict: verdict,
+		})
+		clog.Infof("[档位 %d] QPS=%.1f P50=%dms P95=%dms P99=%dms Max=%dms Err=%.2f%% game=%v heap=%dMB rss=%dMB gate=%v rss=%dMB => %s",
+			n, qps, p50, p95, p99, maxLat, errRate, game.Online, game.HeapAllocMB, game.RSSMB, gate.Online, gate.RSSMB, verdict)
+
+		if verdict == "SERVER_DOWN" || verdict == "UNSTABLE" || verdict == "SATURATED" {
+			stopReason = "SLO 触发: " + verdict
+			break
+		}
+	}
+
+	printCapacitySummary(results, stopReason)
+}
+
+func printCapacitySummary(results []capacityStepResult, stopReason string) {
+	clog.Infof("========== 容量测试汇总（%s）==========", stopReason)
+	clog.Infof("%-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-10s",
+		"并发", "QPS", "P50", "P95", "P99", "Max", "Err%", "GameRSS", "结论")
+	maxOK := 0
+	var maxOKQPS float64
+	for _, r := range results {
+		clog.Infof("%-8d %-8.1f %-8d %-8d %-8d %-8d %-8.2f %-8d %-10s",
+			r.n, r.qps, r.p50, r.p95, r.p99, r.max, r.errRate, r.gameRSS, r.verdict)
+		if r.verdict == "OK" {
+			maxOK = r.n
+			maxOKQPS = r.qps
+		}
+	}
+	if maxOK > 0 {
+		clog.Infof("建议单机容量: 并发=%d, 可持续QPS≈%.0f（下一档已达瓶颈或未测）", maxOK, maxOKQPS)
+	} else {
+		clog.Info("没有稳定档位，请降低起始并发或检查服务是否正常。")
+	}
+}
+
+func RunContinuousSpin() {
+	runContinuousSpin(snapshotConnectedRobots(), loadCfg.HoldDuration)
+	clog.Info("Spin completed")
+}
+
+func runContinuousSpin(robots []*robotclient.Robot, hold time.Duration) {
 	if len(robots) == 0 {
 		clog.Warn("No robots for Spin")
 		return
 	}
-	clog.Infof("Spinning with %d robots for %v", len(robots), loadCfg.HoldDuration)
+	clog.Infof("Spinning with %d robots for %v", len(robots), hold)
 
 	var wg sync.WaitGroup
-	stopTime := time.Now().Add(loadCfg.HoldDuration)
+	stopTime := time.Now().Add(hold)
 	for _, r := range robots {
 		wg.Add(1)
 		go func(robot *robotclient.Robot) {
@@ -644,12 +988,13 @@ func RunContinuousSpin() {
 				} else {
 					recordAPIMetrics("ActorSpin", start, false)
 				}
-				time.Sleep(loadCfg.SpinInterval)
+				if !interruptibleSleep(loadCfg.SpinInterval) {
+					return
+				}
 			}
 		}(r)
 	}
 	wg.Wait()
-	clog.Info("Spin completed")
 }
 
 func DisconnectAllRobots() {
@@ -712,6 +1057,10 @@ func RunRobotWithMetrics(url, pid, userName, password string, printLog bool) *ro
 	}
 
 	for _, s := range steps {
+		if atomic.LoadInt32(&stopSpawning) == 1 {
+			cli.Disconnect()
+			return nil
+		}
 		apiStart := time.Now()
 		if err := s.fn(); err != nil {
 			recordAPIMetrics(s.name, apiStart, true)
@@ -782,11 +1131,12 @@ func PrintStatus() {
 	clog.Infof("[%.0fs] Online:%d | Total:%d | Errors:%d(%.1f%%) | Spins:%d(Err:%d) | CPU:%.1f%% | Mem:%dMB | GR:%d",
 		elapsed, online, total, errors, errRate, spins, spinErrs, sm.CPUPercent, sm.MemUsedMB, sm.GoRoutines)
 
-	// Server pprof
 	clog.Info("  Server Nodes:")
 	for _, m := range getAllServerMetrics() {
 		if m.Online {
-			clog.Infof("    %s: Goroutines=%d", m.Name, m.Goroutines)
+			clog.Infof("    %s: goroutines=%d heap=%dMB rss=%dMB", m.Name, m.Goroutines, m.HeapAllocMB, m.RSSMB)
+		} else {
+			clog.Warnf("    %s: OFFLINE", m.Name)
 		}
 	}
 
@@ -826,10 +1176,10 @@ func PrintSummary() {
 	clog.Infof("Robot: CPU=%.1f%% | Mem=%dMB/%dMB | GR=%d | Heap=%dMB",
 		sm.CPUPercent, sm.MemUsedMB, sm.MemTotalMB, sm.GoRoutines, sm.HeapAllocMB)
 	clog.Info("----------------------------------------")
-	clog.Info("Server Nodes (pprof):")
+	clog.Info("Server Nodes:")
 	for _, m := range getAllServerMetrics() {
 		if m.Online {
-			clog.Infof("  %s: Goroutines=%d", m.Name, m.Goroutines)
+			clog.Infof("  %s: goroutines=%d heap=%dMB rss=%dMB", m.Name, m.Goroutines, m.HeapAllocMB, m.RSSMB)
 		} else {
 			clog.Infof("  %s: OFFLINE", m.Name)
 		}
@@ -875,11 +1225,11 @@ func PrintAPIMetrics() {
 			avgQPS = float64(cnt) / activeDuration
 		}
 
-		// 获取实时 QPS (滑动窗口)
 		realtimeQPS := m.GetRealtimeQPS()
+		p50, p95, p99, _ := m.Percentiles()
 
-		clog.Infof("  %-18s: Avg=%4dms Max=%4dms Cnt=%6d Err=%4d(%.1f%%) AvgQPS=%.1f RealtimeQPS=%.1f",
-			name, avg, max, cnt, errs, errRate, avgQPS, realtimeQPS)
+		clog.Infof("  %-18s: Avg=%4dms P50=%4dms P95=%4dms P99=%4dms Max=%4dms Cnt=%6d Err=%4d(%.1f%%) AvgQPS=%.1f RealtimeQPS=%.1f",
+			name, avg, p50, p95, p99, max, cnt, errs, errRate, avgQPS, realtimeQPS)
 	}
 }
 
@@ -901,9 +1251,10 @@ func PrintAPIMetricsRealtime() {
 
 		realtimeQPS := m.GetRealtimeQPS()
 		lastSecQPS := m.GetLastSecondQPS()
+		p50, p95, p99, _ := m.Percentiles()
 
-		clog.Infof("    %-18s: LastSec=%6.0f/s Avg10s=%6.1f/s Total=%6d Err=%4d",
-			name, lastSecQPS, realtimeQPS, cnt, errs)
+		clog.Infof("    %-18s: LastSec=%6.0f/s Avg10s=%6.1f/s P50=%dms P95=%dms P99=%dms Total=%6d Err=%4d",
+			name, lastSecQPS, realtimeQPS, p50, p95, p99, cnt, errs)
 	}
 }
 
@@ -912,6 +1263,9 @@ func RegisterDevAccount(url string, accounts map[string]string) {
 	accountChan := make(chan struct{}, loadCfg.BatchSize)
 	var registWait sync.WaitGroup
 	for k, v := range accounts {
+		if atomic.LoadInt32(&stopSpawning) == 1 {
+			break
+		}
 		registWait.Add(1)
 		accountChan <- struct{}{}
 		go func(account, password string) {

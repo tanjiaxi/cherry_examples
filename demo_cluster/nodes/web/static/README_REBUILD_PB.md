@@ -1,76 +1,30 @@
-<!--
- * @Author: t 921865806@qq.com
- * @Date: 2025-11-24 22:25:28
- * @LastEditors: t 921865806@qq.com
- * @LastEditTime: 2025-11-25 00:19:52
- * @FilePath: /examples/demo_cluster/nodes/web/static/README_REBUILD_PB.md
- * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
--->
-# 重新生成 pb.js 文件（包含 Slots 协议）
+# 重新生成浏览器可用的 pb.js
 
-## 问题
-当前的 `pb.js` 文件不包含 slots 相关的 protobuf 消息定义（EnterMachine, Spin 等），导致网页端无法调用 slots 接口。
+页面加载的是 `static/pb.js`，必须是 **browserify 打好的浏览器包**。
 
-## 解决方案
+## 正确做法
 
-### 方法 1：使用 protoc 编译器（推荐）
+在 `internal/protocol` 或任意目录：
 
 ```bash
-cd demo_cluster/internal/protocol
-
-# 编译生成 JavaScript protobuf 文件
-protoc \
-  --js_out=import_style=commonjs,binary:../nodes/web/static \
-  --proto_path=. \
-  *.proto
-
-# 合并所有生成的 _pb.js 文件到 pb.js
-cat ../nodes/web/static/*_pb.js > ../nodes/web/static/pb_new.js
-mv ../nodes/web/static/pb_new.js ../nodes/web/static/pb.js
+./build_proto.sh           # Go 代码 + 网页 pb.js
+./build_proto.sh --go      # 只生成 internal/pb/*.go
+./build_proto.sh --js      # 只生成 nodes/web/static/pb.js
 ```
 
-### 方法 2：使用 pbjs 工具（需要 protobufjs）
+旧路径仍可用：`demo_cluster/build_js_protocol.sh` 会转到 `build_proto.sh --js`。
+
+依赖：`protoc`、`browserify`（`npm install -g browserify`）、`demo_cluster/node_modules/google-protobuf`。
+
+## 不要这样
 
 ```bash
-# 安装 protobufjs
-npm install -g protobufjs
-
-cd demo_cluster/internal/protocol
-
-# 生成静态 JavaScript 模块
-pbjs -t static-module -w commonjs \
-  -o ../nodes/web/static/pb.js \
-  login.proto \
-  player.proto \
-  rpc.proto \
-  slots.proto \
-  slots_define.proto \
-  slots_feature.proto \
-  common_define.proto \
-  base_type.proto \
-  base_error.proto
+protoc --js_out=import_style=commonjs,binary:... *.proto
+cat *_pb.js > pb.js
 ```
 
-### 方法 3：使用提供的脚本
+那会得到带 `require` 的 Node 模块，浏览器报 `require is not defined`。
 
-```bash
-cd demo_cluster/internal/protocol
-chmod +x build_proto_js.sh
-./build_proto_js.sh
-```
+验证：`pb.js` 开头应是 `(function(){function r(e,n,t){`。
 
-## 验证
-
-重新生成后，在浏览器控制台中检查：
-
-```javascript
-console.log(proto.pb.EnterMachine);
-console.log(proto.pb.Spin);
-console.log(proto.pb.MachineInfo);
-```
-
-如果这些对象存在，说明生成成功。
-
-## 临时解决方案
-
-如果无法重新编译，可以修改 HTML 页面使用简化的消息格式（不使用 protobuf）。
+控制台：`typeof proto.pb.Spin.prototype.setRequestid === "function"`。

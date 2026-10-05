@@ -1,13 +1,72 @@
 package middleware
 
 import (
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	clog "github.com/cherry-game/cherry/logger"
 	"github.com/cherry-game/cherry/net/parser/pomelo"
 	cproto "github.com/cherry-game/cherry/net/proto"
+	"github.com/cherry-game/examples/demo_cluster/internal/pb"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
+
+const maxClientPayloadDump = 2048
+
+// clientReqFactory 客户端 route → 请求 proto。Gate 在转发前没有 handler 类型，需要这份表才能把 msg.Data 打成 JSON。
+var clientReqFactory = map[string]func() proto.Message{
+	"gate.user.login":         func() proto.Message { return new(pb.LoginRequest) },
+	"game.player.select":      func() proto.Message { return new(pb.None) },
+	"game.player.create":      func() proto.Message { return new(pb.PlayerCreateRequest) },
+	"game.player.enter":       func() proto.Message { return new(pb.Int64) },
+	"game.slots.enterMachine": func() proto.Message { return new(pb.EnterMachine) },
+	"game.slots.machineInfo":  func() proto.Message { return new(pb.MachineInfo) },
+	"game.slots.spin":         func() proto.Message { return new(pb.Spin) },
+	"game.slots.bonus":        func() proto.Message { return new(pb.Bonus) },
+	"game.slots.collect":      func() proto.Message { return new(pb.CollectDone) },
+}
+
+var clientPayloadJSON = protojson.MarshalOptions{
+	EmitUnpopulated: true,
+	UseProtoNames:   true,
+}
+
+// FormatClientPayload 把客户端 Pomelo msg.Data（protobuf 字节）解成可读 JSON。
+// 未知 route 或解包失败则输出 hex，避免 string(bytes) 打出乱码。
+func FormatClientPayload(route string, data []byte) string {
+	if len(data) == 0 {
+		return "{}"
+	}
+	factory, ok := clientReqFactory[route]
+	if !ok {
+		return dumpPayloadHex(data)
+	}
+	msg := factory()
+	if err := proto.Unmarshal(data, msg); err != nil {
+		return fmt.Sprintf("unmarshal_err=%v %s", err, dumpPayloadHex(data))
+	}
+	raw, err := clientPayloadJSON.Marshal(msg)
+	if err != nil {
+		return dumpPayloadHex(data)
+	}
+	s := string(raw)
+	if len(s) > maxClientPayloadDump {
+		return s[:maxClientPayloadDump] + "...(truncated)"
+	}
+	return s
+}
+
+func dumpPayloadHex(data []byte) string {
+	n := len(data)
+	if n > 256 {
+		n = 256
+		return "hex=" + hex.EncodeToString(data[:n]) + "...(truncated)"
+	}
+	return "hex=" + hex.EncodeToString(data)
+}
 
 // LogResponse 统一打印响应消息（包装 Agent.Response）
 func LogResponse(agent *pomelo.Agent, session *cproto.Session, v interface{}, isError ...bool) {
@@ -101,7 +160,7 @@ func (t *MessageTracker) LogRequest(reqData []byte) {
 
 	if len(reqData) > 0 {
 		clog.Debugf("[MSG-IN-DETAIL] route=%s, uid=%d, data=%s",
-			t.Route, t.UID, string(reqData))
+			t.Route, t.UID, FormatClientPayload(t.Route, reqData))
 	}
 }
 

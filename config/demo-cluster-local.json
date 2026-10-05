@@ -235,7 +235,7 @@
       "password": "postgres",
       "max_idle_connect": 200,
       "max_open_connect": 200,
-      "slow_threshold_ms": 20,
+      "slow_threshold_ms": 200,
       "max_life_time_minute": 30,
       "max_Idle_time_minute": 10,
       "log_mode": false
@@ -251,7 +251,7 @@
       "password": "postgres",
       "max_idle_connect": 200,
       "max_open_connect": 200,
-      "slow_threshold_ms": 20,
+      "slow_threshold_ms": 200,
       "max_life_time_minute": 30,
       "max_Idle_time_minute": 10,
       "log_mode": false

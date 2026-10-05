@@ -27,6 +27,7 @@ import (
 	configCacheSlots "github.com/cherry-game/examples/demo_cluster/internal/config_cache/slots"
 	"github.com/cherry-game/examples/demo_cluster/internal/data"
 	"github.com/cherry-game/examples/demo_cluster/nodes/game/db"
+	"github.com/cherry-game/examples/demo_cluster/nodes/game/module/online"
 	"github.com/cherry-game/examples/demo_cluster/nodes/game/module/player"
 	slotsRoom "github.com/cherry-game/examples/demo_cluster/nodes/game/module/slots/room"
 
@@ -100,6 +101,21 @@ func Run(profileFilePath, nodeID string) {
 	redisCompent := cherryRedis.NewRedisCompent()
 	// redisCompent这里本来是个组件,但是Init()在Startup后面执行
 	redisCompent.Init()
+	runtime_monitor.SetOnlinePlayersFunc(online.Count)
+	runtime_monitor.SetRedisStatsFunc(func() *runtime_monitor.RedisPoolSnapshot {
+		stats := redisCompent.GetDb().PoolStats()
+		if stats == nil {
+			return nil
+		}
+		return &runtime_monitor.RedisPoolSnapshot{
+			Hits:       uint64(stats.Hits),
+			Misses:     uint64(stats.Misses),
+			Timeouts:   uint64(stats.Timeouts),
+			TotalConns: uint64(stats.TotalConns),
+			IdleConns:  uint64(stats.IdleConns),
+			StaleConns: uint64(stats.StaleConns),
+		}
+	})
 	saver := dbqueue.NewRedisBackend(redisCompent.GetDb())
 	dbQueueComponent := dbqueue.NewDBWriteQueueComponent(configs, saver)
 	app.Register(dbQueueComponent)

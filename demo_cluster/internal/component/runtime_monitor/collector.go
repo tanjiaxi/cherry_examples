@@ -35,9 +35,15 @@ type RuntimeMetrics struct {
 	MCacheInuse uint64
 	MCacheSys   uint64
 	Sys         uint64 // 系统总内存
+	TotalAlloc  uint64 // 进程启动以来累计分配的堆字节（只增不减）
 	Mallocs     uint64 // 累计分配次数
 	Frees       uint64 // 累计释放次数
 	LiveObjects uint64 // 当前存活对象数
+
+	// 进程指标（RSS / FD / OS 线程，补齐仅看 Go heap 的盲区）
+	ProcessRSS uint64 // 进程常驻内存字节
+	OpenFDs    int    // 打开的文件描述符数量
+	NumThread  int    // OS 线程数
 
 	// 线程指标
 	NumCPU     int
@@ -142,9 +148,15 @@ func (c *Collector) collect() {
 	metrics.MCacheInuse = ms.MCacheInuse
 	metrics.MCacheSys = ms.MCacheSys
 	metrics.Sys = ms.Sys
+	metrics.TotalAlloc = ms.TotalAlloc
 	metrics.Mallocs = ms.Mallocs
 	metrics.Frees = ms.Frees
 	metrics.LiveObjects = ms.Mallocs - ms.Frees
+
+	proc := collectProcessMetrics()
+	metrics.ProcessRSS = proc.RSS
+	metrics.OpenFDs = proc.OpenFDs
+	metrics.NumThread = proc.Threads
 
 	// 线程指标
 	metrics.NumCPU = runtime.NumCPU()
@@ -255,7 +267,7 @@ type MemoryStats struct {
 	LiveObjects  uint64
 	SysMB        float64
 	StackInuseMB float64
-	AllocRate    float64 // 分配速率 (MB/s)
+	AllocRate    float64 // 分配速率 (MB/s)，基于 TotalAlloc 字节增量
 	GrowthRate   float64 // 内存增长率 (最近 5 分钟)
 }
 
@@ -276,14 +288,14 @@ func (c *Collector) GetMemoryStats() *MemoryStats {
 		StackInuseMB: float64(current.StackInuse) / 1024 / 1024,
 	}
 
-	// 计算分配速率 (基于最近 1 分钟)
+	// 计算分配速率 (基于最近 1 分钟的 TotalAlloc 字节增量，而不是 malloc 次数)
 	history := c.GetHistory(12) // 1 分钟
 	if len(history) >= 2 {
 		first := history[0]
 		last := history[len(history)-1]
 		duration := last.Timestamp.Sub(first.Timestamp).Seconds()
-		if duration > 0 {
-			allocDiff := float64(last.Mallocs - first.Mallocs)
+		if duration > 0 && last.TotalAlloc >= first.TotalAlloc {
+			allocDiff := float64(last.TotalAlloc - first.TotalAlloc)
 			stats.AllocRate = allocDiff / duration / 1024 / 1024
 		}
 	}

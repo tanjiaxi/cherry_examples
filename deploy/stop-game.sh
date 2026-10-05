@@ -11,6 +11,8 @@
 
 echo "🛑 停止所有游戏服务节点..."
 
+pkill -f "dlv .*attach" 2>/dev/null || true
+pkill -f "dlv.*exec.*io_sql" 2>/dev/null || true
 pkill -f "io_sql" 2>/dev/null || true
 
 sleep 1

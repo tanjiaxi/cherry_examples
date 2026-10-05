@@ -123,7 +123,9 @@ func (s *Component) createORM(cfg *mySqlConfig) (*gorm.DB, error) {
 	db, err := gorm.Open(postgres.Open(cfg.GetDSN()), &gorm.Config{
 		Logger:                 getLogger(cfg),
 		SkipDefaultTransaction: true, // 关闭默认事务
-		PrepareStmt:            true, // 开启预编译缓存，提升速度
+		// 高频 Transaction() 下 PrepareStmt 容易让预处理缓存和事务连接错位，
+		// 连接归还后 Postgres 仍显示 idle in transaction。
+		PrepareStmt: false,
 	})
 
 	if err != nil {
@@ -247,6 +249,50 @@ func (s *Component) PrintAllPoolStats() {
 			clog.Warnf("===========================")
 		}
 	}
+}
+
+// PoolSnapshot 单个库的连接池快照，供 Prometheus 导出
+type PoolSnapshot struct {
+	GroupID            string
+	DBID               string
+	MaxOpenConnections int
+	OpenConnections    int
+	InUse              int
+	Idle               int
+	WaitCount          int64
+	WaitDuration       time.Duration
+}
+
+// AllPoolStats 返回当前节点已打开的全部数据库连接池统计
+func (s *Component) AllPoolStats() []PoolSnapshot {
+	if s == nil || s.ormMap == nil {
+		return nil
+	}
+
+	result := make([]PoolSnapshot, 0)
+	for groupID, group := range s.ormMap {
+		for dbID, db := range group {
+			if db == nil {
+				continue
+			}
+			sqlDB, err := db.DB()
+			if err != nil {
+				continue
+			}
+			stats := sqlDB.Stats()
+			result = append(result, PoolSnapshot{
+				GroupID:            groupID,
+				DBID:               dbID,
+				MaxOpenConnections: stats.MaxOpenConnections,
+				OpenConnections:    stats.OpenConnections,
+				InUse:              stats.InUse,
+				Idle:               stats.Idle,
+				WaitCount:          stats.WaitCount,
+				WaitDuration:       stats.WaitDuration,
+			})
+		}
+	}
+	return result
 }
 
 // OnAfterInit 组件初始化完成后，启动定时打印连接池状态

@@ -1,6 +1,7 @@
 
 # Default ignored files
 .idea/
+demo_cluster/internal/protocol/.outjs/
 bin/
 logs/
 *.exe

@@ -154,6 +154,14 @@
                 "--path=../../config/demo-cluster-local.json",
                 "--node=gc-activity-1"
             ]
+        },
+        {
+            "name": "Connect to Remote Go App",
+            "type": "go",
+            "request": "attach",
+            "mode": "remote",
+            "port": 2345,
+            "host": "10.10.10.251" 
         }
     ],
     "compounds": [

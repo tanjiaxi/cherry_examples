@@ -64,7 +64,7 @@ func (r *ActorRoom) OnInit() {
 	// clog.Debugf("[actorRoom] path = %s init!", r.PathString())
 	// 处理gate的节点actor消息
 	r.Local().Register("enterMachine", r.enterMachine) // 进入关卡
-	r.Local().Register("machineInfo", r.machineinfo)   // 初始化关卡数据
+	r.Local().Register("machineInfo", r.machineInfo)   // 初始化关卡数据
 	r.Local().Register("spin", r.spin)                 // 关卡spin
 	r.Local().Register("bonus", r.bonus)               // 关卡bonus请求
 	r.Local().Register("collect", r.collect)           // 关卡collect 请求
@@ -111,8 +111,8 @@ func (r *ActorRoom) enterMachine(ctx context.Context, session *cproto.Session, r
 	r.Response(session, response)
 }
 
-func (r *ActorRoom) machineinfo(ctx context.Context, session *cproto.Session, req *pb.MachineInfo) {
-	done := metrics.TrackRequest("game.slots.machineinfo")
+func (r *ActorRoom) machineInfo(ctx context.Context, session *cproto.Session, req *pb.MachineInfo) {
+	done := metrics.TrackRequest("game.slots.machineInfo")
 	hasError := false
 	defer func() { done(hasError) }()
 
@@ -353,10 +353,10 @@ func (r *ActorRoom) spin(ctx context.Context, session *cproto.Session, req *pb.S
 		return
 	}
 	SpinResponse.Balance = settled.Balance
-	clog.Infof("spin: userId=%d, roomId=%d, version=%d ,feature=%v",
-		userInfo.UserId, roomId, roomDataInfo.Version, roomDataInfo)
+	clog.Debugf("spin: userId=%d, roomId=%d, version=%d",
+		userInfo.UserId, roomId, roomDataInfo.Version)
 	elapsed := time.Since(startTime)
-	clog.Warnf("[spin] 代码执行耗时: %v", elapsed)
+	clog.Debugf("[spin] 代码执行耗时: %v", elapsed)
 	r.Response(session, SpinResponse)
 }
 

@@ -12,6 +12,7 @@ import (
 	cproto "github.com/cherry-game/cherry/net/proto"
 	"github.com/cherry-game/examples/demo_cluster/internal/code"
 	"github.com/cherry-game/examples/demo_cluster/internal/component/metrics"
+	"github.com/cherry-game/examples/demo_cluster/internal/middleware"
 	"github.com/cherry-game/examples/demo_cluster/internal/pb"
 	rpcCenter "github.com/cherry-game/examples/demo_cluster/internal/rpc/center"
 	sessionKey "github.com/cherry-game/examples/demo_cluster/internal/session_key"
@@ -58,12 +59,13 @@ func onPomeloDataRoute(agent *pomelo.Agent, route *pmessage.Route, msg *pmessage
 	}()
 
 	session := pomelo.BuildSession(agent, msg)
-	clog.Infof("[GATE-IN] route=%s, uid=%d, sid=%s, mid=%d, size=%d bytes",
+	clog.Infof("[GATE-IN] route=%s, uid=%d, sid=%s, mid=%d, size=%d, data=%s",
 		msg.Route,
 		session.Uid,
 		session.Sid,
 		msg.ID,
-		len(msg.Data))
+		len(msg.Data),
+		middleware.FormatClientPayload(msg.Route, msg.Data))
 	// agent没有"用户登录",且请求不是第一条协议，则踢掉agent，断开连接
 	if !session.IsBind() && msg.Route != firstRouteName {
 		hasError = true

@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"time"
 
-	clog "github.com/cherry-game/cherry/logger"
 	"github.com/cherry-game/examples/demo_cluster/internal/model"
 	gameModel "github.com/cherry-game/examples/demo_cluster/internal/model"
 	"github.com/google/uuid"
@@ -63,7 +62,6 @@ func (r *Repository) SettleSpin(
 	if cmd.UserID <= 0 || cmd.RequestID == "" || !isJSONObject(cmd.OutboxJSON) {
 		return SettleSpinResult{}, ErrInvalidCommand
 	}
-	clog.Warnf("settle spin outbox insert: %v", datatypes.JSON(cmd.OutboxJSON))
 	var result SettleSpinResult
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 1) 尽早占据业务唯一键。并发重试时只有一个请求可插入。
@@ -84,20 +82,12 @@ func (r *Repository) SettleSpin(
 		if err := tx.Create(&op).Error; err != nil {
 			return err
 		}
-		// 2) 原子条件扣款。不能先 SELECT 余额再 UPDATE，后者会产生竞态。
-		var user gameModel.SlotsUser
-		err := tx.Model(&gameModel.SlotsUser{}).Where("user_id = ? AND money >= ?", cmd.UserID, cmd.Bet).
-			UpdateColumn("money", gorm.Expr("money - ?", cmd.Bet)).
-			Scan(&user).Error // 使用 Scan 接收 RETURNING 的结果
+		// 2) 原子条件扣款：同一条 UPDATE ... RETURNING，避免 UpdateColumn().Scan()
+		// 再发一条 SELECT（可能换连接，把自己的行锁等死，Postgres 表现为 idle in transaction）。
+		afterDebit, err := debitUserGold(tx, cmd.UserID, cmd.Bet)
 		if err != nil {
 			return err
 		}
-		// 2. 依然通过 RowsAffected 判断是否因余额不足导致更新失败
-		// 注意：在 GORM 中，即使用了 Scan，tx.RowsAffected 依然有效
-		if user.UserID == 0 {
-			return ErrInsufficientGold
-		}
-		afterDebit := user.Money
 		// 3) 下注账本。账本是 append-only，不允许 UPDATE/DELETE。
 		if err := tx.Create(&gameModel.AssetLedger{
 			OperationID: cmd.OperationID, UserID: cmd.UserID, AssetKind: "core.gold",
@@ -109,9 +99,10 @@ func (r *Repository) SettleSpin(
 		finalBalance := afterDebit
 		if cmd.Win > 0 {
 			// 4) 中奖入账。这里无需余额条件，仍必须在同一事务中。
-			credit := tx.Model(&gameModel.SlotsUser{}).
-				Where("user_id = ?", cmd.UserID).
-				UpdateColumn("money", gorm.Expr("money + ?", cmd.Win))
+			credit := tx.Exec(
+				`UPDATE `+gameModel.TableNameSlotsUser+` SET money = money + ? WHERE user_id = ?`,
+				cmd.Win, cmd.UserID,
+			)
 			if credit.Error != nil {
 				return credit.Error
 			}
@@ -177,6 +168,22 @@ func (r *Repository) SettleSpin(
 }
 func (r *Repository) SettleActivity() {
 
+}
+
+// debitUserGold 在当前事务连接上执行条件扣款，RETURNING 带回扣完后的余额。
+func debitUserGold(tx *gorm.DB, userID, bet int64) (int64, error) {
+	var user gameModel.SlotsUser
+	res := tx.Raw(
+		`UPDATE `+gameModel.TableNameSlotsUser+` SET money = money - ? WHERE user_id = ? AND money >= ? RETURNING *`,
+		bet, userID, bet,
+	).Scan(&user)
+	if res.Error != nil {
+		return 0, res.Error
+	}
+	if user.UserID == 0 {
+		return 0, ErrInsufficientGold
+	}
+	return user.Money, nil
 }
 
 // loadExistingSpin 是唯一冲突后的统一处理：

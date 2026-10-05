@@ -53,12 +53,12 @@
     }],
     "gate": [{
         "node_id": "gc-gate-1",
-        "address": "0.0.0.0:10010",
+        "address": "10.10.10.251:10010",
         "__settings__": {
           "db_id_list": {
             "center_db_id": "game_db_1"
           },
-          "tcp_address": "0.0.0.0:20010",
+          "tcp_address": "10.10.10.251:20010",
           "ref_logger": "gate_log",
           "call_time_out": "1"
 
@@ -67,12 +67,12 @@
       },
       {
         "node_id": "gc-gate-2",
-        "address": "0.0.0.0:10011",
+        "address": "10.10.10.251:10011",
         "__settings__": {
           "db_id_list": {
             "game_db_id": "game_db_1"
           },
-          "tcp_address": "0.0.0.0:20011",
+          "tcp_address": "10.10.10.251:20011",
           "ref_logger": "gate_log",
           "call_time_out": "1"
         },
@@ -80,12 +80,12 @@
       },
       {
         "node_id": "gc-gate-3",
-        "address": "0.0.0.0:20012",
+        "address": "10.10.10.251:20012",
         "__settings__": {
           "db_id_list": {
             "game_db_id": "game_db_1"
           },
-          "tcp_address": "0.0.0.0:20012",
+          "tcp_address": "10.10.10.251:20012",
           "ref_logger": "gate_log",
           "call_time_out": "1"
         },
@@ -94,7 +94,7 @@
     ],
     "web": [{
       "node_id": "gc-web-1",
-      "address": "0.0.0.0:8081",
+      "address": "10.10.10.251:8081",
       "__settings__": {
         "ref_logger": "web_log",
         "call_time_out": "10"
@@ -143,49 +143,49 @@
   },
   "logger": {
     "master_log": {
-      "level": "warn",
+      "level": "WARN",
       "enable_console": false,
       "enable_write_file": true,
       "file_link_path": "logs/master.log",
       "file_path_format": "logs/master_%Y%m%d%H%M.log"
     },
     "web_log": {
-      "level": "warn",
+      "level": "WARN",
       "enable_console": false,
       "enable_write_file": true,
       "file_link_path": "logs/web.log",
       "file_path_format": "logs/web_%Y%m%d%H%M.log"
     },
     "center_log": {
-      "level": "warn",
+      "level": "WARN",
       "enable_console": false,
       "enable_write_file": true,
       "file_link_path": "logs/center.log",
       "file_path_format": "logs/center_%Y%m%d%H%M.log"
     },
     "gate_log": {
-      "level": "warn",
+      "level": "WARN",
       "enable_console": false,
       "enable_write_file": true,
       "file_link_path": "logs/gate.log",
       "file_path_format": "logs/gate_%Y%m%d%H%M.log"
     },
     "game_log": {
-      "level": "warn",
+      "level": "WARN",
       "enable_console": false,
       "enable_write_file": true,
       "file_link_path": "logs/game.log",
       "file_path_format": "logs/game_%Y%m%d%H%M.log"
     },
     "activity_log": {
-      "level": "warn",
+      "level": "WARN",
       "enable_console": false,
       "enable_write_file": true,
       "file_link_path": "logs/activity.log",
       "file_path_format": "logs/activity_%Y%m%d%H%M.log"
     },
     "cross_log": {
-      "level": "warn",
+      "level": "WARN",
       "enable_console": false,
       "enable_write_file": true,
       "file_link_path": "logs/cross.log",
@@ -235,7 +235,7 @@
       "password": "postgres",
       "max_idle_connect": 200,
       "max_open_connect": 200,
-      "slow_threshold_ms": 20,
+      "slow_threshold_ms": 200,
       "max_life_time_minute": 30,
       "max_Idle_time_minute": 10,
       "log_mode": false
@@ -251,7 +251,7 @@
       "password": "postgres",
       "max_idle_connect": 200,
       "max_open_connect": 200,
-      "slow_threshold_ms": 20,
+      "slow_threshold_ms": 200,
       "max_life_time_minute": 30,
       "max_Idle_time_minute": 10,
       "log_mode": false
